@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+backend/venv/
+
+# Environment variables
+.env
+backend/.env
+
+# VS Code
+.vscode/
+
+# MySQL / backups temporales
+*.bak
+*.tmp

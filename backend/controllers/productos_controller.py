@@ -17,9 +17,10 @@ def listar_productos():
             LEFT JOIN colores c 
             ON p.colores_id_color = c.id_color
         """
-
         cursor.execute(query)
         productos = cursor.fetchall()
+
+        print("PRODUCTOS:", productos)
 
         cursor.close()
         conn.close()

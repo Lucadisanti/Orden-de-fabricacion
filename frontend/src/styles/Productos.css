@@ -44,6 +44,10 @@
   cursor: pointer;
 }
 
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
 .btn-secondary {
   background: #e5e7eb;
   color: #111827;
@@ -52,6 +56,10 @@
   border-radius: 7px;
   cursor: pointer;
   margin-right: 8px;
+}
+
+.btn-secondary:hover {
+  background: #d1d5db;
 }
 
 .btn-danger {
@@ -63,10 +71,91 @@
   cursor: pointer;
 }
 
+.btn-danger:hover {
+  background: #fecaca;
+}
+
+/* FORMULARIO */
+
+.form-card {
+  background: white;
+  border-radius: 14px;
+  padding: 25px;
+  margin-bottom: 25px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+.form-card h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.form-producto {
+  max-width: 700px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-producto input,
+.form-producto select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.form-producto input:focus,
+.form-producto select:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.color-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.color-row select {
+  flex: 1;
+}
+
+.color-row button {
+  white-space: nowrap;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
 @media (max-width: 700px) {
   .page-header-row {
     flex-direction: column;
     align-items: flex-start;
     gap: 14px;
+  }
+
+  .color-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .color-row button {
+    width: 100%;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
   }
 }

@@ -8,7 +8,9 @@ import Proveedores from "./pages/Proveedores";
 import Materiales from "./pages/Materiales";
 import Ordenes from "./pages/Ordenes";
 import Planillas from "./pages/Planillas";
+import UsoMateriales from "./pages/UsoMateriales";
 import Trazabilidad from "./pages/Trazabilidad";
+import RecepcionMateriales from "./pages/RecepcionMateriales";
 
 import "./App.css";
 
@@ -24,9 +26,11 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/productos" element={<Productos />} />
             <Route path="/proveedores" element={<Proveedores />} />
+            <Route path="/recepcion-materiales" element={<RecepcionMateriales />}/>
             <Route path="/materiales" element={<Materiales />} />
             <Route path="/ordenes" element={<Ordenes />} />
             <Route path="/planillas" element={<Planillas />} />
+            <Route path="/uso-materiales" element={<UsoMateriales />} />
             <Route path="/trazabilidad" element={<Trazabilidad />} />
           </Routes>
         </main>

@@ -14,8 +14,10 @@ export default function Sidebar() {
         <NavLink to="/productos">Productos</NavLink>
         <NavLink to="/proveedores">Proveedores</NavLink>
         <NavLink to="/materiales">Materiales</NavLink>
+        <NavLink to="/recepcion-materiales">Recepción Materiales</NavLink>
         <NavLink to="/ordenes">Órdenes</NavLink>
         <NavLink to="/planillas">Planillas</NavLink>
+        <NavLink to="/uso-materiales">Uso Materiales</NavLink>
         <NavLink to="/trazabilidad">Trazabilidad</NavLink>
       </nav>
     </aside>

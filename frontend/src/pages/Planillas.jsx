@@ -16,6 +16,8 @@ export default function Planillas() {
   const [planillaSeleccionada, setPlanillaSeleccionada] = useState(null);
   const [detalles, setDetalles] = useState([]);
   const [operarios, setOperarios] = useState([]);
+  const [usosMateriales, setUsosMateriales] = useState([]);
+  const [lotes, setLotes] = useState([]);
 
   const [detalleForm, setDetalleForm] = useState({
     talle: "",
@@ -25,6 +27,11 @@ export default function Planillas() {
   const [operarioForm, setOperarioForm] = useState({
     etapa: "",
     nombre_operario: "",
+  });
+
+  const [usoMaterialForm, setUsoMaterialForm] = useState({
+    lote_materiales_id_lote: "",
+    cantidad_usada: "",
   });
 
   const [planillaForm, setPlanillaForm] = useState({
@@ -103,6 +110,13 @@ export default function Planillas() {
   const manejarCambioOperario = (e) => {
     setOperarioForm({
       ...operarioForm,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const manejarCambioUsoMaterial = (e) => {
+    setUsoMaterialForm({
+      ...usoMaterialForm,
       [e.target.name]: e.target.value,
     });
   };
@@ -219,17 +233,28 @@ export default function Planillas() {
     setPlanillaSeleccionada(planilla);
 
     try {
-      const [detallesRes, operariosRes] = await Promise.all([
-        axios.get(
-          `http://127.0.0.1:5000/api/planillas/${planilla.id_planilla}/detalles`
-        ),
-        axios.get(
-          `http://127.0.0.1:5000/api/planillas/${planilla.id_planilla}/operarios`
-        ),
-      ]);
+      const [detallesRes, operariosRes, usosRes, lotesRes] =
+        await Promise.all([
+          axios.get(
+            `http://127.0.0.1:5000/api/planillas/${planilla.id_planilla}/detalles`
+          ),
+          axios.get(
+            `http://127.0.0.1:5000/api/planillas/${planilla.id_planilla}/operarios`
+          ),
+          axios.get("http://127.0.0.1:5000/api/uso-materiales/"),
+          axios.get("http://127.0.0.1:5000/api/lotes/"),
+        ]);
 
       setDetalles(detallesRes.data);
       setOperarios(operariosRes.data);
+      setLotes(lotesRes.data);
+
+      setUsosMateriales(
+        usosRes.data.filter(
+          (uso) =>
+            uso.planilla_produccion_id_planilla === planilla.id_planilla
+        )
+      );
     } catch (error) {
       console.error(error);
       alert("No se pudieron cargar los datos de la planilla.");
@@ -336,6 +361,56 @@ export default function Planillas() {
     } catch (error) {
       console.error(error);
       alert(error.response?.data?.error || "No se pudo eliminar el operario.");
+    }
+  };
+
+  const agregarUsoMaterial = async (e) => {
+    e.preventDefault();
+
+    if (!planillaSeleccionada) return;
+
+    try {
+      await axios.post("http://127.0.0.1:5000/api/uso-materiales/", {
+        lote_materiales_id_lote: Number(
+          usoMaterialForm.lote_materiales_id_lote
+        ),
+        planilla_produccion_id_planilla: planillaSeleccionada.id_planilla,
+        cantidad_usada: Number(usoMaterialForm.cantidad_usada),
+      });
+
+      setUsoMaterialForm({
+        lote_materiales_id_lote: "",
+        cantidad_usada: "",
+      });
+
+      gestionarPlanilla(planillaSeleccionada);
+      alert("Material agregado correctamente.");
+    } catch (error) {
+      console.error(error);
+      alert(
+        error.response?.data?.error ||
+          "No se pudo registrar el material utilizado."
+      );
+    }
+  };
+
+  const eliminarUsoMaterial = async (id_uso) => {
+    const confirmar = window.confirm("¿Eliminar este uso de material?");
+
+    if (!confirmar) return;
+
+    try {
+      await axios.delete(`http://127.0.0.1:5000/api/uso-materiales/${id_uso}`);
+
+      setUsosMateriales(usosMateriales.filter((uso) => uso.id_uso !== id_uso));
+
+      alert("Material eliminado correctamente.");
+    } catch (error) {
+      console.error(error);
+      alert(
+        error.response?.data?.error ||
+          "No se pudo eliminar el material utilizado."
+      );
     }
   };
 
@@ -556,18 +631,6 @@ export default function Planillas() {
               <button type="submit" className="btn-primary">
                 Agregar operario
               </button>
-
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setPlanillaSeleccionada(null);
-                  setDetalles([]);
-                  setOperarios([]);
-                }}
-              >
-                Cerrar gestión
-              </button>
             </div>
           </form>
 
@@ -604,6 +667,95 @@ export default function Planillas() {
                 {operarios.length === 0 && (
                   <tr>
                     <td colSpan="4">Todavía no hay operarios cargados.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Materiales utilizados</h3>
+
+          <form onSubmit={agregarUsoMaterial} className="form-planilla">
+            <select
+              name="lote_materiales_id_lote"
+              value={usoMaterialForm.lote_materiales_id_lote}
+              onChange={manejarCambioUsoMaterial}
+              required
+            >
+              <option value="">Seleccione lote</option>
+
+              {lotes.map((lote) => (
+                <option key={lote.id_lote} value={lote.id_lote}>
+                  {lote.codigo_lote} - {lote.material || "Material"}{" "}
+                  {lote.color ? `(${lote.color})` : ""}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              step="0.01"
+              name="cantidad_usada"
+              placeholder="Cantidad usada"
+              value={usoMaterialForm.cantidad_usada}
+              onChange={manejarCambioUsoMaterial}
+              required
+            />
+
+            <div className="form-actions">
+              <button type="submit" className="btn-primary">
+                Agregar material
+              </button>
+
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setPlanillaSeleccionada(null);
+                  setDetalles([]);
+                  setOperarios([]);
+                  setUsosMateriales([]);
+                  setLotes([]);
+                }}
+              >
+                Cerrar gestión
+              </button>
+            </div>
+          </form>
+
+          <div className="table-card">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Lote</th>
+                  <th>Material</th>
+                  <th>Color</th>
+                  <th>Cantidad usada</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {usosMateriales.map((uso) => (
+                  <tr key={uso.id_uso}>
+                    <td>{uso.codigo_lote || "-"}</td>
+                    <td>{uso.material || "-"}</td>
+                    <td>{uso.color || "-"}</td>
+                    <td>{uso.cantidad_usada}</td>
+                    <td>
+                      <button
+                        className="btn-danger"
+                        onClick={() => eliminarUsoMaterial(uso.id_uso)}
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+
+                {usosMateriales.length === 0 && (
+                  <tr>
+                    <td colSpan="5">Todavía no hay materiales cargados.</td>
                   </tr>
                 )}
               </tbody>

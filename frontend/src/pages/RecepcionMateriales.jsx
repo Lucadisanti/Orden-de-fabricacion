@@ -21,7 +21,6 @@ export default function RecepcionMateriales() {
 
     materiales_id_material: "",
     colores_id_color: "",
-    codigo_lote: "",
     cantidad_solicitada: "",
     cantidad_recibida: "",
     observaciones: "",
@@ -84,7 +83,7 @@ export default function RecepcionMateriales() {
         remitos_id_remito: idRemito,
         materiales_id_material: Number(form.materiales_id_material),
         colores_id_color: Number(form.colores_id_color),
-        codigo_lote: form.codigo_lote,
+        codigo_lote: null,
         cantidad_solicitada: Number(form.cantidad_solicitada),
         cantidad_recibida: Number(form.cantidad_recibida),
         pendiente: calcularPendiente(),
@@ -103,7 +102,6 @@ export default function RecepcionMateriales() {
 
         materiales_id_material: "",
         colores_id_color: "",
-        codigo_lote: "",
         cantidad_solicitada: "",
         cantidad_recibida: "",
         observaciones: "",
@@ -112,10 +110,7 @@ export default function RecepcionMateriales() {
       cargarDatos();
     } catch (error) {
       console.error(error);
-      alert(
-        error.response?.data?.error ||
-          "No se pudo registrar la recepción."
-      );
+      alert(error.response?.data?.error || "No se pudo registrar la recepción.");
     }
   };
 
@@ -123,7 +118,7 @@ export default function RecepcionMateriales() {
     <section className="recepcion-materiales">
       <div className="page-header">
         <h1>Recepción de materiales</h1>
-        <p>Registro de remitos, proveedores y lotes recibidos.</p>
+        <p>Registro de remitos, proveedores y materiales recibidos.</p>
       </div>
 
       <div className="form-card">
@@ -223,15 +218,6 @@ export default function RecepcionMateriales() {
             </select>
 
             <input
-              type="text"
-              name="codigo_lote"
-              placeholder="Código de lote"
-              value={form.codigo_lote}
-              onChange={manejarCambio}
-              required
-            />
-
-            <input
               type="number"
               step="0.01"
               name="cantidad_solicitada"
@@ -284,7 +270,7 @@ export default function RecepcionMateriales() {
             <thead>
               <tr>
                 <th>ID Lote</th>
-                <th>Código</th>
+                <th>Proveedor</th>
                 <th>Material</th>
                 <th>Color</th>
                 <th>Remito</th>
@@ -298,7 +284,7 @@ export default function RecepcionMateriales() {
               {lotes.map((lote) => (
                 <tr key={lote.id_lote}>
                   <td>{lote.id_lote}</td>
-                  <td>{lote.codigo_lote}</td>
+                  <td>{lote.nombre_proveedor || lote.proveedor || "-"}</td>
                   <td>{lote.material}</td>
                   <td>{lote.color}</td>
                   <td>{lote.numero_remito}</td>

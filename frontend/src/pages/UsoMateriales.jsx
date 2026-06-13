@@ -65,7 +65,10 @@ export default function UsoMateriales() {
     setIdEditando(uso.id_uso);
 
     setForm({
-      lote_materiales_id_lote: uso.lote_materiales_id_lote || "",
+      lote_materiales_id_lote:
+        uso.lote_materiales_id_lote ||
+        uso.id_lote_materiales ||
+        "",
       planilla_produccion_id_planilla:
         uso.planilla_produccion_id_planilla || "",
       cantidad_usada: uso.cantidad_usada || "",
@@ -112,8 +115,7 @@ export default function UsoMateriales() {
     } catch (error) {
       console.error(error);
       alert(
-        error.response?.data?.error ||
-          "No se pudo guardar el uso de material."
+        error.response?.data?.error || "No se pudo guardar el uso de material."
       );
     }
   };
@@ -147,7 +149,9 @@ export default function UsoMateriales() {
       <div className="page-header page-header-row">
         <div>
           <h1>Uso de Materiales</h1>
-          <p>Registro de lotes utilizados en cada planilla de producción.</p>
+          <p>
+            Registro de materiales utilizados en cada planilla de producción.
+          </p>
         </div>
 
         <button className="btn-primary" onClick={abrirFormularioNuevo}>
@@ -182,12 +186,18 @@ export default function UsoMateriales() {
               onChange={manejarCambio}
               required
             >
-              <option value="">Seleccione lote/material</option>
+              <option value="">Seleccione material recibido</option>
 
               {lotes.map((lote) => (
-                <option key={lote.id_lote} value={lote.id_lote}>
-                  {lote.codigo_lote} - {lote.material || "Material"}{" "}
-                  {lote.color ? `(${lote.color})` : ""}
+                <option
+                  key={lote.id_lote_materiales || lote.id_lote}
+                  value={lote.id_lote_materiales || lote.id_lote}
+                >
+                  Remito {lote.numero_remito || "-"} -{" "}
+                  {lote.nombre_proveedor || lote.proveedor || "Proveedor"} -{" "}
+                  {lote.material || "Material"}{" "}
+                  {lote.color ? `(${lote.color})` : ""} - Recibido:{" "}
+                  {lote.cantidad_recibida ?? "-"}
                 </option>
               ))}
             </select>
@@ -235,7 +245,8 @@ export default function UsoMateriales() {
                 <th>ID</th>
                 <th>Planilla</th>
                 <th>Orden</th>
-                <th>Lote</th>
+                <th>Remito</th>
+                <th>Proveedor</th>
                 <th>Material</th>
                 <th>Color</th>
                 <th>Cantidad usada</th>
@@ -249,7 +260,8 @@ export default function UsoMateriales() {
                   <td>{uso.id_uso}</td>
                   <td>{uso.numero_planilla || uso.planilla || "-"}</td>
                   <td>{uso.numero_orden || uso.orden || "-"}</td>
-                  <td>{uso.codigo_lote || uso.lote || "-"}</td>
+                  <td>{uso.numero_remito || "-"}</td>
+                  <td>{uso.nombre_proveedor || uso.proveedor || "-"}</td>
                   <td>{uso.material || "-"}</td>
                   <td>{uso.color || "-"}</td>
                   <td>{uso.cantidad_usada}</td>

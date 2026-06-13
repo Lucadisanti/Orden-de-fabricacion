@@ -3,6 +3,16 @@ import axios from "axios";
 import "../styles/Planillas.css";
 
 export default function Planillas() {
+  const tallesDisponibles = Array.from({ length: 13 }, (_, i) => i + 35);
+
+  const crearTallesIniciales = () => {
+    const talles = {};
+    tallesDisponibles.forEach((talle) => {
+      talles[talle] = "";
+    });
+    return talles;
+  };
+
   const [planillas, setPlanillas] = useState([]);
   const [ordenes, setOrdenes] = useState([]);
   const [maquinas, setMaquinas] = useState([]);
@@ -19,10 +29,7 @@ export default function Planillas() {
   const [usosMateriales, setUsosMateriales] = useState([]);
   const [lotes, setLotes] = useState([]);
 
-  const [detalleForm, setDetalleForm] = useState({
-    talle: "",
-    cantidad_pares: "",
-  });
+  const [tallesForm, setTallesForm] = useState(crearTallesIniciales());
 
   const [operarioForm, setOperarioForm] = useState({
     etapa: "",
@@ -79,9 +86,7 @@ export default function Planillas() {
       return "estado-produccion";
     }
 
-    if (estadoNormalizado.includes("pendiente")) {
-      return "estado-pendiente";
-    }
+    if (estadoNormalizado.includes("pendiente")) return "estado-pendiente";
 
     if (
       estadoNormalizado.includes("finalizada") ||
@@ -100,11 +105,18 @@ export default function Planillas() {
     });
   };
 
-  const manejarCambioDetalle = (e) => {
-    setDetalleForm({
-      ...detalleForm,
-      [e.target.name]: e.target.value,
+  const manejarCambioTalle = (talle, valor) => {
+    setTallesForm({
+      ...tallesForm,
+      [talle]: valor,
     });
+  };
+
+  const calcularTotalPares = () => {
+    return Object.values(tallesForm).reduce(
+      (total, valor) => total + Number(valor || 0),
+      0
+    );
   };
 
   const manejarCambioOperario = (e) => {
@@ -140,8 +152,7 @@ export default function Planillas() {
     setIdEditando(planilla.id_planilla);
 
     setPlanillaForm({
-      orden_fabricacion_id_orden:
-        planilla.orden_fabricacion_id_orden || "",
+      orden_fabricacion_id_orden: planilla.orden_fabricacion_id_orden || "",
       numero_planilla: planilla.numero_planilla || "",
       fecha: planilla.fecha || "",
       tipo_planilla: planilla.tipo_planilla || "",
@@ -172,11 +183,9 @@ export default function Planillas() {
           `http://127.0.0.1:5000/api/planillas/${idEditando}`,
           datos
         );
-
         alert("Planilla actualizada correctamente.");
       } else {
         await axios.post("http://127.0.0.1:5000/api/planillas/", datos);
-
         alert("Planilla creada correctamente.");
       }
 
@@ -251,8 +260,7 @@ export default function Planillas() {
 
       setUsosMateriales(
         usosRes.data.filter(
-          (uso) =>
-            uso.planilla_produccion_id_planilla === planilla.id_planilla
+          (uso) => uso.planilla_produccion_id_planilla === planilla.id_planilla
         )
       );
     } catch (error) {
@@ -261,55 +269,63 @@ export default function Planillas() {
     }
   };
 
-  const agregarDetalle = async (e) => {
-    e.preventDefault();
-
+  const guardarTalles = async () => {
     if (!planillaSeleccionada) return;
 
+    const tallesConCantidad = tallesDisponibles
+      .map((talle) => ({
+        talle,
+        cantidad: Number(tallesForm[talle] || 0),
+      }))
+      .filter((item) => item.cantidad > 0);
+
+    if (tallesConCantidad.length === 0) {
+      alert("Debe cargar al menos una cantidad.");
+      return;
+    }
+
     try {
-      await axios.post(
-        `http://127.0.0.1:5000/api/planillas/${planillaSeleccionada.id_planilla}/detalles`,
-        {
-          talle: detalleForm.talle,
-          cantidad_pares: Number(detalleForm.cantidad_pares),
-        }
+      await Promise.all(
+        tallesConCantidad.map((item) =>
+          axios.post(
+            `http://127.0.0.1:5000/api/planillas/${planillaSeleccionada.id_planilla}/detalles`,
+            {
+              talle: String(item.talle),
+              cantidad_pares: item.cantidad,
+            }
+          )
+        )
       );
 
-      setDetalleForm({
-        talle: "",
-        cantidad_pares: "",
-      });
-
+      setTallesForm(crearTallesIniciales());
       gestionarPlanilla(planillaSeleccionada);
-      alert("Detalle agregado correctamente.");
+      alert("Talles cargados correctamente.");
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.error || "No se pudo agregar el detalle.");
+      alert(error.response?.data?.error || "No se pudieron guardar los talles.");
     }
   };
 
   const eliminarDetalle = async (id_detalle) => {
-    const confirmar = window.confirm("¿Seguro que desea eliminar este detalle?");
+  const confirmar = window.confirm("¿Seguro que desea eliminar este detalle?");
 
-    if (!confirmar) return;
+  if (!confirmar) return;
 
-    try {
-      await axios.delete(
-        `http://127.0.0.1:5000/api/planillas/detalles/${id_detalle}`
-      );
+  try {
+    await axios.delete(
+      `http://127.0.0.1:5000/api/planillas/detalles/${id_detalle}`
+    );
 
-      setDetalles(
-        detalles.filter(
-          (detalle) => detalle.id_detalle_planilla !== id_detalle
-        )
-      );
+    setDetalles((prevDetalles) =>
+      prevDetalles.filter((detalle) => detalle.id_detalle !== id_detalle)
+    );
 
-      alert("Detalle eliminado correctamente.");
-    } catch (error) {
-      console.error(error);
-      alert(error.response?.data?.error || "No se pudo eliminar el detalle.");
-    }
-  };
+    alert("Detalle eliminado correctamente.");
+  } catch (error) {
+    console.error(error);
+    alert(error.response?.data?.error || "No se pudo eliminar el detalle.");
+  }
+};
 
   const agregarOperario = async (e) => {
     e.preventDefault();
@@ -352,8 +368,7 @@ export default function Planillas() {
 
       setOperarios(
         operarios.filter(
-          (operario) =>
-            operario.id_operario_planilla !== id_operario_planilla
+          (operario) => operario.id_operario_planilla !== id_operario_planilla
         )
       );
 
@@ -487,7 +502,7 @@ export default function Planillas() {
 
               {maquinas.map((maquina) => (
                 <option key={maquina.id_maquina} value={maquina.id_maquina}>
-                  {maquina.nombre_maquina}
+                  {maquina.nombre_maquina || maquina.maquina}
                 </option>
               ))}
             </select>
@@ -537,31 +552,47 @@ export default function Planillas() {
 
           <h3>Detalles por talle</h3>
 
-          <form onSubmit={agregarDetalle} className="form-planilla">
-            <input
-              type="text"
-              name="talle"
-              placeholder="Talle"
-              value={detalleForm.talle}
-              onChange={manejarCambioDetalle}
-              required
-            />
+          <div className="table-card">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  {tallesDisponibles.map((talle) => (
+                    <th key={talle}>{talle}</th>
+                  ))}
+                </tr>
+              </thead>
 
-            <input
-              type="number"
-              name="cantidad_pares"
-              placeholder="Cantidad de pares"
-              value={detalleForm.cantidad_pares}
-              onChange={manejarCambioDetalle}
-              required
-            />
+              <tbody>
+                <tr>
+                  {tallesDisponibles.map((talle) => (
+                    <td key={talle}>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tallesForm[talle]}
+                        onChange={(e) =>
+                          manejarCambioTalle(talle, e.target.value)
+                        }
+                        style={{ width: "60px" }}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
 
             <div className="form-actions">
-              <button type="submit" className="btn-primary">
-                Agregar detalle
+              <strong>Total pares: {calcularTotalPares()}</strong>
+
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={guardarTalles}
+              >
+                Guardar talles
               </button>
             </div>
-          </form>
+          </div>
 
           <div className="table-card">
             <table className="data-table">
@@ -576,16 +607,16 @@ export default function Planillas() {
 
               <tbody>
                 {detalles.map((detalle) => (
-                  <tr key={detalle.id_detalle_planilla}>
-                    <td>{detalle.id_detalle_planilla}</td>
+                  <tr key={detalle.id_detalle}>
+                    <td>{detalle.id_detalle}</td>
                     <td>{detalle.talle}</td>
                     <td>{detalle.cantidad_pares}</td>
                     <td>
                       <button
                         className="btn-danger"
                         onClick={() =>
-                          eliminarDetalle(detalle.id_detalle_planilla)
-                        }
+                            eliminarDetalle(detalle.id_detalle)
+                            }
                       >
                         Eliminar
                       </button>
@@ -682,12 +713,18 @@ export default function Planillas() {
               onChange={manejarCambioUsoMaterial}
               required
             >
-              <option value="">Seleccione lote</option>
+              <option value="">Seleccione material recibido</option>
 
               {lotes.map((lote) => (
-                <option key={lote.id_lote} value={lote.id_lote}>
-                  {lote.codigo_lote} - {lote.material || "Material"}{" "}
-                  {lote.color ? `(${lote.color})` : ""}
+                <option
+                  key={lote.id_lote_materiales || lote.id_lote}
+                  value={lote.id_lote_materiales || lote.id_lote}
+                >
+                  Remito {lote.numero_remito || "-"} -{" "}
+                  {lote.nombre_proveedor || lote.proveedor || "Proveedor"} -{" "}
+                  {lote.material || "Material"}{" "}
+                  {lote.color ? `(${lote.color})` : ""} - Recibido:{" "}
+                  {lote.cantidad_recibida ?? "-"}
                 </option>
               ))}
             </select>
@@ -716,6 +753,7 @@ export default function Planillas() {
                   setOperarios([]);
                   setUsosMateriales([]);
                   setLotes([]);
+                  setTallesForm(crearTallesIniciales());
                 }}
               >
                 Cerrar gestión
@@ -727,7 +765,8 @@ export default function Planillas() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Lote</th>
+                  <th>Remito</th>
+                  <th>Proveedor</th>
                   <th>Material</th>
                   <th>Color</th>
                   <th>Cantidad usada</th>
@@ -738,7 +777,8 @@ export default function Planillas() {
               <tbody>
                 {usosMateriales.map((uso) => (
                   <tr key={uso.id_uso}>
-                    <td>{uso.codigo_lote || "-"}</td>
+                    <td>{uso.numero_remito || "-"}</td>
+                    <td>{uso.nombre_proveedor || uso.proveedor || "-"}</td>
                     <td>{uso.material || "-"}</td>
                     <td>{uso.color || "-"}</td>
                     <td>{uso.cantidad_usada}</td>
@@ -755,7 +795,7 @@ export default function Planillas() {
 
                 {usosMateriales.length === 0 && (
                   <tr>
-                    <td colSpan="5">Todavía no hay materiales cargados.</td>
+                    <td colSpan="6">Todavía no hay materiales cargados.</td>
                   </tr>
                 )}
               </tbody>

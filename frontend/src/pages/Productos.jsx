@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Toast from "../components/Toast";
+import PromptModal from "../components/PromptModal";
+import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Productos.css";
+
+const API_URL = "http://127.0.0.1:5000/api";
 
 export default function Productos() {
   const [productos, setProductos] = useState([]);
   const [colores, setColores] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState(null);
+  const [mostrarModalColor, setMostrarModalColor] = useState(false);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -23,9 +30,13 @@ export default function Productos() {
     cargarColores();
   }, []);
 
+  const mostrarToast = (type, title, message) => {
+    setToast({ type, title, message });
+  };
+
   const cargarProductos = () => {
     axios
-      .get("http://127.0.0.1:5000/api/productos/")
+      .get(`${API_URL}/productos/`)
       .then((response) => {
         setProductos(response.data);
         setCargando(false);
@@ -39,30 +50,19 @@ export default function Productos() {
 
   const cargarColores = () => {
     return axios
-      .get("http://127.0.0.1:5000/api/colores/")
-      .then((response) => {
-        setColores(response.data);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+      .get(`${API_URL}/colores/`)
+      .then((response) => setColores(response.data))
+      .catch((error) => console.error(error));
   };
 
   const manejarCambio = (e) => {
-    setProductoForm({
-      ...productoForm,
-      [e.target.name]: e.target.value,
-    });
+    setProductoForm({ ...productoForm, [e.target.name]: e.target.value });
   };
 
   const abrirFormularioNuevo = () => {
     setEditando(false);
     setIdEditando(null);
-    setProductoForm({
-      articulo_producto: "",
-      nombre_producto: "",
-      colores_id_color: "",
-    });
+    setProductoForm({ articulo_producto: "", nombre_producto: "", colores_id_color: "" });
     setMostrarFormulario(true);
   };
 
@@ -77,103 +77,108 @@ export default function Productos() {
     setMostrarFormulario(true);
   };
 
-  const crearColorRapido = async () => {
-    const color = prompt("Ingrese el nuevo color:");
+  const crearColorRapido = async (color) => {
+    const colorLimpio = color.trim();
 
-    if (!color || color.trim() === "") return;
+    const colorExistente = colores.find(
+      (item) => item.color.trim().toLowerCase() === colorLimpio.toLowerCase()
+    );
+
+    if (colorExistente) {
+      setProductoForm({ ...productoForm, colores_id_color: colorExistente.id_color });
+      setMostrarModalColor(false);
+      mostrarToast("info", "Color ya existente", "Ese color ya estaba cargado, lo seleccioné automáticamente.");
+      return;
+    }
 
     try {
-      const response = await axios.post("http://127.0.0.1:5000/api/colores/", {
-        color: color.trim(),
-      });
-
+      const response = await axios.post(`${API_URL}/colores/`, { color: colorLimpio });
       await cargarColores();
 
-      setProductoForm({
-        ...productoForm,
-        colores_id_color: response.data.id_color,
-      });
-
-      alert("Color creado correctamente.");
+      setProductoForm({ ...productoForm, colores_id_color: response.data.id_color });
+      setMostrarModalColor(false);
+      mostrarToast("success", "Color creado", "El color se agregó y quedó seleccionado.");
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.error || "No se pudo crear el color.");
+      mostrarToast("error", "No se pudo crear el color", obtenerMensajeError(error, "color"));
     }
   };
 
   const guardarProducto = async (e) => {
     e.preventDefault();
 
+    const articulo = productoForm.articulo_producto.trim();
+    const nombre = productoForm.nombre_producto.trim();
+
+    const articuloRepetido = productos.some(
+      (producto) =>
+        producto.articulo_producto.trim().toLowerCase() === articulo.toLowerCase() &&
+        producto.id_producto !== idEditando
+    );
+
+    if (articuloRepetido) {
+      mostrarToast(
+        "warning",
+        "Artículo repetido",
+        "Ya existe un producto con ese artículo. Usá otro código o editá el producto existente."
+      );
+      return;
+    }
+
     const datos = {
-      articulo_producto: productoForm.articulo_producto,
-      nombre_producto: productoForm.nombre_producto,
+      articulo_producto: articulo,
+      nombre_producto: nombre,
       colores_id_color: Number(productoForm.colores_id_color),
     };
 
     try {
       if (editando) {
-        await axios.put(
-          `http://127.0.0.1:5000/api/productos/${idEditando}`,
-          datos
-        );
-
-        alert("Producto actualizado correctamente.");
+        await axios.put(`${API_URL}/productos/${idEditando}`, datos);
+        mostrarToast("success", "Producto actualizado", "Los cambios se guardaron correctamente.");
       } else {
-        await axios.post("http://127.0.0.1:5000/api/productos/", datos);
-
-        alert("Producto creado correctamente.");
+        await axios.post(`${API_URL}/productos/`, datos);
+        mostrarToast("success", "Producto creado", "El producto se agregó correctamente.");
       }
 
-      setProductoForm({
-        articulo_producto: "",
-        nombre_producto: "",
-        colores_id_color: "",
-      });
-
+      setProductoForm({ articulo_producto: "", nombre_producto: "", colores_id_color: "" });
       setEditando(false);
       setIdEditando(null);
       setMostrarFormulario(false);
       cargarProductos();
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.error || "No se pudo guardar el producto.");
+      mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "producto"));
     }
   };
 
   const eliminarProducto = async (id_producto) => {
-    const confirmar = window.confirm(
-      "¿Seguro que desea eliminar este producto?"
-    );
-
+    const confirmar = window.confirm("¿Seguro que desea eliminar este producto?");
     if (!confirmar) return;
 
     try {
-      await axios.delete(
-        `http://127.0.0.1:5000/api/productos/${id_producto}`
-      );
-
-      setProductos(
-        productos.filter((producto) => producto.id_producto !== id_producto)
-      );
-
-      alert("Producto eliminado correctamente.");
+      await axios.delete(`${API_URL}/productos/${id_producto}`);
+      setProductos(productos.filter((producto) => producto.id_producto !== id_producto));
+      mostrarToast("success", "Producto eliminado", "El registro se eliminó correctamente.");
     } catch (error) {
       console.error(error);
-
-      if (
-        error.response?.data?.error?.includes("foreign key constraint fails")
-      ) {
-        alert(
-          "No se puede eliminar este producto porque ya está asociado a una orden de fabricación."
-        );
-      } else {
-        alert(error.response?.data?.error || "No se pudo eliminar el producto.");
-      }
+      mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "producto"));
     }
   };
 
   return (
     <section className="productos">
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+
+      <PromptModal
+        open={mostrarModalColor}
+        title="Agregar color"
+        label="Nombre del color"
+        placeholder="Ej: Violeta"
+        confirmText="Agregar"
+        onCancel={() => setMostrarModalColor(false)}
+        onConfirm={crearColorRapido}
+      />
+
       <div className="page-header page-header-row">
         <div>
           <h1>Productos</h1>
@@ -216,7 +221,6 @@ export default function Productos() {
                 required
               >
                 <option value="">Seleccione un color</option>
-
                 {colores.map((color) => (
                   <option key={color.id_color} value={color.id_color}>
                     {color.color}
@@ -224,11 +228,7 @@ export default function Productos() {
                 ))}
               </select>
 
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={crearColorRapido}
-              >
+              <button type="button" className="btn-secondary" onClick={() => setMostrarModalColor(true)}>
                 + Agregar color
               </button>
             </div>
@@ -255,7 +255,6 @@ export default function Productos() {
       )}
 
       {cargando && <p>Cargando productos...</p>}
-
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
@@ -279,17 +278,10 @@ export default function Productos() {
                   <td>{producto.nombre_producto}</td>
                   <td>{producto.color || "Sin color"}</td>
                   <td>
-                    <button
-                      className="btn-secondary"
-                      onClick={() => iniciarEdicion(producto)}
-                    >
+                    <button className="btn-secondary" onClick={() => iniciarEdicion(producto)}>
                       Editar
                     </button>
-
-                    <button
-                      className="btn-danger"
-                      onClick={() => eliminarProducto(producto.id_producto)}
-                    >
+                    <button className="btn-danger" onClick={() => eliminarProducto(producto.id_producto)}>
                       Eliminar
                     </button>
                   </td>

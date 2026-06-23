@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Toast from "../components/Toast";
+import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Ordenes.css";
+
+const API_URL = "http://127.0.0.1:5000/api";
 
 export default function Ordenes() {
   const [ordenes, setOrdenes] = useState([]);
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -22,11 +27,13 @@ export default function Ordenes() {
     cargarDatos();
   }, []);
 
+  const mostrarToast = (type, title, message) => setToast({ type, title, message });
+
   const cargarDatos = async () => {
     try {
       const [ordenesRes, productosRes] = await Promise.all([
-        axios.get("http://127.0.0.1:5000/api/ordenes/"),
-        axios.get("http://127.0.0.1:5000/api/productos/"),
+        axios.get(`${API_URL}/ordenes/`),
+        axios.get(`${API_URL}/productos/`),
       ]);
 
       setOrdenes(ordenesRes.data);
@@ -47,32 +54,20 @@ export default function Ordenes() {
       return "estado-produccion";
     }
 
-    if (estadoNormalizado.includes("pendiente")) {
-      return "estado-pendiente";
-    }
-
-    if (estadoNormalizado.includes("finalizada") || estadoNormalizado.includes("finalizado")) {
-      return "estado-finalizada";
-    }
+    if (estadoNormalizado.includes("pendiente")) return "estado-pendiente";
+    if (estadoNormalizado.includes("finalizada") || estadoNormalizado.includes("finalizado")) return "estado-finalizada";
 
     return "";
   };
 
   const manejarCambio = (e) => {
-    setOrdenForm({
-      ...ordenForm,
-      [e.target.name]: e.target.value,
-    });
+    setOrdenForm({ ...ordenForm, [e.target.name]: e.target.value });
   };
 
   const abrirFormularioNuevo = () => {
     setEditando(false);
     setIdEditando(null);
-    setOrdenForm({
-      producto_id_producto: "",
-      numero_orden: "",
-      fecha: "",
-    });
+    setOrdenForm({ producto_id_producto: "", numero_orden: "", fecha: "" });
     setMostrarFormulario(true);
   };
 
@@ -90,70 +85,67 @@ export default function Ordenes() {
   const guardarOrden = async (e) => {
     e.preventDefault();
 
+    const numeroOrden = ordenForm.numero_orden.trim();
+
+    const repetida = ordenes.some(
+      (orden) =>
+        orden.numero_orden?.trim().toLowerCase() === numeroOrden.toLowerCase() &&
+        orden.id_orden !== idEditando
+    );
+
+    if (repetida) {
+      mostrarToast(
+        "warning",
+        "Orden repetida",
+        "Ya existe una orden con ese número. Usá otro número o editá la orden existente."
+      );
+      return;
+    }
+
     const datos = {
       producto_id_producto: Number(ordenForm.producto_id_producto),
-      numero_orden: ordenForm.numero_orden,
+      numero_orden: numeroOrden,
       fecha: ordenForm.fecha,
     };
 
     try {
       if (editando) {
-        await axios.put(
-          `http://127.0.0.1:5000/api/ordenes/${idEditando}`,
-          datos
-        );
-
-        alert("Orden actualizada correctamente.");
+        await axios.put(`${API_URL}/ordenes/${idEditando}`, datos);
+        mostrarToast("success", "Orden actualizada", "Los cambios se guardaron correctamente.");
       } else {
-        await axios.post("http://127.0.0.1:5000/api/ordenes/", datos);
-
-        alert("Orden creada correctamente.");
+        await axios.post(`${API_URL}/ordenes/`, datos);
+        mostrarToast("success", "Orden creada", "La orden se agregó correctamente.");
       }
 
-      setOrdenForm({
-        producto_id_producto: "",
-        numero_orden: "",
-        fecha: "",
-      });
-
+      setOrdenForm({ producto_id_producto: "", numero_orden: "", fecha: "" });
       setEditando(false);
       setIdEditando(null);
       setMostrarFormulario(false);
       cargarDatos();
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.error || "No se pudo guardar la orden.");
+      mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "orden"));
     }
   };
 
   const eliminarOrden = async (id_orden) => {
-    const confirmar = window.confirm(
-      "¿Seguro que desea eliminar esta orden?"
-    );
-
+    const confirmar = window.confirm("¿Seguro que desea eliminar esta orden?");
     if (!confirmar) return;
 
     try {
-      await axios.delete(`http://127.0.0.1:5000/api/ordenes/${id_orden}`);
-
+      await axios.delete(`${API_URL}/ordenes/${id_orden}`);
       setOrdenes(ordenes.filter((orden) => orden.id_orden !== id_orden));
-
-      alert("Orden eliminada correctamente.");
+      mostrarToast("success", "Orden eliminada", "El registro se eliminó correctamente.");
     } catch (error) {
       console.error(error);
-
-      if (error.response?.data?.error?.includes("foreign key constraint fails")) {
-        alert(
-          "No se puede eliminar esta orden porque ya está asociada a planillas de producción."
-        );
-      } else {
-        alert(error.response?.data?.error || "No se pudo eliminar la orden.");
-      }
+      mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "orden"));
     }
   };
 
   return (
     <section className="ordenes">
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+
       <div className="page-header page-header-row">
         <div>
           <h1>Órdenes de Fabricación</h1>
@@ -170,21 +162,11 @@ export default function Ordenes() {
           <h2>{editando ? "Editar orden" : "Nueva orden"}</h2>
 
           <form onSubmit={guardarOrden} className="form-orden">
-            <select
-              name="producto_id_producto"
-              value={ordenForm.producto_id_producto}
-              onChange={manejarCambio}
-              required
-            >
+            <select name="producto_id_producto" value={ordenForm.producto_id_producto} onChange={manejarCambio} required>
               <option value="">Seleccione producto</option>
-
               {productos.map((producto) => (
-                <option
-                  key={producto.id_producto}
-                  value={producto.id_producto}
-                >
-                  {producto.articulo_producto} - {producto.nombre_producto}{" "}
-                  {producto.color ? `(${producto.color})` : ""}
+                <option key={producto.id_producto} value={producto.id_producto}>
+                  {producto.articulo_producto} - {producto.nombre_producto} {producto.color ? `(${producto.color})` : ""}
                 </option>
               ))}
             </select>
@@ -198,13 +180,7 @@ export default function Ordenes() {
               required
             />
 
-            <input
-              type="date"
-              name="fecha"
-              value={ordenForm.fecha}
-              onChange={manejarCambio}
-              required
-            />
+            <input type="date" name="fecha" value={ordenForm.fecha} onChange={manejarCambio} required />
 
             <div className="form-actions">
               <button type="submit" className="btn-primary">
@@ -228,7 +204,6 @@ export default function Ordenes() {
       )}
 
       {cargando && <p>Cargando órdenes...</p>}
-
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
@@ -262,17 +237,10 @@ export default function Ordenes() {
                     </span>
                   </td>
                   <td>
-                    <button
-                      className="btn-secondary"
-                      onClick={() => iniciarEdicion(orden)}
-                    >
+                    <button className="btn-secondary" onClick={() => iniciarEdicion(orden)}>
                       Editar
                     </button>
-
-                    <button
-                      className="btn-danger"
-                      onClick={() => eliminarOrden(orden.id_orden)}
-                    >
+                    <button className="btn-danger" onClick={() => eliminarOrden(orden.id_orden)}>
                       Eliminar
                     </button>
                   </td>

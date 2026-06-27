@@ -1,4 +1,4 @@
-.toast {
+.feedback-toast {
   position: fixed;
   top: 22px;
   right: 22px;
@@ -13,23 +13,23 @@
   background: #ffffff;
   color: #0f172a;
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.2);
-  animation: toastIn 0.18s ease-out;
+  animation: feedbackToastIn 0.18s ease-out;
 }
 
-.toast strong {
+.feedback-toast strong {
   display: block;
   margin-bottom: 4px;
   font-size: 15px;
 }
 
-.toast p {
+.feedback-toast p {
   margin: 0;
   color: #475569;
   font-size: 14px;
   line-height: 1.4;
 }
 
-.toast button {
+.feedback-toast button {
   width: 28px;
   height: 28px;
   flex: 0 0 auto;
@@ -39,25 +39,26 @@
   color: #334155;
   font-size: 20px;
   line-height: 1;
+  cursor: pointer;
 }
 
-.toast-success {
+.feedback-toast-success {
   border-left: 6px solid #22c55e;
 }
 
-.toast-error {
+.feedback-toast-error {
   border-left: 6px solid #ef4444;
 }
 
-.toast-warning {
+.feedback-toast-warning {
   border-left: 6px solid #f59e0b;
 }
 
-.toast-info {
+.feedback-toast-info {
   border-left: 6px solid #2563eb;
 }
 
-@keyframes toastIn {
+@keyframes feedbackToastIn {
   from {
     opacity: 0;
     transform: translateY(-8px);
@@ -68,7 +69,7 @@
   }
 }
 
-.modal-backdrop {
+.feedback-modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 9998;
@@ -79,7 +80,7 @@
   backdrop-filter: blur(3px);
 }
 
-.modal-card {
+.feedback-modal-card {
   width: min(460px, 100%);
   padding: 24px;
   border-radius: 18px;
@@ -88,13 +89,19 @@
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
 }
 
-.modal-card h2 {
-  margin: 0 0 18px;
+.feedback-modal-card h2 {
+  margin: 0 0 12px;
   font-size: 22px;
   font-weight: 800;
 }
 
-.modal-card label {
+.feedback-modal-card p {
+  margin: 0 0 18px;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.feedback-modal-card label {
   display: block;
   margin-bottom: 8px;
   color: #334155;
@@ -102,7 +109,7 @@
   font-weight: 700;
 }
 
-.modal-card input {
+.feedback-modal-card input {
   width: 100%;
   min-height: 44px;
   border: 1px solid #cbd5e1;
@@ -113,19 +120,19 @@
   outline: none;
 }
 
-.modal-card input:focus {
+.feedback-modal-card input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
-.modal-actions {
+.feedback-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 18px;
 }
 
-.form-help {
+.feedback-form-help {
   padding: 12px 14px;
   border: 1px solid #bfdbfe;
   border-radius: 14px;
@@ -135,7 +142,7 @@
   line-height: 1.45;
 }
 
-.field-warning {
+.feedback-field-warning {
   grid-column: 1 / -1;
   padding: 10px 12px;
   border-radius: 12px;
@@ -146,16 +153,17 @@
 }
 
 @media (max-width: 700px) {
-  .toast {
+  .feedback-toast {
     top: 14px;
     right: 14px;
   }
 
-  .modal-actions {
+  .feedback-modal-actions {
     flex-direction: column-reverse;
   }
 
-  .modal-actions button {
+  .feedback-modal-actions .ui-btn {
     width: 100%;
+    margin-right: 0;
   }
 }

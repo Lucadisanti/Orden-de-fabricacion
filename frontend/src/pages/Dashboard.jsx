@@ -63,7 +63,7 @@ export default function Dashboard() {
 
   return (
     <section className="dashboard">
-      <div className="page-header">
+      <div className="ui-page-header">
         <h1>Dashboard</h1>
         <p>Resumen general del sistema de trazabilidad de calzado.</p>
       </div>

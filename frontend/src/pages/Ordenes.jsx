@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
+import ConfirmModal from "../components/ConfirmModal";
 import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Ordenes.css";
 
@@ -12,6 +13,8 @@ export default function Ordenes() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
+  const [confirmacion, setConfirmacion] = useState(null);
+  const formRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -26,6 +29,15 @@ export default function Ordenes() {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  const desplazarAlFormulario = () => {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
+
+  const pedirConfirmacion = (config) => setConfirmacion(config);
+  const cerrarConfirmacion = () => setConfirmacion(null);
 
   const mostrarToast = (type, title, message) => setToast({ type, title, message });
 
@@ -51,11 +63,11 @@ export default function Ordenes() {
     const estadoNormalizado = estado.toLowerCase();
 
     if (estadoNormalizado.includes("producción") || estadoNormalizado.includes("produccion")) {
-      return "estado-produccion";
+      return "ui-status-produccion";
     }
 
-    if (estadoNormalizado.includes("pendiente")) return "estado-pendiente";
-    if (estadoNormalizado.includes("finalizada") || estadoNormalizado.includes("finalizado")) return "estado-finalizada";
+    if (estadoNormalizado.includes("pendiente")) return "ui-status-pendiente";
+    if (estadoNormalizado.includes("finalizada") || estadoNormalizado.includes("finalizado")) return "ui-status-finalizada";
 
     return "";
   };
@@ -69,6 +81,7 @@ export default function Ordenes() {
     setIdEditando(null);
     setOrdenForm({ producto_id_producto: "", numero_orden: "", fecha: "" });
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const iniciarEdicion = (orden) => {
@@ -80,6 +93,7 @@ export default function Ordenes() {
       fecha: orden.fecha || "",
     });
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const guardarOrden = async (e) => {
@@ -128,37 +142,54 @@ export default function Ordenes() {
     }
   };
 
-  const eliminarOrden = async (id_orden) => {
-    const confirmar = window.confirm("¿Seguro que desea eliminar esta orden?");
-    if (!confirmar) return;
+  const eliminarOrden = (id_orden) => {
+    pedirConfirmacion({
+      title: "Eliminar orden",
+      message: "Esta acción eliminará la orden seleccionada.",
+      confirmText: "Eliminar",
+      danger: true,
+      onConfirm: async () => {
+        cerrarConfirmacion();
 
-    try {
+        try {
       await axios.delete(`${API_URL}/ordenes/${id_orden}`);
       setOrdenes(ordenes.filter((orden) => orden.id_orden !== id_orden));
       mostrarToast("success", "Orden eliminada", "El registro se eliminó correctamente.");
-    } catch (error) {
+        } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "orden"));
-    }
+        }
+      },
+    });
   };
 
   return (
     <section className="ordenes">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
 
-      <div className="page-header page-header-row">
+      <ConfirmModal
+        open={Boolean(confirmacion)}
+        title={confirmacion?.title}
+        message={confirmacion?.message}
+        confirmText={confirmacion?.confirmText}
+        danger={confirmacion?.danger}
+        onCancel={cerrarConfirmacion}
+        onConfirm={confirmacion?.onConfirm}
+      />
+
+      <div className="ui-page-header ui-page-header-row">
         <div>
           <h1>Órdenes de Fabricación</h1>
           <p>Seguimiento de órdenes asociadas a productos fabricados.</p>
         </div>
 
-        <button className="btn-primary" onClick={abrirFormularioNuevo}>
+        <button className="ui-btn ui-btn-primary" onClick={abrirFormularioNuevo}>
           + Nueva orden
         </button>
       </div>
 
       {mostrarFormulario && (
-        <div className="form-card">
+        <div className="ui-form-card" ref={formRef}>
           <h2>{editando ? "Editar orden" : "Nueva orden"}</h2>
 
           <form onSubmit={guardarOrden} className="form-orden">
@@ -182,14 +213,14 @@ export default function Ordenes() {
 
             <input type="date" name="fecha" value={ordenForm.fecha} onChange={manejarCambio} required />
 
-            <div className="form-actions">
-              <button type="submit" className="btn-primary">
+            <div className="ui-form-actions">
+              <button type="submit" className="ui-btn ui-btn-primary">
                 {editando ? "Actualizar" : "Guardar"}
               </button>
 
               <button
                 type="button"
-                className="btn-secondary"
+                className="ui-btn ui-btn-secondary"
                 onClick={() => {
                   setMostrarFormulario(false);
                   setEditando(false);
@@ -207,11 +238,10 @@ export default function Ordenes() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="table-card">
-          <table className="data-table">
+        <div className="ui-table-card">
+          <table className="ui-data-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Nº Orden</th>
                 <th>Artículo</th>
                 <th>Producto</th>
@@ -225,22 +255,21 @@ export default function Ordenes() {
             <tbody>
               {ordenes.map((orden) => (
                 <tr key={orden.id_orden}>
-                  <td>{orden.id_orden}</td>
                   <td>{orden.numero_orden}</td>
                   <td>{orden.articulo_producto || "-"}</td>
                   <td>{orden.producto || "-"}</td>
                   <td>{orden.color || "-"}</td>
                   <td>{orden.fecha}</td>
                   <td>
-                    <span className={`estado-badge ${getEstadoClass(orden.estado)}`}>
+                    <span className={`ui-status-badge ${getEstadoClass(orden.estado)}`}>
                       {orden.estado || "Pendiente"}
                     </span>
                   </td>
                   <td>
-                    <button className="btn-secondary" onClick={() => iniciarEdicion(orden)}>
+                    <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(orden)}>
                       Editar
                     </button>
-                    <button className="btn-danger" onClick={() => eliminarOrden(orden.id_orden)}>
+                    <button className="ui-btn ui-btn-danger" onClick={() => eliminarOrden(orden.id_orden)}>
                       Eliminar
                     </button>
                   </td>

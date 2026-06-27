@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
+import Toast from "../components/Toast";
+import ConfirmModal from "../components/ConfirmModal";
+import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/UsoMateriales.css";
 
 export default function UsoMateriales() {
@@ -8,6 +11,9 @@ export default function UsoMateriales() {
   const [lotes, setLotes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState(null);
+  const [confirmacion, setConfirmacion] = useState(null);
+  const formRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -22,6 +28,17 @@ export default function UsoMateriales() {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  const desplazarAlFormulario = () => {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
+
+  const mostrarToast = (type, title, message) => setToast({ type, title, message });
+  const pedirConfirmacion = (config) => setConfirmacion(config);
+  const cerrarConfirmacion = () => setConfirmacion(null);
+
 
   const cargarDatos = async () => {
     try {
@@ -58,6 +75,7 @@ export default function UsoMateriales() {
       cantidad_usada: "",
     });
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const iniciarEdicion = (uso) => {
@@ -75,6 +93,7 @@ export default function UsoMateriales() {
     });
 
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const guardarUsoMaterial = async (e) => {
@@ -95,11 +114,11 @@ export default function UsoMateriales() {
           datos
         );
 
-        alert("Uso de material actualizado correctamente.");
+        mostrarToast("success", "Uso actualizado", "Los cambios se guardaron correctamente.");
       } else {
         await axios.post("http://127.0.0.1:5000/api/uso-materiales/", datos);
 
-        alert("Uso de material registrado correctamente.");
+        mostrarToast("success", "Uso registrado", "El material utilizado se registró correctamente.");
       }
 
       setForm({
@@ -114,39 +133,49 @@ export default function UsoMateriales() {
       cargarDatos();
     } catch (error) {
       console.error(error);
-      alert(
-        error.response?.data?.error || "No se pudo guardar el uso de material."
-      );
+      mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "uso de material"));
     }
   };
 
-  const eliminarUsoMaterial = async (id_uso) => {
-    const confirmar = window.confirm(
-      "¿Seguro que desea eliminar este uso de material?"
-    );
+  const eliminarUsoMaterial = (id_uso) => {
+    pedirConfirmacion({
+      title: "Eliminar uso de material",
+      message: "Esta acción eliminará el material utilizado seleccionado.",
+      confirmText: "Eliminar",
+      danger: true,
+      onConfirm: async () => {
+        cerrarConfirmacion();
 
-    if (!confirmar) return;
+        try {
+          await axios.delete(
+            `http://127.0.0.1:5000/api/uso-materiales/${id_uso}`
+          );
 
-    try {
-      await axios.delete(
-        `http://127.0.0.1:5000/api/uso-materiales/${id_uso}`
-      );
+          setUsos(usos.filter((uso) => uso.id_uso !== id_uso));
 
-      setUsos(usos.filter((uso) => uso.id_uso !== id_uso));
-
-      alert("Uso de material eliminado correctamente.");
-    } catch (error) {
-      console.error(error);
-      alert(
-        error.response?.data?.error ||
-          "No se pudo eliminar el uso de material."
-      );
-    }
+          mostrarToast("success", "Uso eliminado", "El registro se eliminó correctamente.");
+        } catch (error) {
+          console.error(error);
+          mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "uso de material"));
+        }
+      },
+    });
   };
 
   return (
     <section className="uso-materiales">
-      <div className="page-header page-header-row">
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+
+      <ConfirmModal
+        open={Boolean(confirmacion)}
+        title={confirmacion?.title}
+        message={confirmacion?.message}
+        confirmText={confirmacion?.confirmText}
+        danger={confirmacion?.danger}
+        onCancel={cerrarConfirmacion}
+        onConfirm={confirmacion?.onConfirm}
+      />
+      <div className="ui-page-header ui-page-header-row">
         <div>
           <h1>Uso de Materiales</h1>
           <p>
@@ -154,13 +183,13 @@ export default function UsoMateriales() {
           </p>
         </div>
 
-        <button className="btn-primary" onClick={abrirFormularioNuevo}>
+        <button className="ui-btn ui-btn-primary" onClick={abrirFormularioNuevo}>
           + Registrar uso
         </button>
       </div>
 
       {mostrarFormulario && (
-        <div className="form-card">
+        <div className="ui-form-card" ref={formRef}>
           <h2>{editando ? "Editar uso de material" : "Nuevo uso de material"}</h2>
 
           <form onSubmit={guardarUsoMaterial} className="form-uso-material">
@@ -212,14 +241,14 @@ export default function UsoMateriales() {
               required
             />
 
-            <div className="form-actions">
-              <button type="submit" className="btn-primary">
+            <div className="ui-form-actions">
+              <button type="submit" className="ui-btn ui-btn-primary">
                 {editando ? "Actualizar" : "Guardar"}
               </button>
 
               <button
                 type="button"
-                className="btn-secondary"
+                className="ui-btn ui-btn-secondary"
                 onClick={() => {
                   setMostrarFormulario(false);
                   setEditando(false);
@@ -238,11 +267,10 @@ export default function UsoMateriales() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="table-card">
-          <table className="data-table">
+        <div className="ui-table-card">
+          <table className="ui-data-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Planilla</th>
                 <th>Orden</th>
                 <th>Remito</th>
@@ -257,7 +285,6 @@ export default function UsoMateriales() {
             <tbody>
               {usos.map((uso) => (
                 <tr key={uso.id_uso}>
-                  <td>{uso.id_uso}</td>
                   <td>{uso.numero_planilla || uso.planilla || "-"}</td>
                   <td>{uso.numero_orden || uso.orden || "-"}</td>
                   <td>{uso.numero_remito || "-"}</td>
@@ -267,14 +294,14 @@ export default function UsoMateriales() {
                   <td>{uso.cantidad_usada}</td>
                   <td>
                     <button
-                      className="btn-secondary"
+                      className="ui-btn ui-btn-secondary"
                       onClick={() => iniciarEdicion(uso)}
                     >
                       Editar
                     </button>
 
                     <button
-                      className="btn-danger"
+                      className="ui-btn ui-btn-danger"
                       onClick={() => eliminarUsoMaterial(uso.id_uso)}
                     >
                       Eliminar

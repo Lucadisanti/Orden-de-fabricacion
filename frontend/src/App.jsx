@@ -13,6 +13,7 @@ import Trazabilidad from "./pages/Trazabilidad";
 import RecepcionMateriales from "./pages/RecepcionMateriales";
 
 import "./App.css";
+import "./styles/ui.css";
 
 function App() {
   return (

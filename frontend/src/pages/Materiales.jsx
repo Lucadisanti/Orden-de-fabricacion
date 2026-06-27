@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
+import ConfirmModal from "../components/ConfirmModal";
 import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Materiales.css";
 
@@ -11,6 +12,8 @@ export default function Materiales() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
+  const [confirmacion, setConfirmacion] = useState(null);
+  const formRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -21,6 +24,15 @@ export default function Materiales() {
   useEffect(() => {
     cargarMateriales();
   }, []);
+
+  const desplazarAlFormulario = () => {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
+
+  const pedirConfirmacion = (config) => setConfirmacion(config);
+  const cerrarConfirmacion = () => setConfirmacion(null);
 
   const mostrarToast = (type, title, message) => {
     setToast({ type, title, message });
@@ -49,6 +61,7 @@ export default function Materiales() {
     setIdEditando(null);
     setMaterialForm({ material: "" });
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const iniciarEdicion = (material) => {
@@ -56,6 +69,7 @@ export default function Materiales() {
     setIdEditando(material.id_material);
     setMaterialForm({ material: material.material });
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const guardarMaterial = async (e) => {
@@ -100,37 +114,54 @@ export default function Materiales() {
     }
   };
 
-  const eliminarMaterial = async (id_material) => {
-    const confirmar = window.confirm("¿Seguro que desea eliminar este material?");
-    if (!confirmar) return;
+  const eliminarMaterial = (id_material) => {
+    pedirConfirmacion({
+      title: "Eliminar material",
+      message: "Esta acción eliminará el material seleccionado.",
+      confirmText: "Eliminar",
+      danger: true,
+      onConfirm: async () => {
+        cerrarConfirmacion();
 
-    try {
+        try {
       await axios.delete(`${API_URL}/materiales/${id_material}`);
       setMateriales(materiales.filter((material) => material.id_material !== id_material));
       mostrarToast("success", "Material eliminado", "El registro se eliminó correctamente.");
-    } catch (error) {
+        } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "material"));
-    }
+        }
+      },
+    });
   };
 
   return (
     <section className="materiales">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
 
-      <div className="page-header page-header-row">
+      <ConfirmModal
+        open={Boolean(confirmacion)}
+        title={confirmacion?.title}
+        message={confirmacion?.message}
+        confirmText={confirmacion?.confirmText}
+        danger={confirmacion?.danger}
+        onCancel={cerrarConfirmacion}
+        onConfirm={confirmacion?.onConfirm}
+      />
+
+      <div className="ui-page-header ui-page-header-row">
         <div>
           <h1>Materiales</h1>
           <p>Gestión de materiales utilizados en la fabricación de calzado.</p>
         </div>
 
-        <button className="btn-primary" onClick={abrirFormularioNuevo}>
+        <button className="ui-btn ui-btn-primary" onClick={abrirFormularioNuevo}>
           + Nuevo material
         </button>
       </div>
 
       {mostrarFormulario && (
-        <div className="form-card">
+        <div className="ui-form-card" ref={formRef}>
           <h2>{editando ? "Editar material" : "Nuevo material"}</h2>
 
           <form onSubmit={guardarMaterial} className="form-producto">
@@ -143,14 +174,14 @@ export default function Materiales() {
               required
             />
 
-            <div className="form-actions">
-              <button type="submit" className="btn-primary">
+            <div className="ui-form-actions">
+              <button type="submit" className="ui-btn ui-btn-primary">
                 {editando ? "Actualizar" : "Guardar"}
               </button>
 
               <button
                 type="button"
-                className="btn-secondary"
+                className="ui-btn ui-btn-secondary"
                 onClick={() => {
                   setMostrarFormulario(false);
                   setEditando(false);
@@ -168,11 +199,10 @@ export default function Materiales() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="table-card">
-          <table className="data-table">
+        <div className="ui-table-card">
+          <table className="ui-data-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Material</th>
                 <th>Acciones</th>
               </tr>
@@ -181,13 +211,12 @@ export default function Materiales() {
             <tbody>
               {materiales.map((material) => (
                 <tr key={material.id_material}>
-                  <td>{material.id_material}</td>
                   <td>{material.material}</td>
                   <td>
-                    <button className="btn-secondary" onClick={() => iniciarEdicion(material)}>
+                    <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(material)}>
                       Editar
                     </button>
-                    <button className="btn-danger" onClick={() => eliminarMaterial(material.id_material)}>
+                    <button className="ui-btn ui-btn-danger" onClick={() => eliminarMaterial(material.id_material)}>
                       Eliminar
                     </button>
                   </td>

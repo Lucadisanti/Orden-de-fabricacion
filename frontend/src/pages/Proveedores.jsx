@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
+import ConfirmModal from "../components/ConfirmModal";
 import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Proveedores.css";
 
@@ -11,6 +12,8 @@ export default function Proveedores() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
+  const [confirmacion, setConfirmacion] = useState(null);
+  const formRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -26,6 +29,15 @@ export default function Proveedores() {
   useEffect(() => {
     cargarProveedores();
   }, []);
+
+  const desplazarAlFormulario = () => {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
+
+  const pedirConfirmacion = (config) => setConfirmacion(config);
+  const cerrarConfirmacion = () => setConfirmacion(null);
 
   const mostrarToast = (type, title, message) => setToast({ type, title, message });
 
@@ -52,6 +64,7 @@ export default function Proveedores() {
     setIdEditando(null);
     setProveedorForm({ nombre_proveedor: "", cuit: "", telefono: "", email: "" });
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const iniciarEdicion = (proveedor) => {
@@ -64,6 +77,7 @@ export default function Proveedores() {
       email: proveedor.email || "",
     });
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const guardarProveedor = async (e) => {
@@ -117,37 +131,54 @@ export default function Proveedores() {
     }
   };
 
-  const eliminarProveedor = async (id_proveedor) => {
-    const confirmar = window.confirm("¿Seguro que desea eliminar este proveedor?");
-    if (!confirmar) return;
+  const eliminarProveedor = (id_proveedor) => {
+    pedirConfirmacion({
+      title: "Eliminar proveedor",
+      message: "Esta acción eliminará el proveedor seleccionado.",
+      confirmText: "Eliminar",
+      danger: true,
+      onConfirm: async () => {
+        cerrarConfirmacion();
 
-    try {
+        try {
       await axios.delete(`${API_URL}/proveedores/${id_proveedor}`);
       setProveedores(proveedores.filter((proveedor) => proveedor.id_proveedor !== id_proveedor));
       mostrarToast("success", "Proveedor eliminado", "El registro se eliminó correctamente.");
-    } catch (error) {
+        } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "proveedor"));
-    }
+        }
+      },
+    });
   };
 
   return (
     <section className="proveedores">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
 
-      <div className="page-header page-header-row">
+      <ConfirmModal
+        open={Boolean(confirmacion)}
+        title={confirmacion?.title}
+        message={confirmacion?.message}
+        confirmText={confirmacion?.confirmText}
+        danger={confirmacion?.danger}
+        onCancel={cerrarConfirmacion}
+        onConfirm={confirmacion?.onConfirm}
+      />
+
+      <div className="ui-page-header ui-page-header-row">
         <div>
           <h1>Proveedores</h1>
           <p>Gestión de proveedores de materiales e insumos.</p>
         </div>
 
-        <button className="btn-primary" onClick={abrirFormularioNuevo}>
+        <button className="ui-btn ui-btn-primary" onClick={abrirFormularioNuevo}>
           + Nuevo proveedor
         </button>
       </div>
 
       {mostrarFormulario && (
-        <div className="form-card">
+        <div className="ui-form-card" ref={formRef}>
           <h2>{editando ? "Editar proveedor" : "Nuevo proveedor"}</h2>
 
           <form onSubmit={guardarProveedor} className="form-proveedor">
@@ -169,13 +200,13 @@ export default function Proveedores() {
             />
             <input type="email" name="email" placeholder="Email" value={proveedorForm.email} onChange={manejarCambio} />
 
-            <div className="form-actions">
-              <button type="submit" className="btn-primary">
+            <div className="ui-form-actions">
+              <button type="submit" className="ui-btn ui-btn-primary">
                 {editando ? "Actualizar" : "Guardar"}
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className="ui-btn ui-btn-secondary"
                 onClick={() => {
                   setMostrarFormulario(false);
                   setEditando(false);
@@ -193,11 +224,10 @@ export default function Proveedores() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="table-card">
-          <table className="data-table">
+        <div className="ui-table-card">
+          <table className="ui-data-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Proveedor</th>
                 <th>CUIT</th>
                 <th>Teléfono</th>
@@ -209,16 +239,15 @@ export default function Proveedores() {
             <tbody>
               {proveedores.map((proveedor) => (
                 <tr key={proveedor.id_proveedor}>
-                  <td>{proveedor.id_proveedor}</td>
                   <td>{proveedor.nombre_proveedor}</td>
                   <td>{proveedor.cuit || "-"}</td>
                   <td>{proveedor.telefono || "-"}</td>
                   <td>{proveedor.email || "-"}</td>
                   <td>
-                    <button className="btn-secondary" onClick={() => iniciarEdicion(proveedor)}>
+                    <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(proveedor)}>
                       Editar
                     </button>
-                    <button className="btn-danger" onClick={() => eliminarProveedor(proveedor.id_proveedor)}>
+                    <button className="ui-btn ui-btn-danger" onClick={() => eliminarProveedor(proveedor.id_proveedor)}>
                       Eliminar
                     </button>
                   </td>

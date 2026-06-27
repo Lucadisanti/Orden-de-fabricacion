@@ -29,8 +29,8 @@ export default function PromptModal({
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card">
+    <div className="feedback-modal-backdrop">
+      <div className="feedback-modal-card">
         <h2>{title}</h2>
         <form onSubmit={submit}>
           <label>{label}</label>
@@ -42,11 +42,11 @@ export default function PromptModal({
             onChange={(e) => setValue(e.target.value)}
           />
 
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={cancelar}>
+          <div className="feedback-modal-actions">
+            <button type="button" className="ui-btn ui-btn-secondary" onClick={cancelar}>
               {cancelText}
             </button>
-            <button type="submit" className="btn-primary">
+            <button type="submit" className="ui-btn ui-btn-primary">
               {confirmText}
             </button>
           </div>

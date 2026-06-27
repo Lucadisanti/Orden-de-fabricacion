@@ -11,7 +11,7 @@ export default function Toast({ type = "info", title, message, onClose }) {
   }, [onClose]);
 
   return (
-    <div className={`toast toast-${type}`} role="status">
+    <div className={`feedback-toast feedback-toast-${type}`} role="status">
       <div>
         <strong>{title}</strong>
         {message && <p>{message}</p>}

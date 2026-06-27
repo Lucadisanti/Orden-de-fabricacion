@@ -24,7 +24,11 @@ export function obtenerMensajeError(error, entidad = "registro") {
     }
 
     if (lower.includes("remito")) {
-      return "Ya existe un remito con ese número. Revisá el proveedor o cargá el material en el remito existente.";
+      return "Ese número de remito ya existe para este proveedor. Si el proveedor es distinto, se puede usar el mismo número.";
+    }
+
+    if (lower.includes("planilla")) {
+      return "Ya existe una planilla con ese número. Usá otro número o editá la planilla existente.";
     }
 
     return `Ya existe un ${entidad} con esos datos.`;

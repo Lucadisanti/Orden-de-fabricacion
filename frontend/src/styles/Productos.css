@@ -1,161 +1,30 @@
-.page-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.table-card {
-  background: white;
-  border-radius: 14px;
-  padding: 20px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-  overflow-x: auto;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.data-table th {
-  text-align: left;
-  font-size: 14px;
-  color: #374151;
-  padding: 14px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.data-table td {
-  padding: 14px;
-  border-bottom: 1px solid #f3f4f6;
-  color: #374151;
-}
-
-.data-table tbody tr:hover {
-  background: #f9fafb;
-}
-
-.btn-primary {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  background: #1d4ed8;
-}
-
-.btn-secondary {
-  background: #e5e7eb;
-  color: #111827;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 7px;
-  cursor: pointer;
-  margin-right: 8px;
-}
-
-.btn-secondary:hover {
-  background: #d1d5db;
-}
-
-.btn-danger {
-  background: #fee2e2;
-  color: #991b1b;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 7px;
-  cursor: pointer;
-}
-
-.btn-danger:hover {
-  background: #fecaca;
-}
-
-/* FORMULARIO */
-
-.form-card {
-  background: white;
-  border-radius: 14px;
-  padding: 25px;
-  margin-bottom: 25px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-}
-
-.form-card h2 {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.form-producto {
-  max-width: 700px;
-  margin: 0 auto;
+.productos .form-producto {
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
 
-.form-producto input,
-.form-producto select {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 15px;
-  box-sizing: border-box;
-}
-
-.form-producto input:focus,
-.form-producto select:focus {
-  outline: none;
-  border-color: #2563eb;
-}
-
-.color-row {
+.productos .color-row {
   display: flex;
   gap: 10px;
   align-items: center;
 }
 
-.color-row select {
+.productos .color-row select {
   flex: 1;
 }
 
-.color-row button {
+.productos .color-row button {
   white-space: nowrap;
 }
 
-.form-actions {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 10px;
-}
-
 @media (max-width: 700px) {
-  .page-header-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
-  }
-
-  .color-row {
+  .productos .color-row {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .color-row button {
-    width: 100%;
-  }
-
-  .form-actions {
-    flex-direction: column;
-  }
-
-  .form-actions button {
+  .productos .color-row button {
     width: 100%;
   }
 }

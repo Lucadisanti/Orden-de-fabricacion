@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
+import Toast from "../components/Toast";
+import ConfirmModal from "../components/ConfirmModal";
+import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Planillas.css";
 
 export default function Planillas() {
@@ -18,6 +21,9 @@ export default function Planillas() {
   const [maquinas, setMaquinas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState(null);
+  const [confirmacion, setConfirmacion] = useState(null);
+  const formRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -54,6 +60,17 @@ export default function Planillas() {
     cargarDatos();
   }, []);
 
+  const desplazarAlFormulario = () => {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
+
+  const mostrarToast = (type, title, message) => setToast({ type, title, message });
+  const pedirConfirmacion = (config) => setConfirmacion(config);
+  const cerrarConfirmacion = () => setConfirmacion(null);
+
+
   const cargarDatos = async () => {
     try {
       const [planillasRes, ordenesRes, maquinasRes] = await Promise.all([
@@ -83,16 +100,16 @@ export default function Planillas() {
       estadoNormalizado.includes("producción") ||
       estadoNormalizado.includes("produccion")
     ) {
-      return "estado-produccion";
+      return "ui-status-produccion";
     }
 
-    if (estadoNormalizado.includes("pendiente")) return "estado-pendiente";
+    if (estadoNormalizado.includes("pendiente")) return "ui-status-pendiente";
 
     if (
       estadoNormalizado.includes("finalizada") ||
       estadoNormalizado.includes("finalizado")
     ) {
-      return "estado-finalizada";
+      return "ui-status-finalizada";
     }
 
     return "";
@@ -145,6 +162,7 @@ export default function Planillas() {
       estado: "Pendiente",
     });
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const iniciarEdicion = (planilla) => {
@@ -161,6 +179,7 @@ export default function Planillas() {
     });
 
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const guardarPlanilla = async (e) => {
@@ -183,10 +202,10 @@ export default function Planillas() {
           `http://127.0.0.1:5000/api/planillas/${idEditando}`,
           datos
         );
-        alert("Planilla actualizada correctamente.");
+        mostrarToast("success", "Planilla actualizada", "Los cambios se guardaron correctamente.");
       } else {
         await axios.post("http://127.0.0.1:5000/api/planillas/", datos);
-        alert("Planilla creada correctamente.");
+        mostrarToast("success", "Planilla creada", "La planilla se agregó correctamente.");
       }
 
       setPlanillaForm({
@@ -204,38 +223,40 @@ export default function Planillas() {
       cargarDatos();
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.error || "No se pudo guardar la planilla.");
+      mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "planilla"));
     }
   };
 
-  const eliminarPlanilla = async (id_planilla) => {
-    const confirmar = window.confirm(
-      "¿Seguro que desea eliminar esta planilla?"
-    );
+  const eliminarPlanilla = (id_planilla) => {
+    pedirConfirmacion({
+      title: "Eliminar planilla",
+      message: "Esta acción eliminará la planilla seleccionada. Si tiene detalles, operarios o materiales asociados, el sistema no lo permitirá.",
+      confirmText: "Eliminar",
+      danger: true,
+      onConfirm: async () => {
+        cerrarConfirmacion();
 
-    if (!confirmar) return;
+        try {
+          await axios.delete(
+            `http://127.0.0.1:5000/api/planillas/${id_planilla}`
+          );
 
-    try {
-      await axios.delete(
-        `http://127.0.0.1:5000/api/planillas/${id_planilla}`
-      );
+          setPlanillas(
+            planillas.filter((planilla) => planilla.id_planilla !== id_planilla)
+          );
 
-      setPlanillas(
-        planillas.filter((planilla) => planilla.id_planilla !== id_planilla)
-      );
+          mostrarToast("success", "Planilla eliminada", "El registro se eliminó correctamente.");
+        } catch (error) {
+          console.error(error);
 
-      alert("Planilla eliminada correctamente.");
-    } catch (error) {
-      console.error(error);
-
-      if (error.response?.data?.error?.includes("foreign key constraint fails")) {
-        alert(
-          "No se puede eliminar esta planilla porque tiene detalles, operarios o materiales asociados."
-        );
-      } else {
-        alert(error.response?.data?.error || "No se pudo eliminar la planilla.");
-      }
-    }
+          if (error.response?.data?.error?.includes("foreign key constraint fails")) {
+            mostrarToast("warning", "No se puede eliminar", "La planilla tiene detalles, operarios o materiales asociados.");
+          } else {
+            mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "planilla"));
+          }
+        }
+      },
+    });
   };
 
   const gestionarPlanilla = async (planilla) => {
@@ -265,7 +286,7 @@ export default function Planillas() {
       );
     } catch (error) {
       console.error(error);
-      alert("No se pudieron cargar los datos de la planilla.");
+      mostrarToast("error", "No se pudieron cargar datos", "No se pudieron cargar los datos de la planilla.");
     }
   };
 
@@ -280,7 +301,7 @@ export default function Planillas() {
       .filter((item) => item.cantidad > 0);
 
     if (tallesConCantidad.length === 0) {
-      alert("Debe cargar al menos una cantidad.");
+      mostrarToast("warning", "Faltan cantidades", "Debe cargar al menos una cantidad mayor a cero.");
       return;
     }
 
@@ -299,33 +320,39 @@ export default function Planillas() {
 
       setTallesForm(crearTallesIniciales());
       gestionarPlanilla(planillaSeleccionada);
-      alert("Talles cargados correctamente.");
+      mostrarToast("success", "Talles cargados", "Los talles se guardaron correctamente.");
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.error || "No se pudieron guardar los talles.");
+      mostrarToast("error", "No se pudieron guardar", obtenerMensajeError(error, "detalle de planilla"));
     }
   };
 
-  const eliminarDetalle = async (id_detalle) => {
-  const confirmar = window.confirm("¿Seguro que desea eliminar este detalle?");
+  const eliminarDetalle = (id_detalle) => {
+    pedirConfirmacion({
+      title: "Eliminar detalle",
+      message: "Esta acción eliminará el detalle de talle seleccionado.",
+      confirmText: "Eliminar",
+      danger: true,
+      onConfirm: async () => {
+        cerrarConfirmacion();
 
-  if (!confirmar) return;
+        try {
+          await axios.delete(
+            `http://127.0.0.1:5000/api/planillas/detalles/${id_detalle}`
+          );
 
-  try {
-    await axios.delete(
-      `http://127.0.0.1:5000/api/planillas/detalles/${id_detalle}`
-    );
+          setDetalles((prevDetalles) =>
+            prevDetalles.filter((detalle) => detalle.id_detalle !== id_detalle)
+          );
 
-    setDetalles((prevDetalles) =>
-      prevDetalles.filter((detalle) => detalle.id_detalle !== id_detalle)
-    );
-
-    alert("Detalle eliminado correctamente.");
-  } catch (error) {
-    console.error(error);
-    alert(error.response?.data?.error || "No se pudo eliminar el detalle.");
-  }
-};
+          mostrarToast("success", "Detalle eliminado", "El detalle se eliminó correctamente.");
+        } catch (error) {
+          console.error(error);
+          mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "detalle"));
+        }
+      },
+    });
+  };
 
   const agregarOperario = async (e) => {
     e.preventDefault();
@@ -347,36 +374,40 @@ export default function Planillas() {
       });
 
       gestionarPlanilla(planillaSeleccionada);
-      alert("Operario agregado correctamente.");
+      mostrarToast("success", "Operario agregado", "El operario se agregó correctamente.");
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.error || "No se pudo agregar el operario.");
+      mostrarToast("error", "No se pudo agregar", obtenerMensajeError(error, "operario"));
     }
   };
 
-  const eliminarOperario = async (id_operario_planilla) => {
-    const confirmar = window.confirm(
-      "¿Seguro que desea eliminar este operario?"
-    );
+  const eliminarOperario = (id_operario_planilla) => {
+    pedirConfirmacion({
+      title: "Eliminar operario",
+      message: "Esta acción eliminará el operario asignado a la planilla.",
+      confirmText: "Eliminar",
+      danger: true,
+      onConfirm: async () => {
+        cerrarConfirmacion();
 
-    if (!confirmar) return;
+        try {
+          await axios.delete(
+            `http://127.0.0.1:5000/api/planillas/operarios/${id_operario_planilla}`
+          );
 
-    try {
-      await axios.delete(
-        `http://127.0.0.1:5000/api/planillas/operarios/${id_operario_planilla}`
-      );
+          setOperarios(
+            operarios.filter(
+              (operario) => operario.id_operario_planilla !== id_operario_planilla
+            )
+          );
 
-      setOperarios(
-        operarios.filter(
-          (operario) => operario.id_operario_planilla !== id_operario_planilla
-        )
-      );
-
-      alert("Operario eliminado correctamente.");
-    } catch (error) {
-      console.error(error);
-      alert(error.response?.data?.error || "No se pudo eliminar el operario.");
-    }
+          mostrarToast("success", "Operario eliminado", "El operario se eliminó correctamente.");
+        } catch (error) {
+          console.error(error);
+          mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "operario"));
+        }
+      },
+    });
   };
 
   const agregarUsoMaterial = async (e) => {
@@ -399,51 +430,62 @@ export default function Planillas() {
       });
 
       gestionarPlanilla(planillaSeleccionada);
-      alert("Material agregado correctamente.");
+      mostrarToast("success", "Material agregado", "El material utilizado se registró correctamente.");
     } catch (error) {
       console.error(error);
-      alert(
-        error.response?.data?.error ||
-          "No se pudo registrar el material utilizado."
-      );
+      mostrarToast("error", "No se pudo registrar", obtenerMensajeError(error, "uso de material"));
     }
   };
 
-  const eliminarUsoMaterial = async (id_uso) => {
-    const confirmar = window.confirm("¿Eliminar este uso de material?");
+  const eliminarUsoMaterial = (id_uso) => {
+    pedirConfirmacion({
+      title: "Eliminar material utilizado",
+      message: "Esta acción eliminará el uso de material seleccionado.",
+      confirmText: "Eliminar",
+      danger: true,
+      onConfirm: async () => {
+        cerrarConfirmacion();
 
-    if (!confirmar) return;
+        try {
+          await axios.delete(`http://127.0.0.1:5000/api/uso-materiales/${id_uso}`);
 
-    try {
-      await axios.delete(`http://127.0.0.1:5000/api/uso-materiales/${id_uso}`);
+          setUsosMateriales(usosMateriales.filter((uso) => uso.id_uso !== id_uso));
 
-      setUsosMateriales(usosMateriales.filter((uso) => uso.id_uso !== id_uso));
-
-      alert("Material eliminado correctamente.");
-    } catch (error) {
-      console.error(error);
-      alert(
-        error.response?.data?.error ||
-          "No se pudo eliminar el material utilizado."
-      );
-    }
+          mostrarToast("success", "Material eliminado", "El uso de material se eliminó correctamente.");
+        } catch (error) {
+          console.error(error);
+          mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "uso de material"));
+        }
+      },
+    });
   };
 
   return (
     <section className="planillas">
-      <div className="page-header page-header-row">
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+
+      <ConfirmModal
+        open={Boolean(confirmacion)}
+        title={confirmacion?.title}
+        message={confirmacion?.message}
+        confirmText={confirmacion?.confirmText}
+        danger={confirmacion?.danger}
+        onCancel={cerrarConfirmacion}
+        onConfirm={confirmacion?.onConfirm}
+      />
+      <div className="ui-page-header ui-page-header-row">
         <div>
           <h1>Planillas de Producción</h1>
           <p>Control de planillas asociadas a órdenes de fabricación.</p>
         </div>
 
-        <button className="btn-primary" onClick={abrirFormularioNuevo}>
+        <button className="ui-btn ui-btn-primary" onClick={abrirFormularioNuevo}>
           + Nueva planilla
         </button>
       </div>
 
       {mostrarFormulario && (
-        <div className="form-card">
+        <div className="ui-form-card" ref={formRef}>
           <h2>{editando ? "Editar planilla" : "Nueva planilla"}</h2>
 
           <form onSubmit={guardarPlanilla} className="form-planilla">
@@ -518,14 +560,14 @@ export default function Planillas() {
               <option value="Finalizada">Finalizada</option>
             </select>
 
-            <div className="form-actions">
-              <button type="submit" className="btn-primary">
+            <div className="ui-form-actions">
+              <button type="submit" className="ui-btn ui-btn-primary">
                 {editando ? "Actualizar" : "Guardar"}
               </button>
 
               <button
                 type="button"
-                className="btn-secondary"
+                className="ui-btn ui-btn-secondary"
                 onClick={() => {
                   setMostrarFormulario(false);
                   setEditando(false);
@@ -540,7 +582,7 @@ export default function Planillas() {
       )}
 
       {planillaSeleccionada && (
-        <div className="form-card">
+        <div className="ui-form-card">
           <h2>Gestionar planilla {planillaSeleccionada.numero_planilla}</h2>
 
           <p>
@@ -552,8 +594,8 @@ export default function Planillas() {
 
           <h3>Detalles por talle</h3>
 
-          <div className="table-card">
-            <table className="data-table">
+          <div className="ui-table-card">
+            <table className="ui-data-table">
               <thead>
                 <tr>
                   {tallesDisponibles.map((talle) => (
@@ -581,12 +623,12 @@ export default function Planillas() {
               </tbody>
             </table>
 
-            <div className="form-actions">
+            <div className="ui-form-actions">
               <strong>Total pares: {calcularTotalPares()}</strong>
 
               <button
                 type="button"
-                className="btn-primary"
+                className="ui-btn ui-btn-primary"
                 onClick={guardarTalles}
               >
                 Guardar talles
@@ -594,11 +636,10 @@ export default function Planillas() {
             </div>
           </div>
 
-          <div className="table-card">
-            <table className="data-table">
+          <div className="ui-table-card">
+            <table className="ui-data-table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Talle</th>
                   <th>Cantidad pares</th>
                   <th>Acciones</th>
@@ -608,12 +649,11 @@ export default function Planillas() {
               <tbody>
                 {detalles.map((detalle) => (
                   <tr key={detalle.id_detalle}>
-                    <td>{detalle.id_detalle}</td>
                     <td>{detalle.talle}</td>
                     <td>{detalle.cantidad_pares}</td>
                     <td>
                       <button
-                        className="btn-danger"
+                        className="ui-btn ui-btn-danger"
                         onClick={() =>
                             eliminarDetalle(detalle.id_detalle)
                             }
@@ -626,7 +666,7 @@ export default function Planillas() {
 
                 {detalles.length === 0 && (
                   <tr>
-                    <td colSpan="4">Todavía no hay detalles cargados.</td>
+                    <td colSpan="3">Todavía no hay detalles cargados.</td>
                   </tr>
                 )}
               </tbody>
@@ -658,18 +698,17 @@ export default function Planillas() {
               required
             />
 
-            <div className="form-actions">
-              <button type="submit" className="btn-primary">
+            <div className="ui-form-actions">
+              <button type="submit" className="ui-btn ui-btn-primary">
                 Agregar operario
               </button>
             </div>
           </form>
 
-          <div className="table-card">
-            <table className="data-table">
+          <div className="ui-table-card">
+            <table className="ui-data-table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Etapa</th>
                   <th>Operario</th>
                   <th>Acciones</th>
@@ -679,12 +718,11 @@ export default function Planillas() {
               <tbody>
                 {operarios.map((operario) => (
                   <tr key={operario.id_operario_planilla}>
-                    <td>{operario.id_operario_planilla}</td>
                     <td>{operario.etapa}</td>
                     <td>{operario.nombre_operario}</td>
                     <td>
                       <button
-                        className="btn-danger"
+                        className="ui-btn ui-btn-danger"
                         onClick={() =>
                           eliminarOperario(operario.id_operario_planilla)
                         }
@@ -697,7 +735,7 @@ export default function Planillas() {
 
                 {operarios.length === 0 && (
                   <tr>
-                    <td colSpan="4">Todavía no hay operarios cargados.</td>
+                    <td colSpan="3">Todavía no hay operarios cargados.</td>
                   </tr>
                 )}
               </tbody>
@@ -739,14 +777,14 @@ export default function Planillas() {
               required
             />
 
-            <div className="form-actions">
-              <button type="submit" className="btn-primary">
+            <div className="ui-form-actions">
+              <button type="submit" className="ui-btn ui-btn-primary">
                 Agregar material
               </button>
 
               <button
                 type="button"
-                className="btn-secondary"
+                className="ui-btn ui-btn-secondary"
                 onClick={() => {
                   setPlanillaSeleccionada(null);
                   setDetalles([]);
@@ -761,8 +799,8 @@ export default function Planillas() {
             </div>
           </form>
 
-          <div className="table-card">
-            <table className="data-table">
+          <div className="ui-table-card">
+            <table className="ui-data-table">
               <thead>
                 <tr>
                   <th>Remito</th>
@@ -784,7 +822,7 @@ export default function Planillas() {
                     <td>{uso.cantidad_usada}</td>
                     <td>
                       <button
-                        className="btn-danger"
+                        className="ui-btn ui-btn-danger"
                         onClick={() => eliminarUsoMaterial(uso.id_uso)}
                       >
                         Eliminar
@@ -809,11 +847,10 @@ export default function Planillas() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="table-card">
-          <table className="data-table">
+        <div className="ui-table-card">
+          <table className="ui-data-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Nº Planilla</th>
                 <th>Orden</th>
                 <th>Tipo</th>
@@ -827,7 +864,6 @@ export default function Planillas() {
             <tbody>
               {planillas.map((planilla) => (
                 <tr key={planilla.id_planilla}>
-                  <td>{planilla.id_planilla}</td>
                   <td>{planilla.numero_planilla}</td>
                   <td>{planilla.numero_orden || planilla.orden || "-"}</td>
                   <td>{planilla.tipo_planilla}</td>
@@ -835,7 +871,7 @@ export default function Planillas() {
                   <td>{planilla.fecha}</td>
                   <td>
                     <span
-                      className={`estado-badge ${getEstadoClass(
+                      className={`ui-status-badge ${getEstadoClass(
                         planilla.estado
                       )}`}
                     >
@@ -844,21 +880,21 @@ export default function Planillas() {
                   </td>
                   <td>
                     <button
-                      className="btn-secondary"
+                      className="ui-btn ui-btn-secondary"
                       onClick={() => gestionarPlanilla(planilla)}
                     >
                       Gestionar
                     </button>
 
                     <button
-                      className="btn-secondary"
+                      className="ui-btn ui-btn-secondary"
                       onClick={() => iniciarEdicion(planilla)}
                     >
                       Editar
                     </button>
 
                     <button
-                      className="btn-danger"
+                      className="ui-btn ui-btn-danger"
                       onClick={() =>
                         eliminarPlanilla(planilla.id_planilla)
                       }

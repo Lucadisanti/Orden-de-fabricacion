@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
+import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Productos.css";
@@ -13,6 +14,8 @@ export default function Productos() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
+  const [confirmacion, setConfirmacion] = useState(null);
+  const formRef = useRef(null);
   const [mostrarModalColor, setMostrarModalColor] = useState(false);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -29,6 +32,15 @@ export default function Productos() {
     cargarProductos();
     cargarColores();
   }, []);
+
+  const desplazarAlFormulario = () => {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
+
+  const pedirConfirmacion = (config) => setConfirmacion(config);
+  const cerrarConfirmacion = () => setConfirmacion(null);
 
   const mostrarToast = (type, title, message) => {
     setToast({ type, title, message });
@@ -64,6 +76,7 @@ export default function Productos() {
     setIdEditando(null);
     setProductoForm({ articulo_producto: "", nombre_producto: "", colores_id_color: "" });
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const iniciarEdicion = (producto) => {
@@ -75,6 +88,7 @@ export default function Productos() {
       colores_id_color: producto.colores_id_color || "",
     });
     setMostrarFormulario(true);
+    desplazarAlFormulario();
   };
 
   const crearColorRapido = async (color) => {
@@ -151,23 +165,40 @@ export default function Productos() {
     }
   };
 
-  const eliminarProducto = async (id_producto) => {
-    const confirmar = window.confirm("¿Seguro que desea eliminar este producto?");
-    if (!confirmar) return;
+  const eliminarProducto = (id_producto) => {
+    pedirConfirmacion({
+      title: "Eliminar producto",
+      message: "Esta acción eliminará el producto seleccionado.",
+      confirmText: "Eliminar",
+      danger: true,
+      onConfirm: async () => {
+        cerrarConfirmacion();
 
-    try {
+        try {
       await axios.delete(`${API_URL}/productos/${id_producto}`);
       setProductos(productos.filter((producto) => producto.id_producto !== id_producto));
       mostrarToast("success", "Producto eliminado", "El registro se eliminó correctamente.");
-    } catch (error) {
+        } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "producto"));
-    }
+        }
+      },
+    });
   };
 
   return (
     <section className="productos">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+
+      <ConfirmModal
+        open={Boolean(confirmacion)}
+        title={confirmacion?.title}
+        message={confirmacion?.message}
+        confirmText={confirmacion?.confirmText}
+        danger={confirmacion?.danger}
+        onCancel={cerrarConfirmacion}
+        onConfirm={confirmacion?.onConfirm}
+      />
 
       <PromptModal
         open={mostrarModalColor}
@@ -179,19 +210,19 @@ export default function Productos() {
         onConfirm={crearColorRapido}
       />
 
-      <div className="page-header page-header-row">
+      <div className="ui-page-header ui-page-header-row">
         <div>
           <h1>Productos</h1>
           <p>Gestión de artículos y modelos de calzado.</p>
         </div>
 
-        <button className="btn-primary" onClick={abrirFormularioNuevo}>
+        <button className="ui-btn ui-btn-primary" onClick={abrirFormularioNuevo}>
           + Nuevo producto
         </button>
       </div>
 
       {mostrarFormulario && (
-        <div className="form-card">
+        <div className="ui-form-card" ref={formRef}>
           <h2>{editando ? "Editar producto" : "Nuevo producto"}</h2>
 
           <form onSubmit={guardarProducto} className="form-producto">
@@ -228,19 +259,19 @@ export default function Productos() {
                 ))}
               </select>
 
-              <button type="button" className="btn-secondary" onClick={() => setMostrarModalColor(true)}>
+              <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setMostrarModalColor(true)}>
                 + Agregar color
               </button>
             </div>
 
-            <div className="form-actions">
-              <button type="submit" className="btn-primary">
+            <div className="ui-form-actions">
+              <button type="submit" className="ui-btn ui-btn-primary">
                 {editando ? "Actualizar" : "Guardar"}
               </button>
 
               <button
                 type="button"
-                className="btn-secondary"
+                className="ui-btn ui-btn-secondary"
                 onClick={() => {
                   setMostrarFormulario(false);
                   setEditando(false);
@@ -258,11 +289,10 @@ export default function Productos() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="table-card">
-          <table className="data-table">
+        <div className="ui-table-card">
+          <table className="ui-data-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Artículo</th>
                 <th>Nombre</th>
                 <th>Color</th>
@@ -273,15 +303,14 @@ export default function Productos() {
             <tbody>
               {productos.map((producto) => (
                 <tr key={producto.id_producto}>
-                  <td>{producto.id_producto}</td>
                   <td>{producto.articulo_producto}</td>
                   <td>{producto.nombre_producto}</td>
                   <td>{producto.color || "Sin color"}</td>
                   <td>
-                    <button className="btn-secondary" onClick={() => iniciarEdicion(producto)}>
+                    <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(producto)}>
                       Editar
                     </button>
-                    <button className="btn-danger" onClick={() => eliminarProducto(producto.id_producto)}>
+                    <button className="ui-btn ui-btn-danger" onClick={() => eliminarProducto(producto.id_producto)}>
                       Eliminar
                     </button>
                   </td>

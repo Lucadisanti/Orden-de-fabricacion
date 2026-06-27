@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Toast from "../components/Toast";
+import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/RecepcionMateriales.css";
 
 export default function RecepcionMateriales() {
@@ -10,6 +12,7 @@ export default function RecepcionMateriales() {
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState(null);
 
   const [form, setForm] = useState({
     numero_remito: "",
@@ -29,6 +32,9 @@ export default function RecepcionMateriales() {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  const mostrarToast = (type, title, message) => setToast({ type, title, message });
+
 
   const cargarDatos = async () => {
     try {
@@ -90,7 +96,7 @@ export default function RecepcionMateriales() {
         observaciones: form.observaciones,
       });
 
-      alert("Recepción registrada correctamente.");
+      mostrarToast("success", "Recepción registrada", "El remito y el lote se guardaron correctamente.");
 
       setForm({
         numero_remito: "",
@@ -110,18 +116,19 @@ export default function RecepcionMateriales() {
       cargarDatos();
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.error || "No se pudo registrar la recepción.");
+      mostrarToast("error", "No se pudo registrar", obtenerMensajeError(error, "recepción"));
     }
   };
 
   return (
     <section className="recepcion-materiales">
-      <div className="page-header">
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+      <div className="ui-page-header">
         <h1>Recepción de materiales</h1>
         <p>Registro de remitos, proveedores y materiales recibidos.</p>
       </div>
 
-      <div className="form-card">
+      <div className="ui-form-card">
         <h2>Nueva recepción</h2>
 
         <form onSubmit={guardarRecepcion} className="form-recepcion">
@@ -252,8 +259,8 @@ export default function RecepcionMateriales() {
             onChange={manejarCambio}
           />
 
-          <div className="form-actions">
-            <button type="submit" className="btn-primary">
+          <div className="ui-form-actions">
+            <button type="submit" className="ui-btn ui-btn-primary">
               Guardar recepción
             </button>
           </div>
@@ -265,11 +272,10 @@ export default function RecepcionMateriales() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="table-card">
-          <table className="data-table">
+        <div className="ui-table-card">
+          <table className="ui-data-table">
             <thead>
               <tr>
-                <th>ID Lote</th>
                 <th>Proveedor</th>
                 <th>Material</th>
                 <th>Color</th>
@@ -283,7 +289,6 @@ export default function RecepcionMateriales() {
             <tbody>
               {lotes.map((lote) => (
                 <tr key={lote.id_lote}>
-                  <td>{lote.id_lote}</td>
                   <td>{lote.nombre_proveedor || lote.proveedor || "-"}</td>
                   <td>{lote.material}</td>
                   <td>{lote.color}</td>

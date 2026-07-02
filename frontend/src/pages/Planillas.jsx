@@ -26,6 +26,7 @@ export default function Planillas() {
   const formRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
 
@@ -460,6 +461,20 @@ export default function Planillas() {
     });
   };
 
+
+    const planillasFiltradas = planillas.filter((planilla) => {
+    const texto = `
+      ${planilla.numero_planilla || ""}
+      ${planilla.numero_orden || planilla.orden || ""}
+      ${planilla.tipo_planilla || ""}
+      ${planilla.nombre_maquina || planilla.maquina || ""}
+      ${planilla.fecha || ""}
+      ${planilla.estado || ""}
+    `.toLowerCase();
+
+    return texto.includes(busqueda.toLowerCase());
+    });
+
   return (
     <section className="planillas">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
@@ -848,6 +863,13 @@ export default function Planillas() {
 
       {!cargando && !error && (
         <div className="ui-table-card">
+          <input
+            className="ui-input"
+            type="text"
+            placeholder="Buscar por planilla, orden, tipo, máquina, fecha o estado..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -862,7 +884,7 @@ export default function Planillas() {
             </thead>
 
             <tbody>
-              {planillas.map((planilla) => (
+              {planillasFiltradas.map((planilla) => (
                 <tr key={planilla.id_planilla}>
                   <td>{planilla.numero_planilla}</td>
                   <td>{planilla.numero_orden || planilla.orden || "-"}</td>

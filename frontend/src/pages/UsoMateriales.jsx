@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
@@ -18,7 +18,8 @@ export default function UsoMateriales() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
-
+  const [busqueda, setBusqueda] = useState("");
+  const [filaAbierta, setFilaAbierta] = useState(null);
   const [form, setForm] = useState({
     lote_materiales_id_lote: "",
     planilla_produccion_id_planilla: "",
@@ -162,6 +163,19 @@ export default function UsoMateriales() {
     });
   };
 
+  const usosFiltrados = usos.filter((uso) => {
+  const texto = `
+    ${uso.numero_planilla || ""}
+    ${uso.numero_orden || ""}
+    ${uso.numero_remito || ""}
+    ${uso.nombre_proveedor || ""}
+    ${uso.material || ""}
+    ${uso.color || ""}
+  `.toLowerCase();
+
+  return texto.includes(busqueda.toLowerCase());
+  });
+
   return (
     <section className="uso-materiales">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
@@ -268,6 +282,13 @@ export default function UsoMateriales() {
 
       {!cargando && !error && (
         <div className="ui-table-card">
+          <input
+            className="ui-input"
+            type="text"
+            placeholder="Buscar por planilla, orden, remito, proveedor, material o color..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -282,32 +303,136 @@ export default function UsoMateriales() {
               </tr>
             </thead>
 
-            <tbody>
-              {usos.map((uso) => (
-                <tr key={uso.id_uso}>
-                  <td>{uso.numero_planilla || uso.planilla || "-"}</td>
-                  <td>{uso.numero_orden || uso.orden || "-"}</td>
-                  <td>{uso.numero_remito || "-"}</td>
-                  <td>{uso.nombre_proveedor || uso.proveedor || "-"}</td>
-                  <td>{uso.material || "-"}</td>
-                  <td>{uso.color || "-"}</td>
-                  <td>{uso.cantidad_usada}</td>
-                  <td>
-                    <button
-                      className="ui-btn ui-btn-secondary"
-                      onClick={() => iniciarEdicion(uso)}
-                    >
-                      Editar
-                    </button>
+          <tbody>
+              {usosFiltrados.map((uso) => (
+                <Fragment key={uso.id_uso}>
+                  <tr
+                    onClick={() =>
+                      setFilaAbierta(filaAbierta === uso.id_uso ? null : uso.id_uso)
+                    }
+                    style={{ cursor: "pointer" }}
+                  >
+                    <td>{uso.numero_planilla || uso.planilla || "-"}</td>
+                    <td>{uso.numero_orden || uso.orden || "-"}</td>
+                    <td>{uso.numero_remito || "-"}</td>
+                    <td>{uso.nombre_proveedor || uso.proveedor || "-"}</td>
+                    <td>{uso.material || "-"}</td>
+                    <td>{uso.color || "-"}</td>
+                    <td>{uso.cantidad_usada}</td>
+                    <td>
+                      <button
+                        className="ui-btn ui-btn-secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          iniciarEdicion(uso);
+                        }}
+                      >
+                        Editar
+                      </button>
 
-                    <button
-                      className="ui-btn ui-btn-danger"
-                      onClick={() => eliminarUsoMaterial(uso.id_uso)}
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
+                      <button
+                        className="ui-btn ui-btn-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          eliminarUsoMaterial(uso.id_uso);
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+
+                  {filaAbierta === uso.id_uso && (
+                <tr>
+                    <td colSpan="8">
+                      <div className="detalle-uso-grid">
+
+                        <div className="detalle-card">
+                          <h3>📦 Recepción del material</h3>
+
+                          <div className="detalle-item">
+                            <span>Remito</span>
+                            <strong>{uso.numero_remito || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Proveedor</span>
+                            <strong>{uso.nombre_proveedor || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Fecha solicitud</span>
+                            <strong>{uso.fecha_solicitud || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Fecha entrega</span>
+                            <strong>{uso.fecha_entrega || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Estado</span>
+                            <strong>{uso.estado_recepcion || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Recibido por</span>
+                            <strong>{uso.recibido_por || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Cantidad recibida</span>
+                            <strong>{uso.cantidad_recibida}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Observaciones</span>
+                            <strong>{uso.observaciones || "-"}</strong>
+                          </div>
+
+                        </div>
+
+                        <div className="detalle-card">
+
+                          <h3>🏭 Uso en producción</h3>
+
+                          <div className="detalle-item">
+                            <span>Orden</span>
+                            <strong>{uso.numero_orden}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Planilla</span>
+                            <strong>{uso.numero_planilla}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Producto</span>
+                            <strong>{uso.producto}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Material</span>
+                            <strong>{uso.material}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Color</span>
+                            <strong>{uso.color}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Cantidad utilizada</span>
+                            <strong>{uso.cantidad_usada}</strong>
+                          </div>
+
+                        </div>
+
+                      </div>
+                    </td>
+                  </tr>
+              )}
+                </Fragment>
               ))}
             </tbody>
           </table>

@@ -269,3 +269,38 @@
     margin-right: 0;
   }
 }
+
+.ui-table-card .ui-input{
+    margin-bottom:20px;
+}
+
+
+.talles-trazabilidad {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+
+.talles-trazabilidad span {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.planilla-resumen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.planilla-resumen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}

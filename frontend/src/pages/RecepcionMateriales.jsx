@@ -14,6 +14,10 @@ export default function RecepcionMateriales() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
 
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [filaAbierta, setFilaAbierta] = useState(null);
+  
   const [form, setForm] = useState({
     numero_remito: "",
     fecha_solicitud: "",
@@ -113,6 +117,9 @@ export default function RecepcionMateriales() {
         observaciones: "",
       });
 
+
+      setMostrarFormulario(false);
+
       cargarDatos();
     } catch (error) {
       console.error(error);
@@ -120,14 +127,37 @@ export default function RecepcionMateriales() {
     }
   };
 
+  const lotesFiltrados = lotes.filter((lote) => {
+  const texto = `
+    ${lote.nombre_proveedor || lote.proveedor || ""}
+    ${lote.material || ""}
+    ${lote.color || ""}
+    ${lote.numero_remito || ""}
+    ${lote.estado_recepcion || ""}
+    ${lote.recibido_por || ""}
+  `.toLowerCase();
+
+  return texto.includes(busqueda.toLowerCase());
+  });
+
   return (
     <section className="recepcion-materiales">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
-      <div className="ui-page-header">
-        <h1>Recepción de materiales</h1>
-        <p>Registro de remitos, proveedores y materiales recibidos.</p>
+     <div className="ui-page-header ui-page-header-row">
+        <div>
+          <h1>Recepción de materiales</h1>
+          <p>Registro de remitos, proveedores y materiales recibidos.</p>
+        </div>
+
+        <button
+          className="ui-btn ui-btn-primary"
+          onClick={() => setMostrarFormulario(true)}
+        >
+          + Nueva recepción
+        </button>
       </div>
 
+      {mostrarFormulario && (
       <div className="ui-form-card">
         <h2>Nueva recepción</h2>
 
@@ -260,19 +290,36 @@ export default function RecepcionMateriales() {
           />
 
           <div className="ui-form-actions">
-            <button type="submit" className="ui-btn ui-btn-primary">
-              Guardar recepción
-            </button>
-          </div>
+              <button type="submit" className="ui-btn ui-btn-primary">
+                Guardar recepción
+              </button>
+
+              <button
+                type="button"
+                className="ui-btn ui-btn-secondary"
+                onClick={() => setMostrarFormulario(false)}
+              >
+                Cancelar
+              </button>
+            </div>
         </form>
-      </div>
+      </div>)}
+
+     
 
       {cargando && <p>Cargando recepciones...</p>}
 
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="ui-table-card">
+        <div className="ui-table-card"> 
+      <input
+        className="ui-input"
+        type="text"
+        placeholder="Buscar por proveedor, material, color, remito, estado o recibido por..."
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+      />
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -287,16 +334,100 @@ export default function RecepcionMateriales() {
             </thead>
 
             <tbody>
-              {lotes.map((lote) => (
-                <tr key={lote.id_lote}>
-                  <td>{lote.nombre_proveedor || lote.proveedor || "-"}</td>
-                  <td>{lote.material}</td>
-                  <td>{lote.color}</td>
-                  <td>{lote.numero_remito}</td>
-                  <td>{lote.cantidad_solicitada}</td>
-                  <td>{lote.cantidad_recibida}</td>
-                  <td>{lote.pendiente}</td>
-                </tr>
+              {lotesFiltrados.map((lote) => (
+                <>
+                  <tr
+                    key={lote.id_lote}
+                    onClick={() =>
+                      setFilaAbierta(filaAbierta === lote.id_lote ? null : lote.id_lote)
+                    }
+                    style={{ cursor: "pointer" }}
+                  >
+                    <td>{lote.nombre_proveedor || lote.proveedor || "-"}</td>
+                    <td>{lote.material}</td>
+                    <td>{lote.color}</td>
+                    <td>{lote.numero_remito}</td>
+                    <td>{lote.cantidad_solicitada}</td>
+                    <td>{lote.cantidad_recibida}</td>
+                    <td>{lote.pendiente}</td>
+                  </tr>
+
+                  {filaAbierta === lote.id_lote && (
+                    <tr>
+                      <td colSpan="7">
+                      <div className="detalle-recepcion-grid">
+                        <div className="detalle-card">
+                          <h3>📄 Recepción</h3>
+
+                          <div className="detalle-item">
+                            <span>Remito</span>
+                            <strong>{lote.numero_remito || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Proveedor</span>
+                            <strong>{lote.nombre_proveedor || lote.proveedor || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Estado</span>
+                            <strong>{lote.estado_recepcion || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Fecha solicitud</span>
+                            <strong>{lote.fecha_solicitud || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Fecha entrega</span>
+                            <strong>{lote.fecha_entrega || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Recibido por</span>
+                            <strong>{lote.recibido_por || "-"}</strong>
+                          </div>
+                        </div>
+
+                        <div className="detalle-card">
+                          <h3>📦 Material recibido</h3>
+
+                          <div className="detalle-item">
+                            <span>Material</span>
+                            <strong>{lote.material || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Color</span>
+                            <strong>{lote.color || "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Cantidad solicitada</span>
+                            <strong>{lote.cantidad_solicitada ?? "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Cantidad recibida</span>
+                            <strong>{lote.cantidad_recibida ?? "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Pendiente</span>
+                            <strong>{lote.pendiente ?? "-"}</strong>
+                          </div>
+
+                          <div className="detalle-item">
+                            <span>Observaciones</span>
+                            <strong>{lote.observaciones || "-"}</strong>
+                          </div>
+                        </div>
+                      </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))}
             </tbody>
           </table>

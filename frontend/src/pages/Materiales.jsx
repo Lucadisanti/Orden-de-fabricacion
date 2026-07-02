@@ -16,6 +16,7 @@ export default function Materiales() {
   const formRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
 
@@ -135,6 +136,12 @@ export default function Materiales() {
     });
   };
 
+  const materialesFiltrados = materiales.filter((material) =>
+  (material.material || "")
+    .toLowerCase()
+    .includes(busqueda.toLowerCase())
+  );
+
   return (
     <section className="materiales">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
@@ -200,6 +207,13 @@ export default function Materiales() {
 
       {!cargando && !error && (
         <div className="ui-table-card">
+          <input
+            className="ui-input"
+            type="text"
+            placeholder="Buscar material..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -209,7 +223,7 @@ export default function Materiales() {
             </thead>
 
             <tbody>
-              {materiales.map((material) => (
+              {materialesFiltrados.map((material) => (
                 <tr key={material.id_material}>
                   <td>{material.material}</td>
                   <td>

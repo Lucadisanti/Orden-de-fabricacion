@@ -17,6 +17,7 @@ export default function Ordenes() {
   const formRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
 
@@ -163,6 +164,20 @@ export default function Ordenes() {
     });
   };
 
+
+  const ordenesFiltradas = ordenes.filter((orden) => {
+  const texto = `
+    ${orden.numero_orden || ""}
+    ${orden.articulo_producto || ""}
+    ${orden.producto || ""}
+    ${orden.color || ""}
+    ${orden.fecha || ""}
+    ${orden.estado || ""}
+  `.toLowerCase();
+
+    return texto.includes(busqueda.toLowerCase());
+    });
+
   return (
     <section className="ordenes">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
@@ -239,6 +254,13 @@ export default function Ordenes() {
 
       {!cargando && !error && (
         <div className="ui-table-card">
+          <input
+            className="ui-input"
+            type="text"
+            placeholder="Buscar por orden, artículo, producto, color, fecha o estado..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -253,7 +275,7 @@ export default function Ordenes() {
             </thead>
 
             <tbody>
-              {ordenes.map((orden) => (
+              {ordenesFiltradas.map((orden) => (
                 <tr key={orden.id_orden}>
                   <td>{orden.numero_orden}</td>
                   <td>{orden.articulo_producto || "-"}</td>

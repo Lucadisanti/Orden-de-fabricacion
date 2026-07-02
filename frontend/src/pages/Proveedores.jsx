@@ -16,6 +16,7 @@ export default function Proveedores() {
   const formRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
 
@@ -152,6 +153,17 @@ export default function Proveedores() {
     });
   };
 
+  const proveedoresFiltrados = proveedores.filter((proveedor) => {
+    const texto = `
+      ${proveedor.nombre_proveedor || ""}
+      ${proveedor.cuit || ""}
+      ${proveedor.telefono || ""}
+      ${proveedor.email || ""}
+    `.toLowerCase();
+
+    return texto.includes(busqueda.toLowerCase());
+  });
+
   return (
     <section className="proveedores">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
@@ -225,6 +237,13 @@ export default function Proveedores() {
 
       {!cargando && !error && (
         <div className="ui-table-card">
+          <input
+            className="ui-input"
+            type="text"
+            placeholder="Buscar por proveedor, CUIT, teléfono o email..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -237,7 +256,7 @@ export default function Proveedores() {
             </thead>
 
             <tbody>
-              {proveedores.map((proveedor) => (
+              {proveedoresFiltrados.map((proveedor) => (
                 <tr key={proveedor.id_proveedor}>
                   <td>{proveedor.nombre_proveedor}</td>
                   <td>{proveedor.cuit || "-"}</td>

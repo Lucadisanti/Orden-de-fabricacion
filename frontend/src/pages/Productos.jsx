@@ -19,6 +19,7 @@ export default function Productos() {
   const [mostrarModalColor, setMostrarModalColor] = useState(false);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
 
@@ -186,6 +187,16 @@ export default function Productos() {
     });
   };
 
+  const productosFiltrados = productos.filter((producto) => {
+  const texto = `
+    ${producto.articulo_producto || ""}
+    ${producto.nombre_producto || ""}
+    ${producto.color || ""}
+  `.toLowerCase();
+
+  return texto.includes(busqueda.toLowerCase());
+});
+
   return (
     <section className="productos">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
@@ -290,6 +301,13 @@ export default function Productos() {
 
       {!cargando && !error && (
         <div className="ui-table-card">
+          <input
+            className="ui-input"
+            type="text"
+            placeholder="Buscar por artículo, producto o color..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -301,7 +319,7 @@ export default function Productos() {
             </thead>
 
             <tbody>
-              {productos.map((producto) => (
+              {productosFiltrados.map((producto) => (
                 <tr key={producto.id_producto}>
                   <td>{producto.articulo_producto}</td>
                   <td>{producto.nombre_producto}</td>

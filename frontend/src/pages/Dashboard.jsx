@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import "../styles/Dashboard.css";
 
@@ -9,13 +10,17 @@ const resumenInicial = [
   { titulo: "Planillas", valor: "-", detalle: "Planillas cargadas" },
 ];
 
+const rutasResumen = {
+  productos: "/productos",
+  proveedores: "/proveedores",
+  órdenes: "/ordenes",
+  ordenes: "/ordenes",
+  planillas: "/planillas",
+};
+
 export default function Dashboard() {
   const [resumen, setResumen] = useState(resumenInicial);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    cargarResumen();
-  }, []);
 
   const normalizarResumen = (data) => {
     if (Array.isArray(data)) {
@@ -50,7 +55,7 @@ export default function Dashboard() {
     ];
   };
 
-  const cargarResumen = async () => {
+  async function cargarResumen() {
     try {
       const response = await axios.get("http://127.0.0.1:5000/api/dashboard/resumen");
       setResumen(normalizarResumen(response.data));
@@ -59,7 +64,13 @@ export default function Dashboard() {
       console.error(error);
       setError("No se pudo cargar el resumen del dashboard.");
     }
-  };
+  }
+
+  useEffect(() => {
+    // La carga inicial sincroniza el tablero con la API.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarResumen();
+  }, []);
 
   return (
     <section className="dashboard">
@@ -72,11 +83,17 @@ export default function Dashboard() {
 
       <div className="dashboard-cards">
         {resumen.map((item) => (
-          <div className="dashboard-card" key={item.titulo}>
+          <Link
+            className="dashboard-card"
+            key={item.titulo}
+            to={rutasResumen[item.titulo.toLowerCase()] || "/"}
+            aria-label={`Abrir ${item.titulo}`}
+          >
             <span>{item.titulo}</span>
             <h2>{item.valor}</h2>
             <p>{item.detalle}</p>
-          </div>
+            <small>Ver detalle →</small>
+          </Link>
         ))}
       </div>
     </section>

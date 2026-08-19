@@ -300,7 +300,8 @@ export default function Productos() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="ui-table-card">
+        <>
+        <div className="ui-search-bar">
           <input
             className="ui-input"
             type="text"
@@ -308,6 +309,8 @@ export default function Productos() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
+        </div>
+        <div className="ui-table-card">
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -337,6 +340,7 @@ export default function Productos() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   );

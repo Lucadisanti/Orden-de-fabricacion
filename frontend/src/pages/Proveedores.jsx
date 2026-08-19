@@ -236,7 +236,8 @@ export default function Proveedores() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="ui-table-card">
+        <>
+        <div className="ui-search-bar">
           <input
             className="ui-input"
             type="text"
@@ -244,6 +245,8 @@ export default function Proveedores() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
+        </div>
+        <div className="ui-table-card">
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -275,6 +278,7 @@ export default function Proveedores() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   );

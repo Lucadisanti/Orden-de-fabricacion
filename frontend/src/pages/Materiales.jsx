@@ -206,7 +206,8 @@ export default function Materiales() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="ui-table-card">
+        <>
+        <div className="ui-search-bar">
           <input
             className="ui-input"
             type="text"
@@ -214,6 +215,8 @@ export default function Materiales() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
+        </div>
+        <div className="ui-table-card">
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -239,6 +242,7 @@ export default function Materiales() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   );

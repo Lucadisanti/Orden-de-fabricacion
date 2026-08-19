@@ -81,6 +81,22 @@ CREATE TABLE orden_fabricacion (
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE detalle_orden (
+  id_detalle_orden INT AUTO_INCREMENT PRIMARY KEY,
+  orden_fabricacion_id_orden INT NOT NULL,
+  talle VARCHAR(10) NOT NULL,
+  cantidad_pares INT NOT NULL DEFAULT 0,
+
+  UNIQUE KEY uq_detalle_orden_talle (orden_fabricacion_id_orden, talle),
+  KEY idx_detalle_orden_orden (orden_fabricacion_id_orden),
+
+  CONSTRAINT fk_detalle_orden_orden
+    FOREIGN KEY (orden_fabricacion_id_orden)
+    REFERENCES orden_fabricacion (id_orden)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- =========================================================
 -- 3) Remitos y lotes de materiales
 -- =========================================================

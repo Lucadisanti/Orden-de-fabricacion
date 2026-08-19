@@ -29,12 +29,24 @@
     margin-bottom:20px;
 }
 
-.detalle-recepcion-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 24px;
-  padding: 20px;
-}
+.recepcion-fila-abierta { background: #eff6ff !important; }
+.recepcion-flecha { margin-left: 9px; color: var(--primary); font-size: 10px; }
+.recepcion-detalle-compacto { margin: 4px; padding: 18px; border: 1px solid #dbe5f1; border-radius: 14px; background: #f8fbff; text-align: left; }
+.recepcion-detalle-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
+.recepcion-detalle-header span, .recepcion-datos-grid span, .recepcion-cantidades span, .recepcion-observaciones span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.recepcion-detalle-header h3 { margin-top: 2px; color: var(--text-main); font-size: 18px; }
+.recepcion-estado { padding: 7px 11px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: 12px; text-transform: capitalize; }
+.recepcion-datos-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 18px; }
+.recepcion-datos-grid > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.recepcion-datos-grid strong { overflow-wrap: anywhere; color: var(--text-main); font-size: 14px; }
+.recepcion-cantidades { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 15px; }
+.recepcion-cantidades > div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 11px 13px; border: 1px solid #dce5f0; border-radius: 10px; background: #fff; }
+.recepcion-cantidades strong { color: var(--text-main); font-size: 18px; }
+.recepcion-cantidades .con-pendiente { border-color: #fde68a; background: #fffbeb; }
+.recepcion-cantidades .con-pendiente strong { color: #92400e; }
+.recepcion-cantidades .sin-pendiente { border-color: #bbf7d0; background: #f0fdf4; }
+.recepcion-observaciones { margin-top: 13px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
+.recepcion-observaciones p { margin-top: 3px; color: var(--text-main); line-height: 1.45; }
 
 .detalle-card {
   background: #ffffff;
@@ -69,4 +81,18 @@
 .detalle-item strong {
   color: #0f172a;
   text-align: right;
+}
+
+@media (max-width: 420px) {
+  .recepcion-detalle-compacto { padding: 14px; }
+}
+
+@media (max-width: 760px) {
+  .recepcion-datos-grid { grid-template-columns: 1fr 1fr; }
+  .recepcion-cantidades { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .recepcion-detalle-header { align-items: flex-start; flex-direction: column; }
+  .recepcion-datos-grid { grid-template-columns: 1fr; }
 }

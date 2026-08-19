@@ -24,6 +24,8 @@ export default function Planillas() {
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
   const formRef = useRef(null);
+  const talleRefs = useRef([]);
+  const guardarTallesRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -31,7 +33,9 @@ export default function Planillas() {
   const [idEditando, setIdEditando] = useState(null);
 
   const [planillaSeleccionada, setPlanillaSeleccionada] = useState(null);
+  const [seccionAbierta, setSeccionAbierta] = useState("produccion");
   const [detalles, setDetalles] = useState([]);
+  const [tallesPlanificados, setTallesPlanificados] = useState([]);
   const [operarios, setOperarios] = useState([]);
   const [usosMateriales, setUsosMateriales] = useState([]);
   const [lotes, setLotes] = useState([]);
@@ -72,7 +76,7 @@ export default function Planillas() {
   const cerrarConfirmacion = () => setConfirmacion(null);
 
 
-  const cargarDatos = async () => {
+  async function cargarDatos() {
     try {
       const [planillasRes, ordenesRes, maquinasRes] = await Promise.all([
         axios.get("http://127.0.0.1:5000/api/planillas/"),
@@ -89,7 +93,7 @@ export default function Planillas() {
       setError("No se pudieron cargar las planillas.");
       setCargando(false);
     }
-  };
+  }
 
   const getEstadoClass = (estado) => {
     if (!estado) return "";
@@ -117,6 +121,16 @@ export default function Planillas() {
   };
 
   const manejarCambio = (e) => {
+    if (e.target.name === "tipo_planilla") {
+      const esR013 = e.target.value === "Corte y Aparado";
+      setPlanillaForm({
+        ...planillaForm,
+        tipo_planilla: e.target.value,
+        numero_planilla: esR013 ? "R013" : "R013/1",
+        maquinas_id_maquina: esR013 ? "" : planillaForm.maquinas_id_maquina,
+      });
+      return;
+    }
     setPlanillaForm({
       ...planillaForm,
       [e.target.name]: e.target.value,
@@ -124,17 +138,54 @@ export default function Planillas() {
   };
 
   const manejarCambioTalle = (talle, valor) => {
-    setTallesForm({
-      ...tallesForm,
-      [talle]: valor,
-    });
+    const soloNumeros = valor.replace(/\D/g, "");
+    setTallesForm((valoresActuales) => ({
+      ...valoresActuales,
+      [talle]: soloNumeros,
+    }));
   };
 
   const calcularTotalPares = () => {
-    return Object.values(tallesForm).reduce(
-      (total, valor) => total + Number(valor || 0),
+    return tallesDisponibles.reduce(
+      (total, talle) => total + Number(tallesForm[String(talle)] || 0),
       0
     );
+  };
+
+  const esperadosPorTalle = Object.fromEntries(
+    tallesPlanificados.map((item) => [String(item.talle), Number(item.cantidad_pares || 0)])
+  );
+
+  const realizadosPorTalle = detalles.reduce((acumulado, item) => {
+    const talle = String(item.talle);
+    acumulado[talle] = (acumulado[talle] || 0) + Number(item.cantidad_pares || 0);
+    return acumulado;
+  }, {});
+
+  const totalEsperado = tallesDisponibles.reduce(
+    (total, talle) => total + Number(esperadosPorTalle[String(talle)] || 0), 0
+  );
+  const totalRealizado = tallesDisponibles.reduce(
+    (total, talle) => total + Number(realizadosPorTalle[String(talle)] || 0), 0
+  );
+  const totalPendiente = tallesDisponibles.reduce(
+    (total, talle) => total + Math.max(
+      Number(esperadosPorTalle[String(talle)] || 0) - Number(realizadosPorTalle[String(talle)] || 0), 0
+    ), 0
+  );
+
+  const manejarEnterTalle = (event, index) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    if (index < tallesDisponibles.length - 1) talleRefs.current[index + 1]?.focus();
+    else guardarTallesRef.current?.focus();
+  };
+
+  const etapasDePlanilla = (planilla) => {
+    const numero = planilla?.numero_planilla?.toUpperCase();
+    if (numero === "R013" || planilla?.tipo_planilla === "Corte y Aparado") return ["Corte", "Aparado"];
+    if (numero === "R013/1" || planilla?.tipo_planilla === "Calzado e Inyección") return ["Calzado", "Puntera", "Inyección"];
+    return ["Corte", "Aparado", "Armado", "Terminación"];
   };
 
   const manejarCambioOperario = (e) => {
@@ -174,7 +225,12 @@ export default function Planillas() {
       orden_fabricacion_id_orden: planilla.orden_fabricacion_id_orden || "",
       numero_planilla: planilla.numero_planilla || "",
       fecha: planilla.fecha || "",
-      tipo_planilla: planilla.tipo_planilla || "",
+      tipo_planilla:
+        planilla.numero_planilla?.toUpperCase() === "R013"
+          ? "Corte y Aparado"
+          : planilla.numero_planilla?.toUpperCase() === "R013/1"
+            ? "Calzado e Inyección"
+            : planilla.tipo_planilla || "",
       maquinas_id_maquina: planilla.maquinas_id_maquina || "",
       estado: planilla.estado || "Pendiente",
     });
@@ -193,7 +249,9 @@ export default function Planillas() {
       numero_planilla: planillaForm.numero_planilla,
       fecha: planillaForm.fecha,
       tipo_planilla: planillaForm.tipo_planilla,
-      maquinas_id_maquina: Number(planillaForm.maquinas_id_maquina),
+      maquinas_id_maquina: planillaForm.tipo_planilla === "Calzado e Inyección"
+        ? Number(planillaForm.maquinas_id_maquina)
+        : null,
       estado: planillaForm.estado,
     };
 
@@ -260,11 +318,12 @@ export default function Planillas() {
     });
   };
 
-  const gestionarPlanilla = async (planilla) => {
+  const gestionarPlanilla = async (planilla, seccionInicial = null) => {
     setPlanillaSeleccionada(planilla);
+    if (seccionInicial) setSeccionAbierta(seccionInicial);
 
     try {
-      const [detallesRes, operariosRes, usosRes, lotesRes] =
+      const [detallesRes, operariosRes, usosRes, lotesRes, tallesOrdenRes] =
         await Promise.all([
           axios.get(
             `http://127.0.0.1:5000/api/planillas/${planilla.id_planilla}/detalles`
@@ -274,11 +333,13 @@ export default function Planillas() {
           ),
           axios.get("http://127.0.0.1:5000/api/uso-materiales/"),
           axios.get("http://127.0.0.1:5000/api/lotes/"),
+          axios.get(`http://127.0.0.1:5000/api/ordenes/${planilla.orden_fabricacion_id_orden}/talles`),
         ]);
 
       setDetalles(detallesRes.data);
       setOperarios(operariosRes.data);
       setLotes(lotesRes.data);
+      setTallesPlanificados(tallesOrdenRes.data);
 
       setUsosMateriales(
         usosRes.data.filter(
@@ -306,6 +367,15 @@ export default function Planillas() {
       return;
     }
 
+    const excedido = tallesConCantidad.find(
+      (item) => esperadosPorTalle[String(item.talle)] > 0 &&
+        item.cantidad + Number(realizadosPorTalle[String(item.talle)] || 0) > esperadosPorTalle[String(item.talle)]
+    );
+    if (excedido) {
+      mostrarToast("warning", "Cantidad superior a la esperada", `La nueva carga del talle ${excedido.talle} superaría los ${esperadosPorTalle[String(excedido.talle)]} pares esperados.`);
+      return;
+    }
+
     try {
       await Promise.all(
         tallesConCantidad.map((item) =>
@@ -326,33 +396,6 @@ export default function Planillas() {
       console.error(error);
       mostrarToast("error", "No se pudieron guardar", obtenerMensajeError(error, "detalle de planilla"));
     }
-  };
-
-  const eliminarDetalle = (id_detalle) => {
-    pedirConfirmacion({
-      title: "Eliminar detalle",
-      message: "Esta acción eliminará el detalle de talle seleccionado.",
-      confirmText: "Eliminar",
-      danger: true,
-      onConfirm: async () => {
-        cerrarConfirmacion();
-
-        try {
-          await axios.delete(
-            `http://127.0.0.1:5000/api/planillas/detalles/${id_detalle}`
-          );
-
-          setDetalles((prevDetalles) =>
-            prevDetalles.filter((detalle) => detalle.id_detalle !== id_detalle)
-          );
-
-          mostrarToast("success", "Detalle eliminado", "El detalle se eliminó correctamente.");
-        } catch (error) {
-          console.error(error);
-          mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "detalle"));
-        }
-      },
-    });
   };
 
   const agregarOperario = async (e) => {
@@ -520,15 +563,6 @@ export default function Planillas() {
             </select>
 
             <input
-              type="text"
-              name="numero_planilla"
-              placeholder="Número de planilla"
-              value={planillaForm.numero_planilla}
-              onChange={manejarCambio}
-              required
-            />
-
-            <input
               type="date"
               name="fecha"
               value={planillaForm.fecha}
@@ -543,26 +577,27 @@ export default function Planillas() {
               required
             >
               <option value="">Seleccione tipo de planilla</option>
-              <option value="Corte">Corte</option>
-              <option value="Aparado">Aparado</option>
-              <option value="Armado">Armado</option>
-              <option value="Terminación">Terminación</option>
+              <option value="Corte y Aparado">R013 · Corte y Aparado</option>
+              <option value="Calzado e Inyección">R013/1 · Calzado e Inyección</option>
+              {planillaForm.tipo_planilla && !["Corte y Aparado", "Calzado e Inyección"].includes(planillaForm.tipo_planilla) && (
+                <option value={planillaForm.tipo_planilla}>{planillaForm.tipo_planilla} · formato anterior</option>
+              )}
             </select>
 
-            <select
+            {planillaForm.tipo_planilla === "Calzado e Inyección" && <select
               name="maquinas_id_maquina"
               value={planillaForm.maquinas_id_maquina}
               onChange={manejarCambio}
               required
             >
-              <option value="">Seleccione máquina</option>
+              <option value="">Seleccione inyectora</option>
 
-              {maquinas.map((maquina) => (
+              {maquinas.filter((maquina) => /SULPOL|BGM/i.test(maquina.nombre_maquina || maquina.maquina || "")).map((maquina) => (
                 <option key={maquina.id_maquina} value={maquina.id_maquina}>
                   {maquina.nombre_maquina || maquina.maquina}
                 </option>
               ))}
-            </select>
+            </select>}
 
             <select
               name="estado"
@@ -597,98 +632,117 @@ export default function Planillas() {
       )}
 
       {planillaSeleccionada && (
-        <div className="ui-form-card">
-          <h2>Gestionar planilla {planillaSeleccionada.numero_planilla}</h2>
-
-          <p>
-            <strong>Orden:</strong>{" "}
-            {planillaSeleccionada.numero_orden ||
-              planillaSeleccionada.orden ||
-              "-"}
-          </p>
-
-          <h3>Detalles por talle</h3>
-
-          <div className="ui-table-card">
-            <table className="ui-data-table">
-              <thead>
-                <tr>
-                  {tallesDisponibles.map((talle) => (
-                    <th key={talle}>{talle}</th>
-                  ))}
-                </tr>
-              </thead>
-
-              <tbody>
-                <tr>
-                  {tallesDisponibles.map((talle) => (
-                    <td key={talle}>
-                      <input
-                        type="number"
-                        min="0"
-                        value={tallesForm[talle]}
-                        onChange={(e) =>
-                          manejarCambioTalle(talle, e.target.value)
-                        }
-                        style={{ width: "60px" }}
-                      />
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-
+        <div className="ui-form-card planilla-abierta">
+          <div className="planilla-abierta-header">
+            <div>
+              <span className="planilla-eyebrow">Planilla abierta</span>
+              <h2>{planillaSeleccionada.numero_planilla}</h2>
+              <p>
+                Orden {planillaSeleccionada.numero_orden || planillaSeleccionada.orden || "-"}
+                {planillaSeleccionada.tipo_planilla ? ` · ${planillaSeleccionada.tipo_planilla}` : ""}
+                {(planillaSeleccionada.nombre_maquina || planillaSeleccionada.maquina) ? ` · ${planillaSeleccionada.nombre_maquina || planillaSeleccionada.maquina}` : ""}
+              </p>
+            </div>
             <div className="ui-form-actions">
-              <strong>Total pares: {calcularTotalPares()}</strong>
-
-              <button
-                type="button"
-                className="ui-btn ui-btn-primary"
-                onClick={guardarTalles}
-              >
-                Guardar talles
+              <button type="button" className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(planillaSeleccionada)}>
+                Editar datos generales
+              </button>
+              <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPlanillaSeleccionada(null)}>
+                Cerrar
               </button>
             </div>
           </div>
 
-          <div className="ui-table-card">
+          <button type="button" className={`planilla-acordeon ${seccionAbierta === "produccion" ? "activo" : ""}`} onClick={() => setSeccionAbierta(seccionAbierta === "produccion" ? "" : "produccion")}>
+            <span><strong>Producción por talle</strong><small>Cargá los pares procesados en esta etapa.</small></span>
+            <span>{detalles.reduce((total, item) => total + Number(item.cantidad_pares || 0), 0)} pares {seccionAbierta === "produccion" ? "▲" : "▼"}</span>
+          </button>
+
+          {seccionAbierta === "produccion" && <div className="planilla-acordeon-contenido">
+          <div className="planificacion-referencia">
+            <strong>Objetivo de la orden</strong>
+            <span>{tallesPlanificados.reduce((total, item) => total + Number(item.cantidad_pares || 0), 0)} pares solicitados</span>
+            <div className="talles-planificados">
+              {tallesPlanificados.map((item) => <span key={item.id_detalle_orden}>Talle {item.talle}: <strong>{item.cantidad_pares}</strong></span>)}
+              {tallesPlanificados.length === 0 && <small>La orden no tiene talles planificados.</small>}
+            </div>
+          </div>
+
+          <div className="ui-table-card planilla-talles-comparacion">
+            <div className="planilla-talles-scroll">
             <table className="ui-data-table">
               <thead>
                 <tr>
-                  <th>Talle</th>
-                  <th>Cantidad pares</th>
-                  <th>Acciones</th>
+                  <th>Comparación</th>
+                  {tallesDisponibles.map((talle) => (
+                    <th key={talle}>{talle}</th>
+                  ))}
+                  <th className="columna-total">Total</th>
                 </tr>
               </thead>
 
               <tbody>
-                {detalles.map((detalle) => (
-                  <tr key={detalle.id_detalle}>
-                    <td>{detalle.talle}</td>
-                    <td>{detalle.cantidad_pares}</td>
-                    <td>
-                      <button
-                        className="ui-btn ui-btn-danger"
-                        onClick={() =>
-                            eliminarDetalle(detalle.id_detalle)
-                            }
-                      >
-                        Eliminar
-                      </button>
+                <tr className="fila-esperados">
+                  <th>Esperados</th>
+                  {tallesDisponibles.map((talle) => <td key={talle}>{esperadosPorTalle[String(talle)] || 0}</td>)}
+                  <td className="columna-total">{totalEsperado}</td>
+                </tr>
+                <tr className="fila-realizados">
+                  <th>Realizados</th>
+                  {tallesDisponibles.map((talle) => <td key={talle}>{realizadosPorTalle[String(talle)] || 0}</td>)}
+                  <td className="columna-total">{totalRealizado}</td>
+                </tr>
+                <tr className="fila-pendientes">
+                  <th>Pendientes</th>
+                  {tallesDisponibles.map((talle) => <td key={talle}>{Math.max((esperadosPorTalle[String(talle)] || 0) - (realizadosPorTalle[String(talle)] || 0), 0)}</td>)}
+                  <td className="columna-total">{totalPendiente}</td>
+                </tr>
+                <tr className="fila-carga">
+                  <th>Cargar ahora</th>
+                  {tallesDisponibles.map((talle, index) => {
+                    const excede = Number(tallesForm[talle] || 0) + Number(realizadosPorTalle[String(talle)] || 0) > Number(esperadosPorTalle[String(talle)] || 0) && Number(esperadosPorTalle[String(talle)] || 0) > 0;
+                    return <td key={talle}>
+                      <input
+                        ref={(elemento) => { talleRefs.current[index] = elemento; }}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={tallesForm[talle]}
+                        onInput={(e) => manejarCambioTalle(talle, e.currentTarget.value)}
+                        onKeyDown={(e) => manejarEnterTalle(e, index)}
+                        className={excede ? "talle-excedido" : ""}
+                        aria-label={`Cantidad producida para talle ${talle}`}
+                      />
                     </td>
-                  </tr>
-                ))}
-
-                {detalles.length === 0 && (
-                  <tr>
-                    <td colSpan="3">Todavía no hay detalles cargados.</td>
-                  </tr>
-                )}
+                  })}
+                  <td className="columna-total total-carga-actual">{calcularTotalPares()}</td>
+                </tr>
               </tbody>
             </table>
+            </div>
+
+            <div className="ui-form-actions">
+              <strong>Carga actual: {calcularTotalPares()} pares</strong>
+
+              <button
+                type="button"
+                className="ui-btn ui-btn-primary"
+                ref={guardarTallesRef}
+                onClick={guardarTalles}
+              >
+                Agregar producción
+              </button>
+            </div>
           </div>
 
-          <h3>Operarios por etapa</h3>
+          </div>}
+
+          <button type="button" className={`planilla-acordeon ${seccionAbierta === "operarios" ? "activo" : ""}`} onClick={() => setSeccionAbierta(seccionAbierta === "operarios" ? "" : "operarios")}>
+            <span><strong>Operarios asignados</strong><small>Responsables de cada etapa de producción.</small></span>
+            <span>{operarios.length} {operarios.length === 1 ? "operario" : "operarios"} {seccionAbierta === "operarios" ? "▲" : "▼"}</span>
+          </button>
+
+          {seccionAbierta === "operarios" && <div className="planilla-acordeon-contenido">
 
           <form onSubmit={agregarOperario} className="form-planilla">
             <select
@@ -698,10 +752,9 @@ export default function Planillas() {
               required
             >
               <option value="">Seleccione etapa</option>
-              <option value="Corte">Corte</option>
-              <option value="Aparado">Aparado</option>
-              <option value="Armado">Armado</option>
-              <option value="Terminación">Terminación</option>
+              {etapasDePlanilla(planillaSeleccionada).map((etapa) => (
+                <option key={etapa} value={etapa}>{etapa}</option>
+              ))}
             </select>
 
             <input
@@ -756,8 +809,14 @@ export default function Planillas() {
               </tbody>
             </table>
           </div>
+          </div>}
 
-          <h3>Materiales utilizados</h3>
+          <button type="button" className={`planilla-acordeon ${seccionAbierta === "materiales" ? "activo" : ""}`} onClick={() => setSeccionAbierta(seccionAbierta === "materiales" ? "" : "materiales")}>
+            <span><strong>Materiales utilizados</strong><small>Lotes y cantidades consumidas en esta planilla.</small></span>
+            <span>{usosMateriales.length} {usosMateriales.length === 1 ? "material" : "materiales"} {seccionAbierta === "materiales" ? "▲" : "▼"}</span>
+          </button>
+
+          {seccionAbierta === "materiales" && <div className="planilla-acordeon-contenido">
 
           <form onSubmit={agregarUsoMaterial} className="form-planilla">
             <select
@@ -797,20 +856,6 @@ export default function Planillas() {
                 Agregar material
               </button>
 
-              <button
-                type="button"
-                className="ui-btn ui-btn-secondary"
-                onClick={() => {
-                  setPlanillaSeleccionada(null);
-                  setDetalles([]);
-                  setOperarios([]);
-                  setUsosMateriales([]);
-                  setLotes([]);
-                  setTallesForm(crearTallesIniciales());
-                }}
-              >
-                Cerrar gestión
-              </button>
             </div>
           </form>
 
@@ -854,6 +899,7 @@ export default function Planillas() {
               </tbody>
             </table>
           </div>
+          </div>}
         </div>
       )}
 
@@ -862,7 +908,8 @@ export default function Planillas() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="ui-table-card">
+        <>
+        <div className="ui-search-bar">
           <input
             className="ui-input"
             type="text"
@@ -870,6 +917,8 @@ export default function Planillas() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
+        </div>
+        <div className="ui-table-card">
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -902,17 +951,10 @@ export default function Planillas() {
                   </td>
                   <td>
                     <button
-                      className="ui-btn ui-btn-secondary"
-                      onClick={() => gestionarPlanilla(planilla)}
+                      className="ui-btn ui-btn-primary"
+                      onClick={() => gestionarPlanilla(planilla, "produccion")}
                     >
-                      Gestionar
-                    </button>
-
-                    <button
-                      className="ui-btn ui-btn-secondary"
-                      onClick={() => iniciarEdicion(planilla)}
-                    >
-                      Editar
+                      Abrir planilla
                     </button>
 
                     <button
@@ -929,6 +971,7 @@ export default function Planillas() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   );

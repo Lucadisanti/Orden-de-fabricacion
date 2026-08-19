@@ -26,10 +26,6 @@ export default function UsoMateriales() {
     cantidad_usada: "",
   });
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
   const desplazarAlFormulario = () => {
     window.setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -41,7 +37,7 @@ export default function UsoMateriales() {
   const cerrarConfirmacion = () => setConfirmacion(null);
 
 
-  const cargarDatos = async () => {
+  async function cargarDatos() {
     try {
       const [usosRes, planillasRes, lotesRes] = await Promise.all([
         axios.get("http://127.0.0.1:5000/api/uso-materiales/"),
@@ -58,7 +54,13 @@ export default function UsoMateriales() {
       setError("No se pudieron cargar los usos de materiales.");
       setCargando(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    // La carga inicial sincroniza los usos, planillas y lotes con la API.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarDatos();
+  }, []);
 
   const manejarCambio = (e) => {
     setForm({
@@ -281,7 +283,8 @@ export default function UsoMateriales() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="ui-table-card">
+        <>
+        <div className="ui-search-bar">
           <input
             className="ui-input"
             type="text"
@@ -289,6 +292,8 @@ export default function UsoMateriales() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
+        </div>
+        <div className="ui-table-card">
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -307,6 +312,7 @@ export default function UsoMateriales() {
               {usosFiltrados.map((uso) => (
                 <Fragment key={uso.id_uso}>
                   <tr
+                    className={filaAbierta === uso.id_uso ? "uso-fila-abierta" : ""}
                     onClick={() =>
                       setFilaAbierta(filaAbierta === uso.id_uso ? null : uso.id_uso)
                     }
@@ -318,7 +324,7 @@ export default function UsoMateriales() {
                     <td>{uso.nombre_proveedor || uso.proveedor || "-"}</td>
                     <td>{uso.material || "-"}</td>
                     <td>{uso.color || "-"}</td>
-                    <td>{uso.cantidad_usada}</td>
+                    <td>{uso.cantidad_usada} <span className="uso-flecha">{filaAbierta === uso.id_uso ? "▲" : "▼"}</span></td>
                     <td>
                       <button
                         className="ui-btn ui-btn-secondary"
@@ -345,89 +351,23 @@ export default function UsoMateriales() {
                   {filaAbierta === uso.id_uso && (
                 <tr>
                     <td colSpan="8">
-                      <div className="detalle-uso-grid">
-
-                        <div className="detalle-card">
-                          <h3>📦 Recepción del material</h3>
-
-                          <div className="detalle-item">
-                            <span>Remito</span>
-                            <strong>{uso.numero_remito || "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Proveedor</span>
-                            <strong>{uso.nombre_proveedor || "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Fecha solicitud</span>
-                            <strong>{uso.fecha_solicitud || "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Fecha entrega</span>
-                            <strong>{uso.fecha_entrega || "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Estado</span>
-                            <strong>{uso.estado_recepcion || "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Recibido por</span>
-                            <strong>{uso.recibido_por || "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Cantidad recibida</span>
-                            <strong>{uso.cantidad_recibida}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Observaciones</span>
-                            <strong>{uso.observaciones || "-"}</strong>
-                          </div>
-
+                      <div className="uso-detalle-compacto">
+                        <div className="uso-detalle-header">
+                          <div><span>Uso en producción</span><h3>{uso.material || "Material"} {uso.color ? `· ${uso.color}` : ""}</h3></div>
+                          <div className="uso-cantidad-destacada"><span>Cantidad utilizada</span><strong>{uso.cantidad_usada}</strong></div>
                         </div>
-
-                        <div className="detalle-card">
-
-                          <h3>🏭 Uso en producción</h3>
-
-                          <div className="detalle-item">
-                            <span>Orden</span>
-                            <strong>{uso.numero_orden}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Planilla</span>
-                            <strong>{uso.numero_planilla}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Producto</span>
-                            <strong>{uso.producto}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Material</span>
-                            <strong>{uso.material}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Color</span>
-                            <strong>{uso.color}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Cantidad utilizada</span>
-                            <strong>{uso.cantidad_usada}</strong>
-                          </div>
-
+                        <div className="uso-datos-grid">
+                          <div><span>Orden</span><strong>{uso.numero_orden || "-"}</strong></div>
+                          <div><span>Planilla</span><strong>{uso.numero_planilla || "-"}</strong></div>
+                          <div><span>Producto</span><strong>{uso.producto || "-"}</strong></div>
+                          <div><span>Remito</span><strong>{uso.numero_remito || "-"}</strong></div>
+                          <div><span>Proveedor</span><strong>{uso.nombre_proveedor || "-"}</strong></div>
+                          <div><span>Estado de recepción</span><strong>{uso.estado_recepcion || "-"}</strong></div>
+                          <div><span>Fecha de entrega</span><strong>{uso.fecha_entrega || "-"}</strong></div>
+                          <div><span>Recibido por</span><strong>{uso.recibido_por || "-"}</strong></div>
+                          <div><span>Cantidad recibida</span><strong>{uso.cantidad_recibida ?? "-"}</strong></div>
                         </div>
-
+                        <div className="uso-observaciones"><span>Observaciones de recepción</span><p>{uso.observaciones || "Sin observaciones."}</p></div>
                       </div>
                     </td>
                   </tr>
@@ -437,6 +377,7 @@ export default function UsoMateriales() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   );

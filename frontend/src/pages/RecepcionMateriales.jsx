@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import { obtenerMensajeError } from "../utils/errorMessages";
@@ -33,14 +33,10 @@ export default function RecepcionMateriales() {
     observaciones: "",
   });
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
   const mostrarToast = (type, title, message) => setToast({ type, title, message });
 
 
-  const cargarDatos = async () => {
+  async function cargarDatos() {
     try {
       const [provRes, matRes, colRes, lotesRes] = await Promise.all([
         axios.get("http://127.0.0.1:5000/api/proveedores/"),
@@ -59,7 +55,13 @@ export default function RecepcionMateriales() {
       setError("No se pudieron cargar los datos.");
       setCargando(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    // La carga inicial sincroniza los catálogos y recepciones con la API.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarDatos();
+  }, []);
 
   const manejarCambio = (e) => {
     setForm({
@@ -312,7 +314,8 @@ export default function RecepcionMateriales() {
       {error && <p>{error}</p>}
 
       {!cargando && !error && (
-        <div className="ui-table-card"> 
+        <>
+        <div className="ui-search-bar">
       <input
         className="ui-input"
         type="text"
@@ -320,6 +323,8 @@ export default function RecepcionMateriales() {
         value={busqueda}
         onChange={(e) => setBusqueda(e.target.value)}
       />
+        </div>
+        <div className="ui-table-card">
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -335,13 +340,15 @@ export default function RecepcionMateriales() {
 
             <tbody>
               {lotesFiltrados.map((lote) => (
-                <>
+                <Fragment key={lote.id_lote}>
                   <tr
-                    key={lote.id_lote}
+                    className={filaAbierta === lote.id_lote ? "recepcion-fila-abierta" : ""}
                     onClick={() =>
                       setFilaAbierta(filaAbierta === lote.id_lote ? null : lote.id_lote)
                     }
                     style={{ cursor: "pointer" }}
+                    aria-expanded={filaAbierta === lote.id_lote}
+                    title="Ver detalle de la recepción"
                   >
                     <td>{lote.nombre_proveedor || lote.proveedor || "-"}</td>
                     <td>{lote.material}</td>
@@ -349,89 +356,54 @@ export default function RecepcionMateriales() {
                     <td>{lote.numero_remito}</td>
                     <td>{lote.cantidad_solicitada}</td>
                     <td>{lote.cantidad_recibida}</td>
-                    <td>{lote.pendiente}</td>
+                    <td>
+                      {lote.pendiente}
+                      <span className="recepcion-flecha" aria-hidden="true">
+                        {filaAbierta === lote.id_lote ? "▲" : "▼"}
+                      </span>
+                    </td>
                   </tr>
 
                   {filaAbierta === lote.id_lote && (
                     <tr>
                       <td colSpan="7">
-                      <div className="detalle-recepcion-grid">
-                        <div className="detalle-card">
-                          <h3>📄 Recepción</h3>
-
-                          <div className="detalle-item">
-                            <span>Remito</span>
-                            <strong>{lote.numero_remito || "-"}</strong>
+                      <div className="recepcion-detalle-compacto">
+                        <div className="recepcion-detalle-header">
+                          <div>
+                            <span>Detalle de recepción</span>
+                            <h3>Remito {lote.numero_remito || "-"}</h3>
                           </div>
-
-                          <div className="detalle-item">
-                            <span>Proveedor</span>
-                            <strong>{lote.nombre_proveedor || lote.proveedor || "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Estado</span>
-                            <strong>{lote.estado_recepcion || "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Fecha solicitud</span>
-                            <strong>{lote.fecha_solicitud || "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Fecha entrega</span>
-                            <strong>{lote.fecha_entrega || "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Recibido por</span>
-                            <strong>{lote.recibido_por || "-"}</strong>
-                          </div>
+                          <strong className="recepcion-estado">{lote.estado_recepcion || "Sin estado"}</strong>
                         </div>
 
-                        <div className="detalle-card">
-                          <h3>📦 Material recibido</h3>
+                        <div className="recepcion-datos-grid">
+                          <div><span>Proveedor</span><strong>{lote.nombre_proveedor || lote.proveedor || "-"}</strong></div>
+                          <div><span>Material</span><strong>{lote.material || "-"} {lote.color ? `· ${lote.color}` : ""}</strong></div>
+                          <div><span>Recibido por</span><strong>{lote.recibido_por || "-"}</strong></div>
+                          <div><span>Fecha de solicitud</span><strong>{lote.fecha_solicitud || "-"}</strong></div>
+                          <div><span>Fecha de entrega</span><strong>{lote.fecha_entrega || "-"}</strong></div>
+                        </div>
 
-                          <div className="detalle-item">
-                            <span>Material</span>
-                            <strong>{lote.material || "-"}</strong>
-                          </div>
+                        <div className="recepcion-cantidades">
+                          <div><span>Solicitado</span><strong>{lote.cantidad_solicitada ?? "-"}</strong></div>
+                          <div><span>Recibido</span><strong>{lote.cantidad_recibida ?? "-"}</strong></div>
+                          <div className={Number(lote.pendiente) > 0 ? "con-pendiente" : "sin-pendiente"}><span>Pendiente</span><strong>{lote.pendiente ?? "-"}</strong></div>
+                        </div>
 
-                          <div className="detalle-item">
-                            <span>Color</span>
-                            <strong>{lote.color || "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Cantidad solicitada</span>
-                            <strong>{lote.cantidad_solicitada ?? "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Cantidad recibida</span>
-                            <strong>{lote.cantidad_recibida ?? "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Pendiente</span>
-                            <strong>{lote.pendiente ?? "-"}</strong>
-                          </div>
-
-                          <div className="detalle-item">
-                            <span>Observaciones</span>
-                            <strong>{lote.observaciones || "-"}</strong>
-                          </div>
+                        <div className="recepcion-observaciones">
+                          <span>Observaciones</span>
+                          <p>{lote.observaciones || "Sin observaciones."}</p>
                         </div>
                       </div>
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   );

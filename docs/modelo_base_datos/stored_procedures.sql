@@ -302,6 +302,7 @@ BEGIN
     p.articulo_producto,
     p.nombre_producto AS producto,
     c.color,
+    COALESCE(MAX(totales.total_pares), 0) AS total_pares,
     CASE
       WHEN COUNT(pp.id_planilla) = 0 THEN 'Pendiente'
       WHEN SUM(CASE WHEN LOWER(pp.estado) IN ('finalizada', 'finalizado') THEN 1 ELSE 0 END) = COUNT(pp.id_planilla) THEN 'Finalizada'
@@ -312,6 +313,11 @@ BEGIN
   INNER JOIN producto p ON o.producto_id_producto = p.id_producto
   LEFT JOIN colores c ON p.colores_id_color = c.id_color
   LEFT JOIN planilla_produccion pp ON pp.orden_fabricacion_id_orden = o.id_orden
+  LEFT JOIN (
+    SELECT orden_fabricacion_id_orden, SUM(cantidad_pares) AS total_pares
+    FROM detalle_orden
+    GROUP BY orden_fabricacion_id_orden
+  ) totales ON totales.orden_fabricacion_id_orden = o.id_orden
   GROUP BY o.id_orden, o.numero_orden, o.fecha, o.producto_id_producto, p.articulo_producto, p.nombre_producto, c.color
   ORDER BY o.fecha DESC, o.id_orden DESC;
 END$$
@@ -326,11 +332,24 @@ BEGIN
     o.producto_id_producto,
     p.articulo_producto,
     p.nombre_producto AS producto,
-    c.color
+    c.color,
+    COALESCE(SUM(d.cantidad_pares), 0) AS total_pares
   FROM orden_fabricacion o
   INNER JOIN producto p ON o.producto_id_producto = p.id_producto
   LEFT JOIN colores c ON p.colores_id_color = c.id_color
-  WHERE o.id_orden = p_id_orden;
+  LEFT JOIN detalle_orden d ON d.orden_fabricacion_id_orden = o.id_orden
+  WHERE o.id_orden = p_id_orden
+  GROUP BY o.id_orden, o.numero_orden, o.fecha, o.producto_id_producto,
+           p.articulo_producto, p.nombre_producto, c.color;
+END$$
+
+DROP PROCEDURE IF EXISTS sp_listar_talles_orden$$
+CREATE PROCEDURE sp_listar_talles_orden(IN p_id_orden INT)
+BEGIN
+  SELECT id_detalle_orden, orden_fabricacion_id_orden, talle, cantidad_pares
+  FROM detalle_orden
+  WHERE orden_fabricacion_id_orden = p_id_orden
+  ORDER BY CAST(talle AS UNSIGNED), talle;
 END$$
 
 DROP PROCEDURE IF EXISTS sp_crear_orden$$

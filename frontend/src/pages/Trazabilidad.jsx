@@ -4,6 +4,19 @@ import Toast from "../components/Toast";
 import "../styles/ui.css";
 
 const API_URL = "http://127.0.0.1:5000/api";
+const GRUPOS_PLANILLA = [
+  { codigo: "R013", titulo: "Corte y Aparado" },
+  { codigo: "R013/1", titulo: "Calzado, Puntera e Inyección" },
+];
+
+const obtenerGrupoPlanilla = (planilla) => {
+  const numero = planilla.numero_planilla?.trim().toUpperCase();
+  const tipo = planilla.tipo_planilla?.toLowerCase() || "";
+  if (numero === "R013") return "R013";
+  if (numero === "R013/1") return "R013/1";
+  if (tipo.includes("corte") || tipo.includes("aparado")) return "R013";
+  return "R013/1";
+};
 
 export default function Trazabilidad() {
   const [ordenes, setOrdenes] = useState([]);
@@ -14,18 +27,18 @@ export default function Trazabilidad() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [tallesPorPlanilla, setTallesPorPlanilla] = useState({});
+  const [tallesOrden, setTallesOrden] = useState([]);
+  const [planillasDetalle, setPlanillasDetalle] = useState([]);
+  const [operariosPorPlanilla, setOperariosPorPlanilla] = useState({});
   const [planillaAbierta, setPlanillaAbierta] = useState(null);
+  const [bloqueAbierto, setBloqueAbierto] = useState("planillas");
   const [busquedaOrden, setBusquedaOrden] = useState("");
-
-  useEffect(() => {
-    cargarOrdenes();
-  }, []);
 
   const mostrarToast = (type, title, message) => {
     setToast({ type, title, message });
   };
 
-  const cargarOrdenes = async () => {
+  async function cargarOrdenes() {
     try {
       const res = await axios.get(`${API_URL}/ordenes/`);
       setOrdenes(res.data);
@@ -35,39 +48,56 @@ export default function Trazabilidad() {
       setError("No se pudieron cargar las órdenes.");
       setCargando(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    // La carga inicial es una sincronización con la API externa.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarOrdenes();
+  }, []);
 
   const seleccionarOrden = async (orden) => {
     setOrdenSeleccionada(orden);
     setPlanillaAbierta(null);
+    setBloqueAbierto("planillas");
     setMateriales([]);
     setTallesPorPlanilla({});
+    setTallesOrden([]);
+    setPlanillasDetalle([]);
+    setOperariosPorPlanilla({});
     setCargandoMateriales(true);
 
     try {
-      const res = await axios.get(
-        `${API_URL}/trazabilidad/orden/${orden.id_orden}/materiales`
-      );
+      const [res, tallesOrdenRes, planillasRes] = await Promise.all([
+        axios.get(`${API_URL}/trazabilidad/orden/${orden.id_orden}/materiales`),
+        axios.get(`${API_URL}/ordenes/${orden.id_orden}/talles`),
+        axios.get(`${API_URL}/planillas/`),
+      ]);
 
       setMateriales(res.data);
+      setTallesOrden(tallesOrdenRes.data);
 
-      const idsPlanillas = [
-        ...new Set(res.data.map((item) => item.id_planilla).filter(Boolean)),
-      ];
-
-      const tallesRes = await Promise.all(
-        idsPlanillas.map((idPlanilla) =>
-          axios.get(`${API_URL}/planillas/${idPlanilla}/detalles`)
-        )
+      const planillasOrden = planillasRes.data.filter(
+        (planilla) => planilla.orden_fabricacion_id_orden === orden.id_orden
       );
+      setPlanillasDetalle(planillasOrden);
+      const idsPlanillas = planillasOrden.map((planilla) => planilla.id_planilla);
+
+      const [tallesRes, operariosRes] = await Promise.all([
+        Promise.all(idsPlanillas.map((idPlanilla) => axios.get(`${API_URL}/planillas/${idPlanilla}/detalles`))),
+        Promise.all(idsPlanillas.map((idPlanilla) => axios.get(`${API_URL}/planillas/${idPlanilla}/operarios`))),
+      ]);
 
       const tallesAgrupados = {};
+      const operariosAgrupados = {};
 
       idsPlanillas.forEach((idPlanilla, index) => {
         tallesAgrupados[idPlanilla] = tallesRes[index].data;
+        operariosAgrupados[idPlanilla] = operariosRes[index].data;
       });
 
       setTallesPorPlanilla(tallesAgrupados);
+      setOperariosPorPlanilla(operariosAgrupados);
     } catch (error) {
       console.error(error);
       mostrarToast(
@@ -86,8 +116,7 @@ export default function Trazabilidad() {
     const normalizado = estado.toLowerCase();
 
     if (
-      normalizado.includes("producción") ||
-      normalizado.includes("produccion") ||
+      normalizado.includes("producci") ||
       normalizado.includes("proceso")
     ) {
       return "ui-status-produccion";
@@ -103,26 +132,19 @@ export default function Trazabilidad() {
     return "ui-status-pendiente";
   };
 
-  const planillasAgrupadas = materiales.reduce((acc, item) => {
-    const id = item.id_planilla;
+  const mostrarEstado = (estado = "") => {
+    const normalizado = estado.toLowerCase();
+    if (normalizado.includes("producci") || normalizado.includes("proceso")) return "En producción";
+    if (normalizado.includes("finalizada") || normalizado.includes("finalizado")) return "Finalizada";
+    return estado || "Pendiente";
+  };
 
-    if (!acc[id]) {
-      acc[id] = {
-        id_planilla: item.id_planilla,
-        numero_planilla: item.numero_planilla,
-        tipo_planilla: item.tipo_planilla,
-        materiales: [],
-      };
-    }
-
-    if (item.id_uso) {
-      acc[id].materiales.push(item);
-    }
-
-    return acc;
-  }, {});
-
-  const listaPlanillas = Object.values(planillasAgrupadas);
+  const listaPlanillas = planillasDetalle.map((planilla) => ({
+    ...planilla,
+    materiales: materiales.filter(
+      (item) => item.id_planilla === planilla.id_planilla && item.id_uso
+    ),
+  }));
 
   const obtenerTotalPlanilla = (idPlanilla) => {
     const talles = tallesPorPlanilla[idPlanilla] || [];
@@ -133,13 +155,23 @@ export default function Trazabilidad() {
     );
   };
 
-  const planillaCorte = listaPlanillas.find(
-    (planilla) => planilla.tipo_planilla?.toLowerCase() === "corte"
+  const progresoPorGrupo = Object.fromEntries(
+    GRUPOS_PLANILLA.map((grupo) => [
+      grupo.codigo,
+      listaPlanillas
+        .filter((planilla) => obtenerGrupoPlanilla(planilla) === grupo.codigo)
+        .reduce((total, planilla) => total + obtenerTotalPlanilla(planilla.id_planilla), 0),
+    ])
   );
 
-  const totalOrdenCorte = planillaCorte
-    ? obtenerTotalPlanilla(planillaCorte.id_planilla)
-    : 0;
+  const totalOrdenR013 = progresoPorGrupo.R013 || 0;
+
+  const totalPlanificado = tallesOrden.reduce(
+    (total, detalle) => total + Number(detalle.cantidad_pares || 0),
+    0
+  );
+
+  const paresPendientesR013 = Math.max(totalPlanificado - totalOrdenR013, 0);
 
   const totalMaterialesUsados = listaPlanillas.reduce(
     (total, planilla) => total + planilla.materiales.length,
@@ -175,8 +207,8 @@ export default function Trazabilidad() {
 
       {!cargando && !error && (
         <div className="ui-grid-2">
-          <div className="ui-table-card">
-            <h2>Órdenes de fabricación</h2>
+          <div className={`trazabilidad-columna-listado ${ordenSeleccionada ? "oculto-movil" : ""}`}>
+            <div className="ui-search-bar">
             <input
                 className="ui-input"
                 type="text"
@@ -184,11 +216,17 @@ export default function Trazabilidad() {
                 value={busquedaOrden}
                 onChange={(e) => setBusquedaOrden(e.target.value)}
               />
+            </div>
+            <div className="ui-table-card trazabilidad-listado">
+            <h2>Órdenes de fabricación</h2>
             <table className="ui-data-table">
               <thead>
                 <tr>
                   <th>Nº Orden</th>
+                  <th>Artículo</th>
                   <th>Producto</th>
+                  <th>Color</th>
+                  <th>Solicitados</th>
                   <th>Estado</th>
                 </tr>
               </thead>
@@ -197,27 +235,32 @@ export default function Trazabilidad() {
                 {ordenesFiltradas.map((orden) => (
                   <tr
                     key={orden.id_orden}
+                    className={ordenSeleccionada?.id_orden === orden.id_orden ? "trazabilidad-orden-activa" : ""}
                     onClick={() => seleccionarOrden(orden)}
                     style={{ cursor: "pointer" }}
                   >
                     <td>{orden.numero_orden}</td>
+                    <td>{orden.articulo_producto || "-"}</td>
                     <td>{orden.producto || orden.nombre_producto || "-"}</td>
+                    <td>{orden.color || "-"}</td>
+                    <td><strong>{Number(orden.total_pares || 0)} pares</strong></td>
                     <td>
                       <span
                         className={`ui-status-badge ${getEstadoClass(
                           orden.estado
                         )}`}
                       >
-                        {orden.estado || "Pendiente"}
+                        {mostrarEstado(orden.estado)}
                       </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
-          <div className="ui-form-card">
+          <div className={`ui-form-card trazabilidad-detalle ${ordenSeleccionada ? "visible-movil" : ""}`}>
             {!ordenSeleccionada ? (
               <>
                 <h2>Detalle de trazabilidad</h2>
@@ -235,71 +278,57 @@ export default function Trazabilidad() {
                       setOrdenSeleccionada(null);
                       setMateriales([]);
                       setTallesPorPlanilla({});
+                      setTallesOrden([]);
+                      setPlanillasDetalle([]);
+                      setOperariosPorPlanilla({});
                       setPlanillaAbierta(null);
                     }}
                   >
-                    Cerrar
+                    ← Volver a órdenes
                   </button>
                 </div>
-                <div className="ui-table-card">
-                  <h3>Resumen de la orden</h3>
+                <div className="ui-table-card trazabilidad-resumen">
+                  <div className="trazabilidad-meta">
+                    <div><span>Artículo</span><strong>{ordenSeleccionada.articulo_producto || "-"}</strong></div>
+                    <div><span>Producto</span><strong>{ordenSeleccionada.producto || ordenSeleccionada.nombre_producto || "-"}</strong></div>
+                    <div><span>Color</span><strong>{ordenSeleccionada.color || "-"}</strong></div>
+                    <div><span>Fecha</span><strong>{ordenSeleccionada.fecha || "-"}</strong></div>
+                    <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(ordenSeleccionada.estado)}`}>{mostrarEstado(ordenSeleccionada.estado)}</span></strong></div>
+                  </div>
 
-                  <p>
-                    <strong>Nº Orden:</strong>{" "}
-                    {ordenSeleccionada.numero_orden}
-                  </p>
+                  <div className="trazabilidad-totales">
+                    <div><span>Solicitados</span><strong>{totalPlanificado}</strong><small>pares</small></div>
+                    <div><span>Realizados R013</span><strong>{totalOrdenR013}</strong><small>pares</small></div>
+                    <div><span>Pendientes R013</span><strong>{paresPendientesR013}</strong><small>pares</small></div>
+                  </div>
 
-                  <p>
-                    <strong>Artículo:</strong>{" "}
-                    {ordenSeleccionada.articulo_producto || "-"}
-                  </p>
+                  <div className="trazabilidad-etapas">
+                    {GRUPOS_PLANILLA.map((grupo) => {
+                      const procesados = progresoPorGrupo[grupo.codigo] || 0;
+                      const pendientes = Math.max(totalPlanificado - procesados, 0);
+                      const porcentaje = totalPlanificado > 0 ? Math.min((procesados / totalPlanificado) * 100, 100) : 0;
+                      return <div key={grupo.codigo}>
+                        <div><strong>{grupo.codigo} · {grupo.titulo}</strong><span>{procesados} realizados · {pendientes} pendientes</span></div>
+                        <div className="trazabilidad-progreso"><span style={{ width: `${porcentaje}%` }}></span></div>
+                      </div>;
+                    })}
+                  </div>
 
-                  <p>
-                    <strong>Producto:</strong>{" "}
-                    {ordenSeleccionada.producto ||
-                      ordenSeleccionada.nombre_producto ||
-                      "-"}
-                  </p>
-
-                  <p>
-                    <strong>Color:</strong>{" "}
-                    {ordenSeleccionada.color || "-"}
-                  </p>
-
-                  <p>
-                    <strong>Fecha:</strong>{" "}
-                    {ordenSeleccionada.fecha || "-"}
-                  </p>
-
-                  <p>
-                    <strong>Estado:</strong>{" "}
-                    <span
-                      className={`ui-status-badge ${getEstadoClass(
-                        ordenSeleccionada.estado
-                      )}`}
-                    >
-                      {ordenSeleccionada.estado || "Pendiente"}
-                    </span>
-                  </p>
-
-                  <p>
-                    <strong>Total planificado según corte:</strong>{" "}
-                    {totalOrdenCorte} pares
-                  </p>
-
-                  <p>
-                    <strong>Planillas:</strong> {listaPlanillas.length}
-                  </p>
-
-                  <p>
-                    <strong>Materiales utilizados:</strong>{" "}
-                    {totalMaterialesUsados}
-                  </p>
+                  <button type="button" className={`trazabilidad-acordeon ${bloqueAbierto === "talles" ? "activo" : ""}`} onClick={() => setBloqueAbierto(bloqueAbierto === "talles" ? "" : "talles")}>
+                    <span><strong>Planificación por talle</strong><small>{tallesOrden.length} talles</small></span>
+                    <span>{bloqueAbierto === "talles" ? "▲" : "▼"}</span>
+                  </button>
+                  {bloqueAbierto === "talles" && (tallesOrden.length === 0 ? <p>Esta orden no tiene planificación por talle.</p> :
+                    <div className="talles-trazabilidad">{tallesOrden.map((detalle) => <span key={detalle.id_detalle_orden}>Talle {detalle.talle}: <strong>{detalle.cantidad_pares}</strong></span>)}</div>
+                  )}
                 </div>
 
-                <hr />
+                <button type="button" className={`trazabilidad-acordeon ${bloqueAbierto === "planillas" ? "activo" : ""}`} onClick={() => setBloqueAbierto(bloqueAbierto === "planillas" ? "" : "planillas")}>
+                  <span><strong>Planillas de producción</strong><small>{listaPlanillas.length} planillas · {totalMaterialesUsados} materiales</small></span>
+                  <span>{bloqueAbierto === "planillas" ? "▲" : "▼"}</span>
+                </button>
 
-                <h3>Planillas de producción</h3>
+                {bloqueAbierto === "planillas" && <div className="trazabilidad-planillas">
 
                 {cargandoMateriales && <p>Cargando planillas...</p>}
 
@@ -355,6 +384,12 @@ export default function Trazabilidad() {
 
                         {estaAbierta && (
                           <>
+                            <div className="trazabilidad-planilla-meta">
+                              <div><span>Fecha</span><strong>{planilla.fecha || "-"}</strong></div>
+                              <div><span>Máquina</span><strong>{planilla.maquina || "Sin máquina"}</strong></div>
+                              <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(planilla.estado)}`}>{mostrarEstado(planilla.estado)}</span></strong></div>
+                            </div>
+
                             <h4>Pares por talle</h4>
 
                             {tallesPlanilla.length === 0 ? (
@@ -370,13 +405,30 @@ export default function Trazabilidad() {
                               </div>
                             )}
 
+                            <h4>Operarios asignados</h4>
+                            {(operariosPorPlanilla[planilla.id_planilla] || []).length === 0 ? (
+                              <p>Sin operarios registrados.</p>
+                            ) : (
+                              <div className="trazabilidad-operarios">
+                                {operariosPorPlanilla[planilla.id_planilla].map((operario) => (
+                                  <span key={operario.id_operario_planilla}>
+                                    <strong>{operario.nombre_operario}</strong> · {operario.etapa}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            <h4>Materiales utilizados</h4>
+
                             {planilla.materiales.length === 0 ? (
                               <p>Sin materiales registrados.</p>
                             ) : (
+                              <div className="trazabilidad-materiales-tabla">
                               <table className="ui-data-table">
                                 <thead>
                                   <tr>
                                     <th>Remito</th>
+                                    <th>Lote</th>
                                     <th>Material</th>
                                     <th>Color</th>
                                     <th>Proveedor</th>
@@ -388,6 +440,7 @@ export default function Trazabilidad() {
                                   {planilla.materiales.map((item) => (
                                     <tr key={item.id_uso}>
                                       <td>{item.numero_remito || "-"}</td>
+                                      <td>{item.codigo_lote || "-"}</td>
                                       <td>{item.material || "-"}</td>
                                       <td>{item.color || "-"}</td>
                                       <td>{item.nombre_proveedor || "-"}</td>
@@ -396,12 +449,14 @@ export default function Trazabilidad() {
                                   ))}
                                 </tbody>
                               </table>
+                              </div>
                             )}
                           </>
                         )}
                       </div>
                     );
                   })}
+                </div>}
               </>
             )}
           </div>

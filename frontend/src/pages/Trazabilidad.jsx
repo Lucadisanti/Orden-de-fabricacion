@@ -219,14 +219,11 @@ export default function Trazabilidad() {
             </div>
             <div className="ui-table-card trazabilidad-listado">
             <h2>Órdenes de fabricación</h2>
-            <table className="ui-data-table">
+            <table className="ui-data-table trazabilidad-ordenes-table">
               <thead>
                 <tr>
                   <th>Nº Orden</th>
                   <th>Artículo</th>
-                  <th>Producto</th>
-                  <th>Color</th>
-                  <th>Solicitados</th>
                   <th>Estado</th>
                 </tr>
               </thead>
@@ -241,9 +238,6 @@ export default function Trazabilidad() {
                   >
                     <td>{orden.numero_orden}</td>
                     <td>{orden.articulo_producto || "-"}</td>
-                    <td>{orden.producto || orden.nombre_producto || "-"}</td>
-                    <td>{orden.color || "-"}</td>
-                    <td><strong>{Number(orden.total_pares || 0)} pares</strong></td>
                     <td>
                       <span
                         className={`ui-status-badge ${getEstadoClass(
@@ -268,12 +262,12 @@ export default function Trazabilidad() {
               </>
             ) : (
               <>
-                <div className="planilla-resumen-header">
+                <div className="planilla-resumen-header trazabilidad-detalle-header">
                   <h2>Orden {ordenSeleccionada.numero_orden}</h2>
 
                   <button
                     type="button"
-                    className="ui-btn ui-btn-secondary"
+                    className="ui-btn ui-btn-secondary trazabilidad-volver-btn"
                     onClick={() => {
                       setOrdenSeleccionada(null);
                       setMateriales([]);
@@ -284,7 +278,7 @@ export default function Trazabilidad() {
                       setPlanillaAbierta(null);
                     }}
                   >
-                    ← Volver a órdenes
+                    ← Volver a la lista
                   </button>
                 </div>
                 <div className="ui-table-card trazabilidad-resumen">
@@ -307,10 +301,16 @@ export default function Trazabilidad() {
                       const procesados = progresoPorGrupo[grupo.codigo] || 0;
                       const pendientes = Math.max(totalPlanificado - procesados, 0);
                       const porcentaje = totalPlanificado > 0 ? Math.min((procesados / totalPlanificado) * 100, 100) : 0;
-                      return <div key={grupo.codigo}>
-                        <div><strong>{grupo.codigo} · {grupo.titulo}</strong><span>{procesados} realizados · {pendientes} pendientes</span></div>
-                        <div className="trazabilidad-progreso"><span style={{ width: `${porcentaje}%` }}></span></div>
-                      </div>;
+                      return (
+                        <div key={grupo.codigo} className="trazabilidad-etapa-card">
+                          <div className="trazabilidad-etapa-head">
+                            <strong>{grupo.codigo}</strong>
+                            <span>{procesados} realizados · {pendientes} pendientes</span>
+                          </div>
+                          <p className="trazabilidad-etapa-title">{grupo.titulo}</p>
+                          <div className="trazabilidad-progreso"><span style={{ width: `${porcentaje}%` }}></span></div>
+                        </div>
+                      );
                     })}
                   </div>
 

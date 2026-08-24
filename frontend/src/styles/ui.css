@@ -493,3 +493,118 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 @media (max-width: 480px) { .trazabilidad-meta { grid-template-columns: 1fr; } }
+
+
+/* Ajustes de trazabilidad: lista compacta, botón volver cómodo y textos largos prolijos */
+.trazabilidad-listado {
+  overflow-x: hidden;
+}
+
+.trazabilidad-listado .trazabilidad-ordenes-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.trazabilidad-ordenes-table th,
+.trazabilidad-ordenes-table td {
+  padding: 14px 12px;
+  overflow-wrap: anywhere;
+}
+
+.trazabilidad-ordenes-table th:nth-child(1),
+.trazabilidad-ordenes-table td:nth-child(1) {
+  width: 34%;
+}
+
+.trazabilidad-ordenes-table th:nth-child(2),
+.trazabilidad-ordenes-table td:nth-child(2) {
+  width: 28%;
+}
+
+.trazabilidad-ordenes-table th:nth-child(3),
+.trazabilidad-ordenes-table td:nth-child(3) {
+  width: 38%;
+  text-align: left;
+  min-width: 0;
+}
+
+.trazabilidad-ordenes-table .ui-status-badge {
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.trazabilidad-detalle-header {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  margin: -4px 0 16px;
+  padding: 8px 0 12px;
+  background: rgba(248, 251, 255, 0.96);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e5eaf1;
+}
+
+.trazabilidad-detalle-header h2 {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.trazabilidad-volver-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.trazabilidad-etapa-card {
+  min-width: 0;
+}
+
+.trazabilidad-etapa-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.trazabilidad-etapa-head strong {
+  flex: 0 0 auto;
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.trazabilidad-etapa-head span {
+  max-width: 58%;
+  text-align: right;
+  line-height: 1.25;
+}
+
+.trazabilidad-etapa-title {
+  margin: 4px 0 10px;
+  color: #172033;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .trazabilidad-detalle-header {
+    position: static;
+    gap: 10px;
+  }
+
+  .trazabilidad-volver-btn {
+    width: 100%;
+  }
+
+  .trazabilidad-etapa-head {
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .trazabilidad-etapa-head span {
+    max-width: 100%;
+    text-align: left;
+  }
+}

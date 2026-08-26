@@ -129,6 +129,40 @@ cd frontend
 npm run dev
 ```
 
+## Testing automatizado
+
+Las pruebas no requieren que MySQL este iniciado: las respuestas de base de datos se simulan para que los casos sean repetibles y no modifiquen informacion real.
+
+### Backend - Flask y pytest
+
+Instalar las dependencias de prueba y ejecutar la suite:
+
+```bash
+cd backend
+py -3.12 -m pip install -r requirements-test.txt
+py -3.12 -m pytest -v
+```
+
+La suite comprueba el listado de productos, respuestas `404`, creacion con codigo `201`, validacion de datos con codigo `400` y manejo controlado de errores `500`.
+
+### Frontend - Vitest y React Testing Library
+
+Instalar las dependencias y ejecutar todos los tests una vez:
+
+```bash
+cd frontend
+npm install
+npm test
+```
+
+Para trabajar viendo como se vuelven a ejecutar al guardar cambios:
+
+```bash
+npm run test:watch
+```
+
+La suite del Dashboard verifica el contenido inicial, el consumo simulado de la API, los enlaces de navegacion y el mensaje mostrado cuando la API falla.
+
 ## Subir cambios a GitHub
 
 Revisar los archivos modificados:

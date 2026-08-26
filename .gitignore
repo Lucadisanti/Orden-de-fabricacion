@@ -7,6 +7,7 @@ __pycache__/
 # Virtual environments
 venv/
 backend/venv/
+.pytest_cache/
 
 # Environment variables
 .env
@@ -18,3 +19,4 @@ backend/.env
 # MySQL / backups temporales
 *.bak
 *.tmp
+tmp/

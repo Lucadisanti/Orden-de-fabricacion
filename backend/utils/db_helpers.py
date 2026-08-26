@@ -55,14 +55,14 @@ def ejecutar_sp(nombre_sp, parametros=()):
 def responder_lista(nombre_sp, parametros=()):
     filas, error = ejecutar_sp(nombre_sp, parametros)
     if error:
-        return jsonify({"error": error}), 500
+        return jsonify({"mensaje": "Ocurrio un error al procesar la solicitud"}), 500
     return jsonify(filas), 200
 
 
 def responder_uno(nombre_sp, parametros=()):
     filas, error = ejecutar_sp(nombre_sp, parametros)
     if error:
-        return jsonify({"error": error}), 500
+        return jsonify({"mensaje": "Ocurrio un error al procesar la solicitud"}), 500
 
     if not filas:
         return jsonify({"mensaje": "Registro no encontrado"}), 404
@@ -73,7 +73,7 @@ def responder_uno(nombre_sp, parametros=()):
 def responder_accion(nombre_sp, parametros=(), status=200):
     filas, error = ejecutar_sp(nombre_sp, parametros)
     if error:
-        return jsonify({"error": error}), 500
+        return jsonify({"mensaje": "Ocurrio un error al procesar la solicitud"}), 500
 
     if filas:
         return jsonify(filas[0]), status

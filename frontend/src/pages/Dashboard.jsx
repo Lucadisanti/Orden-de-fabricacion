@@ -57,7 +57,7 @@ export default function Dashboard() {
 
   async function cargarResumen() {
     try {
-      const response = await axios.get("http://127.0.0.1:5000/api/dashboard/resumen");
+      const response = await axios.get("/api/dashboard/resumen");
       setResumen(normalizarResumen(response.data));
       setError("");
     } catch (error) {

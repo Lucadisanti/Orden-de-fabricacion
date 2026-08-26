@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
+import os
 
 from routes.productos_routes import productos_bp
 from routes.colores_routes import colores_bp
@@ -15,7 +16,7 @@ from routes.trazabilidad_routes import trazabilidad_bp
 from routes.dashboard_routes import dashboard_bp
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=os.getenv("CORS_ORIGINS", "http://127.0.0.1:5173").split(","))
 
 app.register_blueprint(productos_bp, url_prefix="/api/productos")
 app.register_blueprint(colores_bp, url_prefix="/api/colores")
@@ -53,4 +54,8 @@ def home():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(
+        host=os.getenv("FLASK_HOST", "127.0.0.1"),
+        port=int(os.getenv("FLASK_PORT", "5000")),
+        debug=os.getenv("FLASK_DEBUG", "false").lower() == "true",
+    )

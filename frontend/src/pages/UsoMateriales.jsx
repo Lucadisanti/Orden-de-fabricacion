@@ -40,9 +40,9 @@ export default function UsoMateriales() {
   async function cargarDatos() {
     try {
       const [usosRes, planillasRes, lotesRes] = await Promise.all([
-        axios.get("http://127.0.0.1:5000/api/uso-materiales/"),
-        axios.get("http://127.0.0.1:5000/api/planillas/"),
-        axios.get("http://127.0.0.1:5000/api/lotes/"),
+        axios.get("/api/uso-materiales/"),
+        axios.get("/api/planillas/"),
+        axios.get("/api/lotes/"),
       ]);
 
       setUsos(usosRes.data);
@@ -113,13 +113,13 @@ export default function UsoMateriales() {
     try {
       if (editando) {
         await axios.put(
-          `http://127.0.0.1:5000/api/uso-materiales/${idEditando}`,
+          `/api/uso-materiales/${idEditando}`,
           datos
         );
 
         mostrarToast("success", "Uso actualizado", "Los cambios se guardaron correctamente.");
       } else {
-        await axios.post("http://127.0.0.1:5000/api/uso-materiales/", datos);
+        await axios.post("/api/uso-materiales/", datos);
 
         mostrarToast("success", "Uso registrado", "El material utilizado se registró correctamente.");
       }
@@ -151,7 +151,7 @@ export default function UsoMateriales() {
 
         try {
           await axios.delete(
-            `http://127.0.0.1:5000/api/uso-materiales/${id_uso}`
+            `/api/uso-materiales/${id_uso}`
           );
 
           setUsos(usos.filter((uso) => uso.id_uso !== id_uso));

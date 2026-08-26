@@ -3,7 +3,7 @@ import axios from "axios";
 import Toast from "../components/Toast";
 import "../styles/ui.css";
 
-const API_URL = "http://127.0.0.1:5000/api";
+const API_URL = "/api";
 const GRUPOS_PLANILLA = [
   { codigo: "R013", titulo: "Corte y Aparado" },
   { codigo: "R013/1", titulo: "Calzado, Puntera e Inyección" },

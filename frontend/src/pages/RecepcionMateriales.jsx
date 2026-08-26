@@ -39,10 +39,10 @@ export default function RecepcionMateriales() {
   async function cargarDatos() {
     try {
       const [provRes, matRes, colRes, lotesRes] = await Promise.all([
-        axios.get("http://127.0.0.1:5000/api/proveedores/"),
-        axios.get("http://127.0.0.1:5000/api/materiales/"),
-        axios.get("http://127.0.0.1:5000/api/colores/"),
-        axios.get("http://127.0.0.1:5000/api/lotes/"),
+        axios.get("/api/proveedores/"),
+        axios.get("/api/materiales/"),
+        axios.get("/api/colores/"),
+        axios.get("/api/lotes/"),
       ]);
 
       setProveedores(provRes.data);
@@ -80,7 +80,7 @@ export default function RecepcionMateriales() {
     e.preventDefault();
 
     try {
-      const remitoRes = await axios.post("http://127.0.0.1:5000/api/remitos/", {
+      const remitoRes = await axios.post("/api/remitos/", {
         numero_remito: form.numero_remito,
         fecha_solicitud: form.fecha_solicitud,
         fecha_entrega: form.fecha_entrega || null,
@@ -91,7 +91,7 @@ export default function RecepcionMateriales() {
 
       const idRemito = remitoRes.data.id_remito;
 
-      await axios.post("http://127.0.0.1:5000/api/lotes/", {
+      await axios.post("/api/lotes/", {
         remitos_id_remito: idRemito,
         materiales_id_material: Number(form.materiales_id_material),
         colores_id_color: Number(form.colores_id_color),

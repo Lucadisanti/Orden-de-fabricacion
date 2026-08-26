@@ -12,6 +12,10 @@ backend/venv/
 # Environment variables
 .env
 backend/.env
+.env.docker
+
+# Backups locales de la instalacion
+backups/
 
 # VS Code
 .vscode/

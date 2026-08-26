@@ -42,7 +42,7 @@ describe("Dashboard", () => {
     renderDashboard();
 
     expect(axios.get).toHaveBeenCalledWith(
-      "http://127.0.0.1:5000/api/dashboard/resumen",
+      "/api/dashboard/resumen",
     );
     expect(await screen.findByRole("heading", { name: "10" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "12" })).toBeInTheDocument();

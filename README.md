@@ -27,6 +27,12 @@ Aplicación para administrar órdenes de fabricación de calzado, planificación
 - Node.js y npm.
 - Git.
 
+## Instalacion para cliente con Docker
+
+La version instalable incluye frontend, backend y MariaDB administrados con Docker Compose. En la computadora cliente no es necesario instalar Python, Node.js, XAMPP ni MySQL.
+
+Las instrucciones de primera instalacion, uso, backup y actualizacion se encuentran en [INSTALACION_DOCKER.md](INSTALACION_DOCKER.md).
+
 ## Instalación desde cero
 
 ### 1. Descargar el proyecto

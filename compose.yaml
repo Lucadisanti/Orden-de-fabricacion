@@ -1,0 +1,60 @@
+name: orden-fabricacion
+
+services:
+  database:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MARIADB_DATABASE: orden_fabricacion
+      MARIADB_USER: orden_app
+      MARIADB_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backups:/backups
+      - ./docs/modelo_base_datos/bd_orden_fabricacion.sql:/docker-entrypoint-initdb.d/01-esquema.sql:ro
+      - ./docs/modelo_base_datos/stored_procedures.sql:/docker-entrypoint-initdb.d/02-procedimientos.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - app_network
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: database
+      DB_USER: orden_app
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_NAME: orden_fabricacion
+      DB_PORT: 3306
+      CORS_ORIGINS: http://localhost:${APP_PORT:-8080}
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    depends_on:
+      - backend
+    networks:
+      - app_network
+
+volumes:
+  mysql_data:
+    name: orden_fabricacion_datos
+
+networks:
+  app_network:
+    name: orden_fabricacion_red

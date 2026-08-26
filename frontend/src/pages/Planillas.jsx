@@ -79,9 +79,9 @@ export default function Planillas() {
   async function cargarDatos() {
     try {
       const [planillasRes, ordenesRes, maquinasRes] = await Promise.all([
-        axios.get("http://127.0.0.1:5000/api/planillas/"),
-        axios.get("http://127.0.0.1:5000/api/ordenes/"),
-        axios.get("http://127.0.0.1:5000/api/maquinas/"),
+        axios.get("/api/planillas/"),
+        axios.get("/api/ordenes/"),
+        axios.get("/api/maquinas/"),
       ]);
 
       setPlanillas(planillasRes.data);
@@ -258,12 +258,12 @@ export default function Planillas() {
     try {
       if (editando) {
         await axios.put(
-          `http://127.0.0.1:5000/api/planillas/${idEditando}`,
+          `/api/planillas/${idEditando}`,
           datos
         );
         mostrarToast("success", "Planilla actualizada", "Los cambios se guardaron correctamente.");
       } else {
-        await axios.post("http://127.0.0.1:5000/api/planillas/", datos);
+        await axios.post("/api/planillas/", datos);
         mostrarToast("success", "Planilla creada", "La planilla se agregó correctamente.");
       }
 
@@ -297,7 +297,7 @@ export default function Planillas() {
 
         try {
           await axios.delete(
-            `http://127.0.0.1:5000/api/planillas/${id_planilla}`
+            `/api/planillas/${id_planilla}`
           );
 
           setPlanillas(
@@ -326,14 +326,14 @@ export default function Planillas() {
       const [detallesRes, operariosRes, usosRes, lotesRes, tallesOrdenRes] =
         await Promise.all([
           axios.get(
-            `http://127.0.0.1:5000/api/planillas/${planilla.id_planilla}/detalles`
+            `/api/planillas/${planilla.id_planilla}/detalles`
           ),
           axios.get(
-            `http://127.0.0.1:5000/api/planillas/${planilla.id_planilla}/operarios`
+            `/api/planillas/${planilla.id_planilla}/operarios`
           ),
-          axios.get("http://127.0.0.1:5000/api/uso-materiales/"),
-          axios.get("http://127.0.0.1:5000/api/lotes/"),
-          axios.get(`http://127.0.0.1:5000/api/ordenes/${planilla.orden_fabricacion_id_orden}/talles`),
+          axios.get("/api/uso-materiales/"),
+          axios.get("/api/lotes/"),
+          axios.get(`/api/ordenes/${planilla.orden_fabricacion_id_orden}/talles`),
         ]);
 
       setDetalles(detallesRes.data);
@@ -380,7 +380,7 @@ export default function Planillas() {
       await Promise.all(
         tallesConCantidad.map((item) =>
           axios.post(
-            `http://127.0.0.1:5000/api/planillas/${planillaSeleccionada.id_planilla}/detalles`,
+            `/api/planillas/${planillaSeleccionada.id_planilla}/detalles`,
             {
               talle: String(item.talle),
               cantidad_pares: item.cantidad,
@@ -405,7 +405,7 @@ export default function Planillas() {
 
     try {
       await axios.post(
-        `http://127.0.0.1:5000/api/planillas/${planillaSeleccionada.id_planilla}/operarios`,
+        `/api/planillas/${planillaSeleccionada.id_planilla}/operarios`,
         {
           etapa: operarioForm.etapa,
           nombre_operario: operarioForm.nombre_operario,
@@ -436,7 +436,7 @@ export default function Planillas() {
 
         try {
           await axios.delete(
-            `http://127.0.0.1:5000/api/planillas/operarios/${id_operario_planilla}`
+            `/api/planillas/operarios/${id_operario_planilla}`
           );
 
           setOperarios(
@@ -460,7 +460,7 @@ export default function Planillas() {
     if (!planillaSeleccionada) return;
 
     try {
-      await axios.post("http://127.0.0.1:5000/api/uso-materiales/", {
+      await axios.post("/api/uso-materiales/", {
         lote_materiales_id_lote: Number(
           usoMaterialForm.lote_materiales_id_lote
         ),
@@ -491,7 +491,7 @@ export default function Planillas() {
         cerrarConfirmacion();
 
         try {
-          await axios.delete(`http://127.0.0.1:5000/api/uso-materiales/${id_uso}`);
+          await axios.delete(`/api/uso-materiales/${id_uso}`);
 
           setUsosMateriales(usosMateriales.filter((uso) => uso.id_uso !== id_uso));
 

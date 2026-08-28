@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
@@ -10,6 +11,8 @@ const TALLES = Array.from({ length: 13 }, (_, index) => index + 35);
 const crearTallesVacios = () => Object.fromEntries(TALLES.map((talle) => [talle, ""]));
 
 export default function Ordenes() {
+  const [searchParams] = useSearchParams();
+  const ordenSeleccionadaId = searchParams.get("seleccion");
   const [ordenes, setOrdenes] = useState([]);
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -25,8 +28,15 @@ export default function Ordenes() {
   const formRef = useRef(null);
   const talleRefs = useRef([]);
   const guardarRef = useRef(null);
+  const ordenDestinoRef = useRef(null);
 
   useEffect(() => { cargarDatos(); }, []);
+
+  useEffect(() => {
+    if (!ordenSeleccionadaId || cargando) return;
+    const desplazamiento = window.setTimeout(() => ordenDestinoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+    return () => window.clearTimeout(desplazamiento);
+  }, [ordenSeleccionadaId, cargando]);
 
   const mostrarToast = (type, title, message) => setToast({ type, title, message });
   const cerrarConfirmacion = () => setConfirmacion(null);
@@ -232,7 +242,7 @@ export default function Ordenes() {
         <div className="ui-table-card">
         <table className="ui-data-table">
           <thead><tr><th>Nº Orden</th><th>Artículo</th><th>Producto</th><th>Color</th><th>Total solicitado</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
-          <tbody>{ordenesFiltradas.map((orden) => <tr key={orden.id_orden}>
+          <tbody>{ordenesFiltradas.map((orden) => <tr key={orden.id_orden} ref={String(orden.id_orden) === String(ordenSeleccionadaId) ? ordenDestinoRef : null} className={String(orden.id_orden) === String(ordenSeleccionadaId) ? "orden-fila-seleccionada" : ""}>
             <td>{orden.numero_orden}</td><td>{orden.articulo_producto || "-"}</td><td>{orden.producto || "-"}</td><td>{orden.color || "-"}</td>
             <td><strong>{Number(orden.total_pares || 0)} pares</strong></td><td>{orden.fecha}</td>
             <td><span className={`ui-status-badge ${getEstadoClass(orden.estado)}`}>{mostrarEstado(orden.estado)}</span></td>

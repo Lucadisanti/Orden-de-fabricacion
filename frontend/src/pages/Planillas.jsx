@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
@@ -6,6 +7,8 @@ import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Planillas.css";
 
 export default function Planillas() {
+  const [searchParams] = useSearchParams();
+  const seleccionInicial = searchParams.get("seleccion");
   const tallesDisponibles = Array.from({ length: 13 }, (_, i) => i + 35);
 
   const crearTallesIniciales = () => {
@@ -24,6 +27,9 @@ export default function Planillas() {
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
   const formRef = useRef(null);
+  const planillaAbiertaRef = useRef(null);
+  const listadoRef = useRef(null);
+  const seleccionAplicadaRef = useRef(null);
   const talleRefs = useRef([]);
   const guardarTallesRef = useRef(null);
 
@@ -39,6 +45,9 @@ export default function Planillas() {
   const [operarios, setOperarios] = useState([]);
   const [usosMateriales, setUsosMateriales] = useState([]);
   const [lotes, setLotes] = useState([]);
+  const [filaDetalleAbierta, setFilaDetalleAbierta] = useState(null);
+  const [resumenesPlanilla, setResumenesPlanilla] = useState({});
+  const [cargandoResumen, setCargandoResumen] = useState(null);
 
   const [tallesForm, setTallesForm] = useState(crearTallesIniciales());
 
@@ -65,10 +74,22 @@ export default function Planillas() {
     cargarDatos();
   }, []);
 
+  useEffect(() => {
+    if (!filaDetalleAbierta) return;
+    const desplazamiento = window.setTimeout(() => listadoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    return () => window.clearTimeout(desplazamiento);
+  }, [filaDetalleAbierta]);
+
   const desplazarAlFormulario = () => {
     window.setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 80);
+  };
+
+  const desplazarAPlanillaAbierta = () => {
+    window.setTimeout(() => {
+      planillaAbiertaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
   };
 
   const mostrarToast = (type, title, message) => setToast({ type, title, message });
@@ -319,8 +340,12 @@ export default function Planillas() {
   };
 
   const gestionarPlanilla = async (planilla, seccionInicial = null) => {
+    // El resumen inline puede dejar el formulario fuera de vista por su altura.
+    // Lo cerramos antes de desplazar para que "Abrir planilla" siempre lleve arriba.
+    setFilaDetalleAbierta(null);
     setPlanillaSeleccionada(planilla);
     if (seccionInicial) setSeccionAbierta(seccionInicial);
+    desplazarAPlanillaAbierta();
 
     try {
       const [detallesRes, operariosRes, usosRes, lotesRes, tallesOrdenRes] =
@@ -351,6 +376,52 @@ export default function Planillas() {
       mostrarToast("error", "No se pudieron cargar datos", "No se pudieron cargar los datos de la planilla.");
     }
   };
+
+  const alternarResumenPlanilla = async (planilla) => {
+    if (filaDetalleAbierta === planilla.id_planilla) {
+      setFilaDetalleAbierta(null);
+      return;
+    }
+
+    setFilaDetalleAbierta(planilla.id_planilla);
+    if (resumenesPlanilla[planilla.id_planilla]) return;
+
+    setCargandoResumen(planilla.id_planilla);
+    try {
+      const [detallesRes, operariosRes, usosRes] = await Promise.all([
+        axios.get(`http://127.0.0.1:5000/api/planillas/${planilla.id_planilla}/detalles`),
+        axios.get(`http://127.0.0.1:5000/api/planillas/${planilla.id_planilla}/operarios`),
+        axios.get("http://127.0.0.1:5000/api/uso-materiales/"),
+      ]);
+
+      setResumenesPlanilla((actuales) => ({
+        ...actuales,
+        [planilla.id_planilla]: {
+          detalles: detallesRes.data,
+          operarios: operariosRes.data,
+          materiales: usosRes.data.filter((uso) =>
+            Number(uso.planilla_produccion_id_planilla || uso.id_planilla) === Number(planilla.id_planilla)
+          ),
+        },
+      }));
+    } catch (resumenError) {
+      console.error(resumenError);
+      mostrarToast("error", "No se pudo abrir el detalle", "No se pudieron cargar los datos completos de la planilla.");
+    } finally {
+      setCargandoResumen(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!seleccionInicial || seleccionAplicadaRef.current === seleccionInicial || planillas.length === 0) return;
+    const planilla = planillas.find((item) => String(item.id_planilla) === String(seleccionInicial));
+    if (!planilla) return;
+    seleccionAplicadaRef.current = seleccionInicial;
+    // La selección recibida desde Inicio abre el detalle una sola vez.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    alternarResumenPlanilla(planilla);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seleccionInicial, planillas]);
 
   const guardarTalles = async () => {
     if (!planillaSeleccionada) return;
@@ -518,6 +589,10 @@ export default function Planillas() {
     return texto.includes(busqueda.toLowerCase());
     });
 
+    const planillasOrdenadas = filaDetalleAbierta
+      ? [...planillasFiltradas].sort((a, b) => Number(String(b.id_planilla) === String(filaDetalleAbierta)) - Number(String(a.id_planilla) === String(filaDetalleAbierta)))
+      : planillasFiltradas;
+
   return (
     <section className="planillas">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
@@ -632,7 +707,7 @@ export default function Planillas() {
       )}
 
       {planillaSeleccionada && (
-        <div className="ui-form-card planilla-abierta">
+        <div className="ui-form-card planilla-abierta" ref={planillaAbiertaRef}>
           <div className="planilla-abierta-header">
             <div>
               <span className="planilla-eyebrow">Planilla abierta</span>
@@ -918,7 +993,7 @@ export default function Planillas() {
             onChange={(e) => setBusqueda(e.target.value)}
           />
         </div>
-        <div className="ui-table-card">
+        <div ref={listadoRef} className={`ui-table-card planillas-listado-card ${filaDetalleAbierta ? "detalle-visible" : ""}`}>
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -933,9 +1008,17 @@ export default function Planillas() {
             </thead>
 
             <tbody>
-              {planillasFiltradas.map((planilla) => (
-                <tr key={planilla.id_planilla}>
-                  <td>{planilla.numero_planilla}</td>
+              {planillasOrdenadas.map((planilla) => {
+                const resumen = resumenesPlanilla[planilla.id_planilla];
+                const abierta = filaDetalleAbierta === planilla.id_planilla;
+                const totalDetalle = resumen?.detalles.reduce((total, detalle) => total + Number(detalle.cantidad_pares || 0), 0) || 0;
+                const tallesResumen = Object.entries(resumen?.detalles.reduce((acumulado, detalle) => {
+                  acumulado[detalle.talle] = (acumulado[detalle.talle] || 0) + Number(detalle.cantidad_pares || 0);
+                  return acumulado;
+                }, {}) || {});
+                return <Fragment key={planilla.id_planilla}>
+                <tr className={abierta ? "planilla-fila-abierta" : ""} onClick={() => alternarResumenPlanilla(planilla)} style={{ cursor: "pointer" }}>
+                  <td><span className="planilla-flecha">{abierta ? "▲" : "▼"}</span>{planilla.numero_planilla}</td>
                   <td>{planilla.numero_orden || planilla.orden || "-"}</td>
                   <td>{planilla.tipo_planilla}</td>
                   <td>{planilla.nombre_maquina || planilla.maquina || "-"}</td>
@@ -952,22 +1035,62 @@ export default function Planillas() {
                   <td>
                     <button
                       className="ui-btn ui-btn-primary"
-                      onClick={() => gestionarPlanilla(planilla, "produccion")}
+                      onClick={(event) => { event.stopPropagation(); gestionarPlanilla(planilla, "produccion"); }}
                     >
                       Abrir planilla
                     </button>
 
                     <button
                       className="ui-btn ui-btn-danger"
-                      onClick={() =>
-                        eliminarPlanilla(planilla.id_planilla)
-                      }
+                      onClick={(event) => { event.stopPropagation(); eliminarPlanilla(planilla.id_planilla); }}
                     >
                       Eliminar
                     </button>
                   </td>
                 </tr>
-              ))}
+
+                {abierta && <tr className="planilla-detalle-fila">
+                  <td colSpan="7">
+                    <div className="planilla-detalle-compacto">
+                      {cargandoResumen === planilla.id_planilla && <p>Cargando detalle completo…</p>}
+                      {resumen && <>
+                        <div className="planilla-detalle-header">
+                          <div><span>Planilla de producción</span><h3>{planilla.numero_planilla} · {planilla.tipo_planilla}</h3></div>
+                          <div className="planilla-total-destacado"><span>Total producido</span><strong>{totalDetalle} pares</strong></div>
+                        </div>
+
+                        <div className="planilla-detalle-meta">
+                          <div><span>Orden</span><strong>{planilla.numero_orden || planilla.orden || "-"}</strong></div>
+                          <div><span>Fecha</span><strong>{planilla.fecha || "-"}</strong></div>
+                          <div><span>Máquina</span><strong>{planilla.nombre_maquina || planilla.maquina || "-"}</strong></div>
+                          <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(planilla.estado)}`}>{planilla.estado || "Pendiente"}</span></strong></div>
+                        </div>
+
+                        <div className="planilla-detalle-grupos">
+                          <div>
+                            <h4>Pares por talle</h4>
+                            <div className="planilla-detalle-chips">
+                              {tallesResumen.length > 0 ? tallesResumen.map(([talle, cantidad]) => <span key={talle}>Talle {talle}: <strong>{cantidad}</strong></span>) : <small>Sin producción registrada.</small>}
+                            </div>
+                          </div>
+                          <div>
+                            <h4>Operarios asignados</h4>
+                            <div className="planilla-detalle-chips">
+                              {resumen.operarios.length > 0 ? resumen.operarios.map((operario) => <span key={operario.id_operario_planilla}><strong>{operario.nombre_operario}</strong> · {operario.etapa}</span>) : <small>Sin operarios asignados.</small>}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="planilla-materiales-enlace">
+                          <div><span>Usos de materiales</span><strong>{resumen.materiales.length} {resumen.materiales.length === 1 ? "registro" : "registros"}</strong></div>
+                          <Link className="ui-btn ui-btn-secondary" to={`/uso-materiales?orden=${encodeURIComponent(planilla.numero_orden || planilla.orden || "")}&planilla=${encodeURIComponent(planilla.numero_planilla || "")}`}>Ver usos →</Link>
+                        </div>
+                      </>}
+                    </div>
+                  </td>
+                </tr>}
+                </Fragment>;
+              })}
             </tbody>
           </table>
         </div>

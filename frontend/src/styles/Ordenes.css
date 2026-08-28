@@ -16,4 +16,6 @@
 .talles-orden-grid input { text-align: center; min-width: 0; }
 .ordenes-buscador { margin-bottom: 12px; }
 .ordenes-buscador .ui-input { width: 100%; margin: 0; }
+.orden-fila-seleccionada td { background: #dbeafe !important; box-shadow: inset 0 2px 0 #3b82f6, inset 0 -2px 0 #3b82f6; }
+:root[data-theme="noche"] .orden-fila-seleccionada td { background: #1d3a61 !important; }
 @media (max-width: 760px) { .orden-datos-grid { grid-template-columns: 1fr; } .talles-orden-header { align-items: flex-start; flex-direction: column; } }

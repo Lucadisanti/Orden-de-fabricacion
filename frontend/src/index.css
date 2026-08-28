@@ -25,6 +25,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root[data-theme="noche"] {
+  --bg-page: #0b1220;
+  --bg-card: #111b2e;
+  --bg-soft: #172236;
+  --text-main: #f1f5f9;
+  --text-muted: #9fb0c6;
+  --border: #2a3950;
+  --primary: #60a5fa;
+  --primary-hover: #93c5fd;
+  --danger-bg: #451a24;
+  --danger-text: #fda4af;
+  --shadow-card: 0 14px 34px rgba(0, 0, 0, 0.28);
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -41,6 +56,386 @@ body,
 body {
   overflow-x: hidden;
   background: var(--bg-page);
+}
+
+body,
+.app-layout,
+.main-content {
+  transition: background-color .2s ease, color .2s ease;
+}
+
+:root[data-theme="noche"] .main-content {
+  background: radial-gradient(circle at top left, rgba(59, 130, 246, .13), transparent 28rem), var(--bg-page);
+}
+
+:root[data-theme="noche"] .ui-table-card,
+:root[data-theme="noche"] .ui-form-card,
+:root[data-theme="noche"] .dashboard-card,
+:root[data-theme="noche"] .dashboard-recientes,
+:root[data-theme="noche"] .modal-content,
+:root[data-theme="noche"] .modal-card,
+:root[data-theme="noche"] .toast,
+:root[data-theme="noche"] [class*="-card"] {
+  background-color: var(--bg-card);
+  border-color: var(--border);
+  color: var(--text-main);
+}
+
+:root[data-theme="noche"] h1,
+:root[data-theme="noche"] h2,
+:root[data-theme="noche"] h3,
+:root[data-theme="noche"] strong,
+:root[data-theme="noche"] label,
+:root[data-theme="noche"] .dashboard-card h2,
+:root[data-theme="noche"] .dashboard-recientes-header h2 {
+  color: var(--text-main);
+}
+
+:root[data-theme="noche"] p,
+:root[data-theme="noche"] small,
+:root[data-theme="noche"] .dashboard-card span,
+:root[data-theme="noche"] .dashboard-card p,
+:root[data-theme="noche"] .dashboard-table td,
+:root[data-theme="noche"] .ui-data-table td {
+  color: var(--text-muted);
+}
+
+:root[data-theme="noche"] input,
+:root[data-theme="noche"] select,
+:root[data-theme="noche"] textarea {
+  background: #0c1628;
+  border-color: #34445c;
+  color: #f1f5f9;
+}
+
+:root[data-theme="noche"] input::placeholder,
+:root[data-theme="noche"] textarea::placeholder { color: #718198; }
+
+:root[data-theme="noche"] .ui-data-table th,
+:root[data-theme="noche"] .dashboard-table th {
+  background: #172236;
+  border-color: #2a3950;
+  color: #b9c6d8;
+}
+
+:root[data-theme="noche"] .ui-data-table td,
+:root[data-theme="noche"] .dashboard-table td,
+:root[data-theme="noche"] .dashboard-recientes-header {
+  border-color: #25344a;
+}
+
+:root[data-theme="noche"] .ui-table-card:not(.planilla-talles-comparacion) > .ui-data-table tbody td:first-child {
+  color: #bfdbfe;
+}
+
+:root[data-theme="noche"] .trazabilidad-orden-activa td:first-child {
+  color: #ffffff !important;
+}
+
+:root[data-theme="noche"] .ui-table-card:not(.planilla-talles-comparacion) > .ui-data-table tbody tr:nth-child(even) td {
+  background: #131f32;
+}
+
+:root[data-theme="noche"] .ui-table-card:not(.planilla-talles-comparacion) > .ui-data-table tbody tr:hover td,
+:root[data-theme="noche"] .dashboard-table tbody tr:hover {
+  background: #1b2b43;
+}
+
+:root[data-theme="noche"] .dashboard-fila-navegable:hover {
+  background: #1b3150 !important;
+}
+
+:root[data-theme="noche"] .dashboard-card.dashboard-card-active {
+  border-color: #60a5fa;
+  background: linear-gradient(180deg, #172b49 0%, #13243d 100%);
+  box-shadow: inset 0 0 0 2px #3b82f6, 0 18px 38px rgba(0, 0, 0, .3);
+}
+
+:root[data-theme="noche"] .dashboard-card {
+  border-color: rgba(96, 165, 250, .38);
+  box-shadow: inset 0 3px 0 rgba(96, 165, 250, .42), 0 14px 30px rgba(0, 0, 0, .24);
+}
+
+:root[data-theme="noche"] .dashboard-card:hover,
+:root[data-theme="noche"] .dashboard-card:focus-visible {
+  border-color: #60a5fa;
+  box-shadow: inset 0 3px 0 #60a5fa, 0 18px 38px rgba(37, 99, 235, .22);
+}
+
+:root[data-theme="noche"] .ui-btn-primary {
+  border-color: #60a5fa;
+  background: linear-gradient(180deg, #4f9cf9 0%, #2563eb 100%);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, .38), inset 0 1px 0 rgba(255, 255, 255, .25);
+}
+
+:root[data-theme="noche"] .ui-btn-secondary {
+  border-color: #526b8d;
+  background: linear-gradient(180deg, #203553 0%, #14243a 100%);
+  color: #f1f5f9;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, .24), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+:root[data-theme="noche"] .ui-btn-danger {
+  border-color: #ef4444;
+  background: linear-gradient(180deg, #8f2934 0%, #5f1720 100%);
+  color: #ffe4e6;
+  box-shadow: 0 5px 14px rgba(190, 24, 93, .24), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+
+:root[data-theme="noche"] .ui-btn-primary:hover {
+  background: linear-gradient(180deg, #60a5fa 0%, #1d4ed8 100%);
+}
+
+:root[data-theme="noche"] .ui-btn-secondary:hover {
+  border-color: #7592b8;
+  background: #263e5f;
+}
+
+:root[data-theme="noche"] .ui-btn-danger:hover {
+  border-color: #fb7185;
+  background: #9f2938;
+}
+
+:root[data-theme="noche"] .ui-status-badge {
+  border: 1px solid currentColor;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 3px 8px rgba(0, 0, 0, .18);
+}
+
+:root[data-theme="noche"] .ui-status-produccion {
+  background: #123b68;
+  color: #93c5fd;
+}
+
+:root[data-theme="noche"] .ui-status-pendiente {
+  background: #493509;
+  color: #fcd34d;
+}
+
+:root[data-theme="noche"] .ui-status-finalizada {
+  background: #103b2b;
+  color: #86efac;
+}
+
+:root[data-theme="noche"] option { background: #111b2e; color: #f1f5f9; }
+
+:root[data-theme="noche"] .uso-fila-abierta {
+  background: #17263c !important;
+}
+
+:root[data-theme="noche"] .uso-grupo-header td {
+  border-color: #3b5271;
+  background: #172b49 !important;
+}
+
+:root[data-theme="noche"] .uso-grupo-header strong { color: #dbeafe; }
+:root[data-theme="noche"] .uso-grupo-header span { color: #93a9c4; }
+
+:root[data-theme="noche"] .uso-detalle-compacto {
+  border-color: #34465f;
+  background: #111d30;
+  box-shadow: inset 0 3px 0 rgba(96, 165, 250, .3);
+}
+
+:root[data-theme="noche"] .uso-cantidad-destacada {
+  border-color: #315f9b;
+  background: #172b49;
+}
+
+:root[data-theme="noche"] .uso-cantidad-destacada strong {
+  color: #93c5fd;
+}
+
+:root[data-theme="noche"] .uso-observaciones {
+  border-color: #2b3b52;
+}
+
+:root[data-theme="noche"] .planilla-acordeon {
+  border-color: #34465f;
+  background: #111d30;
+}
+
+:root[data-theme="noche"] .planilla-acordeon:hover,
+:root[data-theme="noche"] .planilla-acordeon.activo {
+  border-color: #60a5fa;
+  background: #172b49;
+}
+
+:root[data-theme="noche"] .planificacion-referencia {
+  border: 1px solid #34465f;
+  background: #15243a;
+}
+
+:root[data-theme="noche"] .talles-planificados > span {
+  border: 1px solid #31435c;
+  background: #0e192a;
+  color: #b9c6d8;
+}
+
+:root[data-theme="noche"] .planilla-talles-comparacion th:first-child,
+:root[data-theme="noche"] .fila-carga th,
+:root[data-theme="noche"] .fila-carga td {
+  background: #101c2e;
+}
+
+:root[data-theme="noche"] .planilla-talles-comparacion .fila-esperados th,
+:root[data-theme="noche"] .planilla-talles-comparacion .fila-esperados td {
+  background: #173a67;
+  color: #bfdbfe;
+  border-color: #3b82f6;
+}
+
+:root[data-theme="noche"] .planilla-talles-comparacion .fila-realizados th,
+:root[data-theme="noche"] .planilla-talles-comparacion .fila-realizados td {
+  background: #14532d;
+  color: #bbf7d0;
+  border-color: #22c55e;
+}
+
+:root[data-theme="noche"] .planilla-talles-comparacion .fila-pendientes th,
+:root[data-theme="noche"] .planilla-talles-comparacion .fila-pendientes td {
+  background: #5a3b08;
+  color: #fde68a;
+  border-color: #f59e0b;
+}
+
+:root[data-theme="noche"] .planilla-talles-comparacion .columna-total {
+  border-color: #40516a;
+}
+
+:root[data-theme="noche"] .planilla-fila-abierta td {
+  background: #1d3a61 !important;
+}
+
+:root[data-theme="noche"] .planilla-detalle-fila > td {
+  background: #0e192a !important;
+}
+
+:root[data-theme="noche"] .planilla-detalle-compacto {
+  border-color: #34465f;
+  background: #111d30;
+  box-shadow: inset 0 3px 0 rgba(96, 165, 250, .28);
+}
+
+:root[data-theme="noche"] .planilla-total-destacado,
+:root[data-theme="noche"] .planilla-detalle-chips > span {
+  border-color: #315f9b;
+  background: #172b49;
+  color: #bfdbfe;
+}
+
+:root[data-theme="noche"] .planilla-total-destacado strong { color: #93c5fd; }
+:root[data-theme="noche"] .planilla-materiales-enlace { border-color: #34465f; }
+
+:root[data-theme="noche"] .recepcion-fila-abierta {
+  background: #17263c !important;
+}
+
+:root[data-theme="noche"] .recepcion-detalle-compacto {
+  border-color: #34465f;
+  background: #111d30;
+  box-shadow: inset 0 3px 0 rgba(96, 165, 250, .28);
+}
+
+:root[data-theme="noche"] .recepcion-estado {
+  border: 1px solid #60a5fa;
+  background: #123b68;
+  color: #bfdbfe;
+}
+
+:root[data-theme="noche"] .recepcion-cantidades > div {
+  border-color: #34465f;
+  background: #101c2e;
+}
+
+:root[data-theme="noche"] .recepcion-cantidades .con-pendiente {
+  border-color: #d97706;
+  background: #493509;
+}
+
+:root[data-theme="noche"] .recepcion-cantidades .con-pendiente strong {
+  color: #fcd34d;
+}
+
+:root[data-theme="noche"] .recepcion-cantidades .sin-pendiente {
+  border-color: #22c55e;
+  background: #103b2b;
+}
+
+:root[data-theme="noche"] .recepcion-cantidades .sin-pendiente strong {
+  color: #86efac;
+}
+
+:root[data-theme="noche"] .recepcion-observaciones {
+  border-color: #2b3b52;
+}
+
+:root[data-theme="noche"] .trazabilidad-detalle-header {
+  border-color: #2b3b52;
+  background: rgba(17, 29, 48, .96);
+}
+
+:root[data-theme="noche"] .trazabilidad-orden-activa,
+:root[data-theme="noche"] .trazabilidad-orden-activa td {
+  background: #1d3a61 !important;
+}
+
+:root[data-theme="noche"] .trazabilidad-acordeon {
+  border-color: #34465f;
+  background: #111d30;
+}
+
+:root[data-theme="noche"] .trazabilidad-acordeon:hover,
+:root[data-theme="noche"] .trazabilidad-acordeon.activo {
+  border-color: #60a5fa;
+  background: #172b49;
+}
+
+:root[data-theme="noche"] .trazabilidad-etapas > div,
+:root[data-theme="noche"] .trazabilidad-planilla-meta > div {
+  border-color: #2f4058;
+  background: #101c2e;
+}
+
+:root[data-theme="noche"] .trazabilidad-etapa-title {
+  color: #e2e8f0;
+}
+
+:root[data-theme="noche"] .trazabilidad-progreso {
+  background: #334155;
+}
+
+:root[data-theme="noche"] .talles-trazabilidad span,
+:root[data-theme="noche"] .trazabilidad-operarios > span {
+  border-color: #315f9b;
+  background: #172b49;
+  color: #bfdbfe;
+}
+
+:root[data-theme="noche"] .trazabilidad-materiales-tabla {
+  border-color: #34465f;
+}
+
+:root[data-theme="noche"] .total-orden {
+  border: 1px solid #315f9b;
+  background: #172b49;
+  color: #bfdbfe;
+}
+
+:root[data-theme="noche"] .talles-orden-grid label {
+  border-color: #34465f;
+  background: #101c2e;
+}
+
+:root[data-theme="noche"] .talles-orden-grid label.talle-con-cantidad {
+  border-color: #60a5fa;
+  background: #172b49;
+  box-shadow: inset 0 2px 0 rgba(96, 165, 250, .28);
+}
+
+:root[data-theme="noche"] .talles-orden-grid input {
+  border-color: #405572;
+  background: #0b1628;
 }
 
 #root {

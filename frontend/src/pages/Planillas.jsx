@@ -9,6 +9,9 @@ import "../styles/Planillas.css";
 export default function Planillas() {
   const [searchParams] = useSearchParams();
   const seleccionInicial = searchParams.get("seleccion");
+  const nuevaPlanilla = searchParams.get("nueva") === "1";
+  const ordenInicial = searchParams.get("orden") || "";
+  const fechaInicial = searchParams.get("fecha") || "";
   const tallesDisponibles = Array.from({ length: 13 }, (_, i) => i + 35);
 
   const crearTallesIniciales = () => {
@@ -30,6 +33,7 @@ export default function Planillas() {
   const planillaAbiertaRef = useRef(null);
   const listadoRef = useRef(null);
   const seleccionAplicadaRef = useRef(null);
+  const nuevaPlanillaAplicadaRef = useRef(false);
   const talleRefs = useRef([]);
   const guardarTallesRef = useRef(null);
 
@@ -56,10 +60,7 @@ export default function Planillas() {
     nombre_operario: "",
   });
 
-  const [usoMaterialForm, setUsoMaterialForm] = useState({
-    lote_materiales_id_lote: "",
-    cantidad_usada: "",
-  });
+  const [materialesForm, setMaterialesForm] = useState([""]);
 
   const [planillaForm, setPlanillaForm] = useState({
     orden_fabricacion_id_orden: "",
@@ -73,6 +74,23 @@ export default function Planillas() {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  useEffect(() => {
+    if (!nuevaPlanilla || !ordenInicial || nuevaPlanillaAplicadaRef.current) return;
+    nuevaPlanillaAplicadaRef.current = true;
+    setEditando(false);
+    setIdEditando(null);
+    setPlanillaForm({
+      orden_fabricacion_id_orden: ordenInicial,
+      numero_planilla: "",
+      fecha: fechaInicial,
+      tipo_planilla: "",
+      maquinas_id_maquina: "",
+      estado: "Pendiente",
+    });
+    setMostrarFormulario(true);
+    desplazarAlFormulario();
+  }, [fechaInicial, nuevaPlanilla, ordenInicial]);
 
   useEffect(() => {
     if (!filaDetalleAbierta) return;
@@ -216,14 +234,25 @@ export default function Planillas() {
     });
   };
 
-  const manejarCambioUsoMaterial = (e) => {
-    setUsoMaterialForm({
-      ...usoMaterialForm,
-      [e.target.name]: e.target.value,
+  const manejarCambioUsoMaterial = (index, valor) => {
+    setMaterialesForm((actuales) => {
+      const siguientes = [...actuales];
+      siguientes[index] = valor;
+      if (valor && index === siguientes.length - 1) siguientes.push("");
+      return siguientes;
+    });
+  };
+
+  const quitarSelectorMaterial = (index) => {
+    setMaterialesForm((actuales) => {
+      const siguientes = actuales.filter((_, posicion) => posicion !== index);
+      return siguientes.length > 0 ? siguientes : [""];
     });
   };
 
   const abrirFormularioNuevo = () => {
+    setPlanillaSeleccionada(null);
+    setFilaDetalleAbierta(null);
     setEditando(false);
     setIdEditando(null);
     setPlanillaForm({
@@ -239,6 +268,8 @@ export default function Planillas() {
   };
 
   const iniciarEdicion = (planilla) => {
+    setPlanillaSeleccionada(null);
+    setFilaDetalleAbierta(null);
     setEditando(true);
     setIdEditando(planilla.id_planilla);
 
@@ -262,6 +293,7 @@ export default function Planillas() {
 
   const guardarPlanilla = async (e) => {
     e.preventDefault();
+    let planillaCreada = null;
 
     const datos = {
       orden_fabricacion_id_orden: Number(
@@ -284,7 +316,16 @@ export default function Planillas() {
         );
         mostrarToast("success", "Planilla actualizada", "Los cambios se guardaron correctamente.");
       } else {
-        await axios.post("http://127.0.0.1:5000/api/planillas/", datos);
+        const respuesta = await axios.post("http://127.0.0.1:5000/api/planillas/", datos);
+        const orden = ordenes.find((item) => Number(item.id_orden) === datos.orden_fabricacion_id_orden);
+        const maquina = maquinas.find((item) => Number(item.id_maquina) === datos.maquinas_id_maquina);
+        planillaCreada = {
+          ...datos,
+          id_planilla: respuesta.data.id_planilla,
+          numero_orden: orden?.numero_orden || "",
+          orden: orden?.numero_orden || "",
+          nombre_maquina: maquina?.nombre_maquina || maquina?.maquina || "",
+        };
         mostrarToast("success", "Planilla creada", "La planilla se agregó correctamente.");
       }
 
@@ -301,6 +342,7 @@ export default function Planillas() {
       setIdEditando(null);
       setMostrarFormulario(false);
       cargarDatos();
+      if (planillaCreada) gestionarPlanilla(planillaCreada, "produccion");
     } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "planilla"));
@@ -343,6 +385,9 @@ export default function Planillas() {
     // El resumen inline puede dejar el formulario fuera de vista por su altura.
     // Lo cerramos antes de desplazar para que "Abrir planilla" siempre lleve arriba.
     setFilaDetalleAbierta(null);
+    setMostrarFormulario(false);
+    setEditando(false);
+    setIdEditando(null);
     setPlanillaSeleccionada(planilla);
     if (seccionInicial) setSeccionAbierta(seccionInicial);
     desplazarAPlanillaAbierta();
@@ -378,6 +423,10 @@ export default function Planillas() {
   };
 
   const alternarResumenPlanilla = async (planilla) => {
+    setPlanillaSeleccionada(null);
+    setMostrarFormulario(false);
+    setEditando(false);
+    setIdEditando(null);
     if (filaDetalleAbierta === planilla.id_planilla) {
       setFilaDetalleAbierta(null);
       return;
@@ -529,23 +578,25 @@ export default function Planillas() {
     e.preventDefault();
 
     if (!planillaSeleccionada) return;
+    const lotesSeleccionados = [...new Set(materialesForm.filter(Boolean))];
+    if (lotesSeleccionados.length === 0) {
+      mostrarToast("warning", "Faltan materiales", "Seleccioná al menos un material recibido.");
+      return;
+    }
 
     try {
-      await axios.post("http://127.0.0.1:5000/api/uso-materiales/", {
-        lote_materiales_id_lote: Number(
-          usoMaterialForm.lote_materiales_id_lote
-        ),
-        planilla_produccion_id_planilla: planillaSeleccionada.id_planilla,
-        cantidad_usada: Number(usoMaterialForm.cantidad_usada),
-      });
+      await Promise.all(lotesSeleccionados.map((idLote) =>
+        axios.post("http://127.0.0.1:5000/api/uso-materiales/", {
+          lote_materiales_id_lote: Number(idLote),
+          planilla_produccion_id_planilla: planillaSeleccionada.id_planilla,
+          cantidad_usada: 0,
+        })
+      ));
 
-      setUsoMaterialForm({
-        lote_materiales_id_lote: "",
-        cantidad_usada: "",
-      });
+      setMaterialesForm([""]);
 
       gestionarPlanilla(planillaSeleccionada);
-      mostrarToast("success", "Material agregado", "El material utilizado se registró correctamente.");
+      mostrarToast("success", "Materiales agregados", `${lotesSeleccionados.length} ${lotesSeleccionados.length === 1 ? "material se registró" : "materiales se registraron"} correctamente.`);
     } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo registrar", obtenerMensajeError(error, "uso de material"));
@@ -887,48 +938,38 @@ export default function Planillas() {
           </div>}
 
           <button type="button" className={`planilla-acordeon ${seccionAbierta === "materiales" ? "activo" : ""}`} onClick={() => setSeccionAbierta(seccionAbierta === "materiales" ? "" : "materiales")}>
-            <span><strong>Materiales utilizados</strong><small>Lotes y cantidades consumidas en esta planilla.</small></span>
+            <span><strong>Materiales utilizados</strong><small>Materiales recibidos utilizados en esta planilla.</small></span>
             <span>{usosMateriales.length} {usosMateriales.length === 1 ? "material" : "materiales"} {seccionAbierta === "materiales" ? "▲" : "▼"}</span>
           </button>
 
           {seccionAbierta === "materiales" && <div className="planilla-acordeon-contenido">
 
           <form onSubmit={agregarUsoMaterial} className="form-planilla">
-            <select
-              name="lote_materiales_id_lote"
-              value={usoMaterialForm.lote_materiales_id_lote}
-              onChange={manejarCambioUsoMaterial}
-              required
-            >
-              <option value="">Seleccione material recibido</option>
-
-              {lotes.map((lote) => (
-                <option
-                  key={lote.id_lote_materiales || lote.id_lote}
-                  value={lote.id_lote_materiales || lote.id_lote}
-                >
-                  Remito {lote.numero_remito || "-"} -{" "}
-                  {lote.nombre_proveedor || lote.proveedor || "Proveedor"} -{" "}
-                  {lote.material || "Material"}{" "}
-                  {lote.color ? `(${lote.color})` : ""} - Recibido:{" "}
-                  {lote.cantidad_recibida ?? "-"}
-                </option>
+            <div className="materiales-selectores">
+              {materialesForm.map((idSeleccionado, index) => (
+                <div className="material-selector-fila" key={index}>
+                  <select
+                    value={idSeleccionado}
+                    onChange={(event) => manejarCambioUsoMaterial(index, event.target.value)}
+                    aria-label={`Material ${index + 1}`}
+                  >
+                    <option value="">Seleccione material recibido</option>
+                    {lotes.map((lote) => {
+                      const idLote = String(lote.id_lote_materiales || lote.id_lote);
+                      const seleccionadoEnOtraFila = materialesForm.some((valor, posicion) => posicion !== index && valor === idLote);
+                      return <option key={idLote} value={idLote} disabled={seleccionadoEnOtraFila}>
+                        Remito {lote.numero_remito || "-"} - {lote.nombre_proveedor || lote.proveedor || "Proveedor"} - {lote.material || "Material"} {lote.color ? `(${lote.color})` : ""}
+                      </option>;
+                    })}
+                  </select>
+                  {idSeleccionado && <button type="button" className="material-selector-quitar" title="Quitar material" aria-label="Quitar material" onClick={() => quitarSelectorMaterial(index)}>×</button>}
+                </div>
               ))}
-            </select>
-
-            <input
-              type="number"
-              step="0.01"
-              name="cantidad_usada"
-              placeholder="Cantidad usada"
-              value={usoMaterialForm.cantidad_usada}
-              onChange={manejarCambioUsoMaterial}
-              required
-            />
+            </div>
 
             <div className="ui-form-actions">
               <button type="submit" className="ui-btn ui-btn-primary">
-                Agregar material
+                Guardar materiales
               </button>
 
             </div>
@@ -942,7 +983,6 @@ export default function Planillas() {
                   <th>Proveedor</th>
                   <th>Material</th>
                   <th>Color</th>
-                  <th>Cantidad usada</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -954,7 +994,6 @@ export default function Planillas() {
                     <td>{uso.nombre_proveedor || uso.proveedor || "-"}</td>
                     <td>{uso.material || "-"}</td>
                     <td>{uso.color || "-"}</td>
-                    <td>{uso.cantidad_usada}</td>
                     <td>
                       <button
                         className="ui-btn ui-btn-danger"
@@ -968,7 +1007,7 @@ export default function Planillas() {
 
                 {usosMateriales.length === 0 && (
                   <tr>
-                    <td colSpan="6">Todavía no hay materiales cargados.</td>
+                    <td colSpan="5">Todavía no hay materiales cargados.</td>
                   </tr>
                 )}
               </tbody>

@@ -35,8 +35,34 @@ CREATE TABLE materiales (
 CREATE TABLE colores (
   id_color INT AUTO_INCREMENT PRIMARY KEY,
   color VARCHAR(45) NOT NULL,
+  codigo_color CHAR(2) NULL,
 
-  UNIQUE KEY uq_colores_color (color)
+  UNIQUE KEY uq_colores_color (color),
+  UNIQUE KEY uq_colores_codigo (codigo_color)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE modelos_calzado (
+  id_modelo INT AUTO_INCREMENT PRIMARY KEY,
+  codigo_modelo CHAR(3) NOT NULL,
+  nombre_modelo VARCHAR(80) NOT NULL,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uq_modelos_codigo (codigo_modelo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE punteras (
+  id_puntera INT AUTO_INCREMENT PRIMARY KEY,
+  codigo_puntera CHAR(2) NOT NULL,
+  nombre_puntera VARCHAR(80) NOT NULL,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uq_punteras_codigo (codigo_puntera)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE adicionales (
+  id_adicional INT AUTO_INCREMENT PRIMARY KEY,
+  codigo_adicional CHAR(2) NOT NULL,
+  nombre_adicional VARCHAR(80) NOT NULL,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uq_adicionales_codigo (codigo_adicional)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE maquinas (
@@ -53,16 +79,36 @@ CREATE TABLE producto (
   id_producto INT AUTO_INCREMENT PRIMARY KEY,
   articulo_producto VARCHAR(45) NOT NULL,
   nombre_producto VARCHAR(45) NOT NULL,
+  modelos_calzado_id_modelo INT NULL,
+  punteras_id_puntera INT NULL,
   colores_id_color INT NULL,
 
   UNIQUE KEY uq_producto_articulo (articulo_producto),
   KEY idx_producto_color (colores_id_color),
+  KEY idx_producto_modelo (modelos_calzado_id_modelo),
+  KEY idx_producto_puntera (punteras_id_puntera),
 
   CONSTRAINT fk_producto_colores
     FOREIGN KEY (colores_id_color)
     REFERENCES colores (id_color)
     ON UPDATE CASCADE
-    ON DELETE SET NULL
+    ON DELETE SET NULL,
+  CONSTRAINT fk_producto_modelo FOREIGN KEY (modelos_calzado_id_modelo)
+    REFERENCES modelos_calzado (id_modelo) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_producto_puntera FOREIGN KEY (punteras_id_puntera)
+    REFERENCES punteras (id_puntera) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE producto_adicionales (
+  producto_id_producto INT NOT NULL,
+  adicionales_id_adicional INT NOT NULL,
+  orden INT NOT NULL,
+  PRIMARY KEY (producto_id_producto, adicionales_id_adicional),
+  UNIQUE KEY uq_producto_adicional_orden (producto_id_producto, orden),
+  CONSTRAINT fk_producto_adicional_producto FOREIGN KEY (producto_id_producto)
+    REFERENCES producto (id_producto) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_producto_adicional FOREIGN KEY (adicionales_id_adicional)
+    REFERENCES adicionales (id_adicional) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE orden_fabricacion (
@@ -239,6 +285,12 @@ CREATE TABLE uso_materiales (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================================================
--- Comprobacion: debe mostrar 12 tablas
+-- Catalogos iniciales confirmados
 -- =========================================================
+INSERT INTO punteras (codigo_puntera, nombre_puntera) VALUES
+  ('01', 'Acero'), ('02', 'Composite'), ('03', 'Plastico');
+INSERT INTO adicionales (codigo_adicional, nombre_adicional)
+VALUES ('97', 'Excentrico metal');
+
+-- Comprobacion: debe mostrar 16 tablas
 SHOW TABLES;

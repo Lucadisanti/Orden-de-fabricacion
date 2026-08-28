@@ -110,6 +110,14 @@ docs/modelo_base_datos/migracion_talles_por_orden_2026-08-19.sql
 
 Esta migración crea `detalle_orden`, conserva las órdenes existentes y actualiza los procedimientos necesarios. Debe ejecutarse una sola vez en cada base anterior a esta versión.
 
+Para incorporar la composición automática de artículos por modelo, puntera, adicionales y color, importar después:
+
+```text
+docs/modelo_base_datos/migracion_codigos_producto_2026-08-28.sql
+```
+
+Esta migración conserva los artículos actuales, crea los nuevos catálogos y relaciona automáticamente los códigos existentes que pueda reconocer. También debe ejecutarse una sola vez.
+
 Después, reiniciar backend y frontend.
 
 ## Trabajo diario

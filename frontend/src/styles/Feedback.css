@@ -109,6 +109,8 @@
   font-weight: 700;
 }
 
+.feedback-modal-card .feedback-segundo-campo { margin-top: 14px; }
+
 .feedback-modal-card input {
   width: 100%;
   min-height: 44px;
@@ -150,6 +152,50 @@
   color: #9a3412;
   font-size: 14px;
   font-weight: 700;
+}
+
+:root[data-theme="noche"] .feedback-toast {
+  border-color: #33445d;
+  background: #162338;
+  color: #f1f5f9;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.42);
+}
+
+:root[data-theme="noche"] .feedback-toast strong { color: #f8fafc; }
+:root[data-theme="noche"] .feedback-toast p { color: #b7c5d8; }
+
+:root[data-theme="noche"] .feedback-toast button {
+  background: #24344c;
+  color: #dce7f5;
+}
+
+:root[data-theme="noche"] .feedback-toast button:hover {
+  background: #31445f;
+  color: #ffffff;
+}
+
+:root[data-theme="noche"] .feedback-toast-success {
+  border-color: #226b4a;
+  border-left-color: #22c55e;
+  background: #102f27;
+}
+
+:root[data-theme="noche"] .feedback-toast-error {
+  border-color: #7f3038;
+  border-left-color: #ef4444;
+  background: #351b24;
+}
+
+:root[data-theme="noche"] .feedback-toast-warning {
+  border-color: #805d20;
+  border-left-color: #f59e0b;
+  background: #352a17;
+}
+
+:root[data-theme="noche"] .feedback-toast-info {
+  border-color: #285b94;
+  border-left-color: #3b82f6;
+  background: #152b47;
 }
 
 @media (max-width: 700px) {

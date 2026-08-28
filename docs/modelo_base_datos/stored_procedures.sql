@@ -13,7 +13,7 @@ DELIMITER $$
 DROP PROCEDURE IF EXISTS sp_listar_colores$$
 CREATE PROCEDURE sp_listar_colores()
 BEGIN
-  SELECT id_color, color
+  SELECT id_color, color, codigo_color
   FROM colores
   ORDER BY color;
 END$$
@@ -21,16 +21,16 @@ END$$
 DROP PROCEDURE IF EXISTS sp_obtener_color$$
 CREATE PROCEDURE sp_obtener_color(IN p_id_color INT)
 BEGIN
-  SELECT id_color, color
+  SELECT id_color, color, codigo_color
   FROM colores
   WHERE id_color = p_id_color;
 END$$
 
 DROP PROCEDURE IF EXISTS sp_crear_color$$
-CREATE PROCEDURE sp_crear_color(IN p_color VARCHAR(45))
+CREATE PROCEDURE sp_crear_color(IN p_color VARCHAR(45), IN p_codigo_color CHAR(2))
 BEGIN
-  INSERT INTO colores (color)
-  VALUES (p_color);
+  INSERT INTO colores (color, codigo_color)
+  VALUES (p_color, p_codigo_color);
 
   SELECT LAST_INSERT_ID() AS id_color, 'Color creado correctamente' AS mensaje;
 END$$
@@ -38,11 +38,12 @@ END$$
 DROP PROCEDURE IF EXISTS sp_actualizar_color$$
 CREATE PROCEDURE sp_actualizar_color(
   IN p_id_color INT,
-  IN p_color VARCHAR(45)
+  IN p_color VARCHAR(45),
+  IN p_codigo_color CHAR(2)
 )
 BEGIN
   UPDATE colores
-  SET color = p_color
+  SET color = p_color, codigo_color = p_codigo_color
   WHERE id_color = p_id_color;
 
   SELECT ROW_COUNT() AS filas_afectadas, 'Color actualizado correctamente' AS mensaje;
@@ -1023,6 +1024,72 @@ BEGIN
   SELECT 'Órdenes' AS titulo, COUNT(*) AS valor, 'Órdenes cargadas' AS detalle FROM orden_fabricacion
   UNION ALL
   SELECT 'Planillas' AS titulo, COUNT(*) AS valor, 'Planillas cargadas' AS detalle FROM planilla_produccion;
+END$$
+
+-- Catalogos para la composicion automatica del articulo
+DROP PROCEDURE IF EXISTS sp_listar_modelos_calzado$$
+CREATE PROCEDURE sp_listar_modelos_calzado()
+BEGIN
+  SELECT id_modelo, codigo_modelo, nombre_modelo, activo
+  FROM modelos_calzado WHERE activo = 1 ORDER BY codigo_modelo;
+END$$
+
+DROP PROCEDURE IF EXISTS sp_listar_punteras$$
+CREATE PROCEDURE sp_listar_punteras()
+BEGIN
+  SELECT id_puntera, codigo_puntera, nombre_puntera, activo
+  FROM punteras WHERE activo = 1 ORDER BY codigo_puntera;
+END$$
+
+DROP PROCEDURE IF EXISTS sp_listar_adicionales$$
+CREATE PROCEDURE sp_listar_adicionales()
+BEGIN
+  SELECT id_adicional, codigo_adicional, nombre_adicional, activo
+  FROM adicionales WHERE activo = 1 ORDER BY codigo_adicional;
+END$$
+
+DROP PROCEDURE IF EXISTS sp_listar_productos$$
+CREATE PROCEDURE sp_listar_productos()
+BEGIN
+  SELECT p.id_producto, p.articulo_producto, p.nombre_producto,
+    p.modelos_calzado_id_modelo, m.codigo_modelo, m.nombre_modelo,
+    p.punteras_id_puntera, pu.codigo_puntera, pu.nombre_puntera,
+    p.colores_id_color, c.color, c.codigo_color,
+    GROUP_CONCAT(pa.adicionales_id_adicional ORDER BY pa.orden SEPARATOR ',') AS adicionales_ids,
+    GROUP_CONCAT(a.nombre_adicional ORDER BY pa.orden SEPARATOR ', ') AS adicionales
+  FROM producto p
+  LEFT JOIN modelos_calzado m ON m.id_modelo = p.modelos_calzado_id_modelo
+  LEFT JOIN punteras pu ON pu.id_puntera = p.punteras_id_puntera
+  LEFT JOIN colores c ON c.id_color = p.colores_id_color
+  LEFT JOIN producto_adicionales pa ON pa.producto_id_producto = p.id_producto
+  LEFT JOIN adicionales a ON a.id_adicional = pa.adicionales_id_adicional
+  GROUP BY p.id_producto, p.articulo_producto, p.nombre_producto,
+    p.modelos_calzado_id_modelo, m.codigo_modelo, m.nombre_modelo,
+    p.punteras_id_puntera, pu.codigo_puntera, pu.nombre_puntera,
+    p.colores_id_color, c.color, c.codigo_color
+  ORDER BY p.id_producto DESC;
+END$$
+
+DROP PROCEDURE IF EXISTS sp_obtener_producto$$
+CREATE PROCEDURE sp_obtener_producto(IN p_id_producto INT)
+BEGIN
+  SELECT p.id_producto, p.articulo_producto, p.nombre_producto,
+    p.modelos_calzado_id_modelo, m.codigo_modelo, m.nombre_modelo,
+    p.punteras_id_puntera, pu.codigo_puntera, pu.nombre_puntera,
+    p.colores_id_color, c.color, c.codigo_color,
+    GROUP_CONCAT(pa.adicionales_id_adicional ORDER BY pa.orden SEPARATOR ',') AS adicionales_ids,
+    GROUP_CONCAT(a.nombre_adicional ORDER BY pa.orden SEPARATOR ', ') AS adicionales
+  FROM producto p
+  LEFT JOIN modelos_calzado m ON m.id_modelo = p.modelos_calzado_id_modelo
+  LEFT JOIN punteras pu ON pu.id_puntera = p.punteras_id_puntera
+  LEFT JOIN colores c ON c.id_color = p.colores_id_color
+  LEFT JOIN producto_adicionales pa ON pa.producto_id_producto = p.id_producto
+  LEFT JOIN adicionales a ON a.id_adicional = pa.adicionales_id_adicional
+  WHERE p.id_producto = p_id_producto
+  GROUP BY p.id_producto, p.articulo_producto, p.nombre_producto,
+    p.modelos_calzado_id_modelo, m.codigo_modelo, m.nombre_modelo,
+    p.punteras_id_puntera, pu.codigo_puntera, pu.nombre_puntera,
+    p.colores_id_color, c.color, c.codigo_color;
 END$$
 
 DELIMITER ;

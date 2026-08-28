@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
@@ -11,6 +11,7 @@ const TALLES = Array.from({ length: 13 }, (_, index) => index + 35);
 const crearTallesVacios = () => Object.fromEntries(TALLES.map((talle) => [talle, ""]));
 
 export default function Ordenes() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const ordenSeleccionadaId = searchParams.get("seleccion");
   const [ordenes, setOrdenes] = useState([]);
@@ -149,8 +150,9 @@ export default function Ordenes() {
         await axios.put(`${API_URL}/ordenes/${idEditando}`, datos);
         mostrarToast("success", "Orden actualizada", "Los datos y cantidades por talle se guardaron.");
       } else {
-        await axios.post(`${API_URL}/ordenes/`, datos);
-        mostrarToast("success", "Orden creada", `Se planificaron ${totalPares} pares.`);
+        const respuesta = await axios.post(`${API_URL}/ordenes/`, datos);
+        navigate(`/planillas?nueva=1&orden=${respuesta.data.id_orden}&fecha=${encodeURIComponent(datos.fecha)}`);
+        return;
       }
       cerrarFormulario();
       cargarDatos();

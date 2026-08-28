@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
-import PromptModal from "../components/PromptModal";
+import CatalogModal from "../components/CatalogModal";
 import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Productos.css";
 
@@ -11,12 +11,16 @@ const API_URL = "/api";
 export default function Productos() {
   const [productos, setProductos] = useState([]);
   const [colores, setColores] = useState([]);
+  const [modelos, setModelos] = useState([]);
+  const [punteras, setPunteras] = useState([]);
+  const [adicionales, setAdicionales] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [errorCatalogos, setErrorCatalogos] = useState("");
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
+  const [catalogoModal, setCatalogoModal] = useState(null);
   const formRef = useRef(null);
-  const [mostrarModalColor, setMostrarModalColor] = useState(false);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -24,14 +28,16 @@ export default function Productos() {
   const [idEditando, setIdEditando] = useState(null);
 
   const [productoForm, setProductoForm] = useState({
-    articulo_producto: "",
+    modelos_calzado_id_modelo: "",
+    punteras_id_puntera: "",
+    adicionales: [""],
     nombre_producto: "",
     colores_id_color: "",
   });
 
   useEffect(() => {
     cargarProductos();
-    cargarColores();
+    cargarCatalogos();
   }, []);
 
   const desplazarAlFormulario = () => {
@@ -47,7 +53,7 @@ export default function Productos() {
     setToast({ type, title, message });
   };
 
-  const cargarProductos = () => {
+  function cargarProductos() {
     axios
       .get(`${API_URL}/productos/`)
       .then((response) => {
@@ -59,23 +65,89 @@ export default function Productos() {
         setError("No se pudieron cargar los productos.");
         setCargando(false);
       });
-  };
+  }
 
-  const cargarColores = () => {
-    return axios
-      .get(`${API_URL}/colores/`)
-      .then((response) => setColores(response.data))
-      .catch((error) => console.error(error));
+  async function cargarCatalogos() {
+    try {
+      const [coloresRes, modelosRes, punterasRes, adicionalesRes] = await Promise.all([
+        axios.get(`${API_URL}/colores/`),
+        axios.get(`${API_URL}/catalogos/modelos-calzado`),
+        axios.get(`${API_URL}/catalogos/punteras`),
+        axios.get(`${API_URL}/catalogos/adicionales`),
+      ]);
+      setColores(coloresRes.data);
+      setModelos(modelosRes.data);
+      setPunteras(punterasRes.data);
+      setAdicionales(adicionalesRes.data);
+      setErrorCatalogos("");
+    } catch (error) {
+      console.error(error);
+      setErrorCatalogos("No se pudieron cargar los catálogos. Recargá la página para volver a intentar.");
+    }
+  }
+
+  const guardarOpcionCatalogo = async ({ codigo, nombre }) => {
+    const configuraciones = {
+      modelo: { endpoint: "catalogos/modelos-calzado", codigo: "codigo_modelo", nombre: "nombre_modelo", id: "id_modelo", campo: "modelos_calzado_id_modelo" },
+      puntera: { endpoint: "catalogos/punteras", codigo: "codigo_puntera", nombre: "nombre_puntera", id: "id_puntera", campo: "punteras_id_puntera" },
+      adicional: { endpoint: "catalogos/adicionales", codigo: "codigo_adicional", nombre: "nombre_adicional", id: "id_adicional", campo: "adicionales" },
+      color: { endpoint: "colores", codigo: "codigo_color", nombre: "color", id: "id_color", campo: "colores_id_color" },
+    };
+    const config = configuraciones[catalogoModal.tipo];
+    try {
+      const url = catalogoModal.itemId
+        ? `${API_URL}/${config.endpoint}/${catalogoModal.itemId}`
+        : `${API_URL}/${config.endpoint}${catalogoModal.tipo === "color" ? "/" : ""}`;
+      const respuesta = await axios[catalogoModal.itemId ? "put" : "post"](url, {
+        [config.codigo]: codigo,
+        [config.nombre]: nombre,
+      });
+      await cargarCatalogos();
+      const opcionId = String(catalogoModal.itemId || respuesta.data[config.id]);
+      setProductoForm((actual) => config.campo === "adicionales"
+        ? { ...actual, adicionales: catalogoModal.itemId ? actual.adicionales : [...actual.adicionales.filter(Boolean), opcionId, ""] }
+        : {
+          ...actual,
+          [config.campo]: opcionId,
+          ...(config.campo === "modelos_calzado_id_modelo" ? { nombre_producto: nombre } : {}),
+        });
+      setCatalogoModal(null);
+      mostrarToast("success", catalogoModal.itemId ? "Opción actualizada" : "Opción agregada", `${nombre} quedó seleccionado.`);
+    } catch (error) {
+      console.error(error);
+      mostrarToast("error", "No se pudo agregar", obtenerMensajeError(error, "opción"));
+    }
   };
 
   const manejarCambio = (e) => {
-    setProductoForm({ ...productoForm, [e.target.name]: e.target.value });
+    const siguiente = { ...productoForm, [e.target.name]: e.target.value };
+    if (e.target.name === "modelos_calzado_id_modelo") {
+      const modelo = modelos.find((item) => String(item.id_modelo) === e.target.value);
+      siguiente.nombre_producto = modelo?.nombre_modelo || "";
+    }
+    setProductoForm(siguiente);
   };
+
+  const manejarAdicional = (index, valor) => {
+    setProductoForm((actual) => {
+      const seleccionados = [...actual.adicionales];
+      seleccionados[index] = valor;
+      if (valor && index === seleccionados.length - 1) seleccionados.push("");
+      return { ...actual, adicionales: seleccionados };
+    });
+  };
+
+  const quitarAdicional = (index) => setProductoForm((actual) => ({
+    ...actual,
+    adicionales: actual.adicionales.filter((_, posicion) => posicion !== index).length
+      ? actual.adicionales.filter((_, posicion) => posicion !== index)
+      : [""],
+  }));
 
   const abrirFormularioNuevo = () => {
     setEditando(false);
     setIdEditando(null);
-    setProductoForm({ articulo_producto: "", nombre_producto: "", colores_id_color: "" });
+    setProductoForm({ modelos_calzado_id_modelo: "", punteras_id_puntera: "", adicionales: [""], nombre_producto: "", colores_id_color: "" });
     setMostrarFormulario(true);
     desplazarAlFormulario();
   };
@@ -84,7 +156,9 @@ export default function Productos() {
     setEditando(true);
     setIdEditando(producto.id_producto);
     setProductoForm({
-      articulo_producto: producto.articulo_producto,
+      modelos_calzado_id_modelo: producto.modelos_calzado_id_modelo || "",
+      punteras_id_puntera: producto.punteras_id_puntera || "",
+      adicionales: producto.adicionales_ids ? [...producto.adicionales_ids.split(","), ""] : [""],
       nombre_producto: producto.nombre_producto,
       colores_id_color: producto.colores_id_color || "",
     });
@@ -92,37 +166,10 @@ export default function Productos() {
     desplazarAlFormulario();
   };
 
-  const crearColorRapido = async (color) => {
-    const colorLimpio = color.trim();
-
-    const colorExistente = colores.find(
-      (item) => item.color.trim().toLowerCase() === colorLimpio.toLowerCase()
-    );
-
-    if (colorExistente) {
-      setProductoForm({ ...productoForm, colores_id_color: colorExistente.id_color });
-      setMostrarModalColor(false);
-      mostrarToast("info", "Color ya existente", "Ese color ya estaba cargado, lo seleccioné automáticamente.");
-      return;
-    }
-
-    try {
-      const response = await axios.post(`${API_URL}/colores/`, { color: colorLimpio });
-      await cargarColores();
-
-      setProductoForm({ ...productoForm, colores_id_color: response.data.id_color });
-      setMostrarModalColor(false);
-      mostrarToast("success", "Color creado", "El color se agregó y quedó seleccionado.");
-    } catch (error) {
-      console.error(error);
-      mostrarToast("error", "No se pudo crear el color", obtenerMensajeError(error, "color"));
-    }
-  };
-
   const guardarProducto = async (e) => {
     e.preventDefault();
 
-    const articulo = productoForm.articulo_producto.trim();
+    const articulo = articuloFinal;
     const nombre = productoForm.nombre_producto.trim();
 
     const articuloRepetido = productos.some(
@@ -143,6 +190,9 @@ export default function Productos() {
     const datos = {
       articulo_producto: articulo,
       nombre_producto: nombre,
+      modelos_calzado_id_modelo: Number(productoForm.modelos_calzado_id_modelo),
+      punteras_id_puntera: Number(productoForm.punteras_id_puntera),
+      adicionales: productoForm.adicionales.filter(Boolean).map(Number),
       colores_id_color: Number(productoForm.colores_id_color),
     };
 
@@ -155,7 +205,7 @@ export default function Productos() {
         mostrarToast("success", "Producto creado", "El producto se agregó correctamente.");
       }
 
-      setProductoForm({ articulo_producto: "", nombre_producto: "", colores_id_color: "" });
+      setProductoForm({ modelos_calzado_id_modelo: "", punteras_id_puntera: "", adicionales: [""], nombre_producto: "", colores_id_color: "" });
       setEditando(false);
       setIdEditando(null);
       setMostrarFormulario(false);
@@ -197,6 +247,14 @@ export default function Productos() {
   return texto.includes(busqueda.toLowerCase());
 });
 
+  const modeloSeleccionado = modelos.find((item) => String(item.id_modelo) === String(productoForm.modelos_calzado_id_modelo));
+  const punteraSeleccionada = punteras.find((item) => String(item.id_puntera) === String(productoForm.punteras_id_puntera));
+  const colorSeleccionado = colores.find((item) => String(item.id_color) === String(productoForm.colores_id_color));
+  const codigosAdicionales = productoForm.adicionales.filter(Boolean).map((id) =>
+    adicionales.find((item) => String(item.id_adicional) === String(id))?.codigo_adicional || ""
+  );
+  const articuloFinal = `${modeloSeleccionado?.codigo_modelo || ""}${punteraSeleccionada?.codigo_puntera || ""}${codigosAdicionales.join("")}${colorSeleccionado?.codigo_color || ""}`;
+
   return (
     <section className="productos">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
@@ -211,15 +269,10 @@ export default function Productos() {
         onConfirm={confirmacion?.onConfirm}
       />
 
-      <PromptModal
-        open={mostrarModalColor}
-        title="Agregar color"
-        label="Nombre del color"
-        placeholder="Ej: Violeta"
-        confirmText="Agregar"
-        onCancel={() => setMostrarModalColor(false)}
-        onConfirm={crearColorRapido}
-      />
+      <CatalogModal key={`${catalogoModal?.tipo || "cerrado"}-${catalogoModal?.itemId || "nuevo"}`} open={Boolean(catalogoModal)} title={catalogoModal?.title}
+        codeLength={catalogoModal?.codeLength || 2} initialCode={catalogoModal?.codigo} initialName={catalogoModal?.nombre}
+        onConfirm={guardarOpcionCatalogo}
+        onCancel={() => setCatalogoModal(null)} />
 
       <div className="ui-page-header ui-page-header-row">
         <div>
@@ -235,44 +288,79 @@ export default function Productos() {
       {mostrarFormulario && (
         <div className="ui-form-card" ref={formRef}>
           <h2>{editando ? "Editar producto" : "Nuevo producto"}</h2>
+          {errorCatalogos && <p>{errorCatalogos}</p>}
 
           <form onSubmit={guardarProducto} className="form-producto">
-            <input
-              type="text"
-              name="articulo_producto"
-              placeholder="Artículo"
-              value={productoForm.articulo_producto}
-              onChange={manejarCambio}
-              required
-            />
-
-            <input
-              type="text"
-              name="nombre_producto"
-              placeholder="Nombre del producto"
-              value={productoForm.nombre_producto}
-              onChange={manejarCambio}
-              required
-            />
-
-            <div className="color-row">
-              <select
-                name="colores_id_color"
-                value={productoForm.colores_id_color}
-                onChange={manejarCambio}
-                required
-              >
-                <option value="">Seleccione un color</option>
-                {colores.map((color) => (
-                  <option key={color.id_color} value={color.id_color}>
-                    {color.color}
-                  </option>
-                ))}
+            <label>Modelo de calzado
+              <div className="catalogo-selector-row">
+              <select name="modelos_calzado_id_modelo" value={productoForm.modelos_calzado_id_modelo} onChange={manejarCambio} required>
+                <option value="">Seleccione modelo</option>
+                {modelos.map((modelo) => <option key={modelo.id_modelo} value={modelo.id_modelo}>
+                  {modelo.codigo_modelo} - {modelo.nombre_modelo}
+                </option>)}
               </select>
+              <div className="catalogo-acciones">
+                <button type="button" className="catalogo-icon-btn" title="Agregar modelo" aria-label="Agregar modelo" onClick={() => setCatalogoModal({ tipo: "modelo", title: "Agregar modelo de calzado", codeLength: 3 })}>+</button>
+                {modeloSeleccionado && <button type="button" className="catalogo-icon-btn" title="Editar modelo" aria-label="Editar modelo" onClick={() => setCatalogoModal({ tipo: "modelo", title: "Editar modelo de calzado", codeLength: 3, itemId: modeloSeleccionado.id_modelo, codigo: modeloSeleccionado.codigo_modelo, nombre: modeloSeleccionado.nombre_modelo })}>✎</button>}
+              </div>
+              </div>
+            </label>
 
-              <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setMostrarModalColor(true)}>
-                + Agregar color
-              </button>
+            <label>Puntera
+              <div className="catalogo-selector-row">
+              <select name="punteras_id_puntera" value={productoForm.punteras_id_puntera} onChange={manejarCambio} required>
+                <option value="">Seleccione puntera</option>
+                {punteras.map((puntera) => <option key={puntera.id_puntera} value={puntera.id_puntera}>
+                  {puntera.codigo_puntera} - {puntera.nombre_puntera}
+                </option>)}
+              </select>
+              <div className="catalogo-acciones">
+                <button type="button" className="catalogo-icon-btn" title="Agregar puntera" aria-label="Agregar puntera" onClick={() => setCatalogoModal({ tipo: "puntera", title: "Agregar puntera", codeLength: 2 })}>+</button>
+                {punteraSeleccionada && <button type="button" className="catalogo-icon-btn" title="Editar puntera" aria-label="Editar puntera" onClick={() => setCatalogoModal({ tipo: "puntera", title: "Editar puntera", codeLength: 2, itemId: punteraSeleccionada.id_puntera, codigo: punteraSeleccionada.codigo_puntera, nombre: punteraSeleccionada.nombre_puntera })}>✎</button>}
+              </div>
+              </div>
+            </label>
+
+            <fieldset className="adicionales-producto">
+              <legend>Adicionales (opcional)</legend>
+              {productoForm.adicionales.map((idSeleccionado, index) => <div className="adicional-producto-fila" key={index}>
+                <select value={idSeleccionado} onChange={(event) => manejarAdicional(index, event.target.value)} aria-label={`Adicional ${index + 1}`}>
+                  <option value="">Sin adicional</option>
+                  {adicionales.map((adicional) => <option key={adicional.id_adicional} value={adicional.id_adicional}
+                    disabled={productoForm.adicionales.some((valor, posicion) => posicion !== index && String(valor) === String(adicional.id_adicional))}>
+                    {adicional.codigo_adicional} - {adicional.nombre_adicional}
+                  </option>)}
+                </select>
+                {idSeleccionado && <div className="catalogo-acciones">
+                  <button type="button" className="catalogo-icon-btn" title="Editar adicional" aria-label="Editar adicional" onClick={() => {
+                    const adicional = adicionales.find((item) => String(item.id_adicional) === String(idSeleccionado));
+                    setCatalogoModal({ tipo: "adicional", title: "Editar adicional", codeLength: 2, itemId: adicional.id_adicional, codigo: adicional.codigo_adicional, nombre: adicional.nombre_adicional });
+                  }}>✎</button>
+                  <button type="button" className="catalogo-icon-btn catalogo-icon-danger" title="Quitar adicional" aria-label="Quitar adicional" onClick={() => quitarAdicional(index)}>×</button>
+                </div>}
+                {!idSeleccionado && <button type="button" className="catalogo-icon-btn" title="Agregar adicional" aria-label="Agregar adicional" onClick={() => setCatalogoModal({ tipo: "adicional", title: "Agregar adicional", codeLength: 2 })}>+</button>}
+              </div>)}
+            </fieldset>
+
+            <label>Color
+              <div className="catalogo-selector-row">
+              <select name="colores_id_color" value={productoForm.colores_id_color} onChange={manejarCambio} required>
+                <option value="">Seleccione color</option>
+                {colores.map((color) => <option key={color.id_color} value={color.id_color} disabled={!color.codigo_color}>
+                  {color.codigo_color ? `${color.codigo_color} - ${color.color}` : `${color.color} - sin código`}
+                </option>)}
+              </select>
+              <div className="catalogo-acciones">
+                <button type="button" className="catalogo-icon-btn" title="Agregar color" aria-label="Agregar color" onClick={() => setCatalogoModal({ tipo: "color", title: "Agregar color", codeLength: 2 })}>+</button>
+                {colorSeleccionado && <button type="button" className="catalogo-icon-btn" title="Editar color" aria-label="Editar color" onClick={() => setCatalogoModal({ tipo: "color", title: "Editar color", codeLength: 2, itemId: colorSeleccionado.id_color, codigo: colorSeleccionado.codigo_color, nombre: colorSeleccionado.color })}>✎</button>}
+              </div>
+              </div>
+            </label>
+
+            <div className="articulo-preview">
+              <span>Artículo final</span>
+              <strong>{articuloFinal || "Seleccioná las opciones"}</strong>
+              <small>Modelo + puntera + adicionales + color</small>
             </div>
 
             <div className="ui-form-actions">

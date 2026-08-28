@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
@@ -6,6 +7,7 @@ import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/UsoMateriales.css";
 
 export default function UsoMateriales() {
+  const [searchParams] = useSearchParams();
   const [usos, setUsos] = useState([]);
   const [planillas, setPlanillas] = useState([]);
   const [lotes, setLotes] = useState([]);
@@ -14,11 +16,12 @@ export default function UsoMateriales() {
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
   const formRef = useRef(null);
+  const listadoRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
-  const [busqueda, setBusqueda] = useState("");
+  const [busqueda, setBusqueda] = useState(() => searchParams.get("orden") || "");
   const [filaAbierta, setFilaAbierta] = useState(null);
   const [form, setForm] = useState({
     lote_materiales_id_lote: "",
@@ -61,6 +64,12 @@ export default function UsoMateriales() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarDatos();
   }, []);
+
+  useEffect(() => {
+    if (!filaAbierta) return;
+    const desplazamiento = window.setTimeout(() => listadoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    return () => window.clearTimeout(desplazamiento);
+  }, [filaAbierta]);
 
   const manejarCambio = (e) => {
     setForm({
@@ -175,8 +184,23 @@ export default function UsoMateriales() {
     ${uso.color || ""}
   `.toLowerCase();
 
-  return texto.includes(busqueda.toLowerCase());
+  const planillaParametro = searchParams.get("planilla");
+  const coincidePlanilla = !planillaParametro || (uso.numero_planilla || uso.planilla || "").toLowerCase() === planillaParametro.toLowerCase();
+  return texto.includes(busqueda.toLowerCase()) && coincidePlanilla;
   });
+
+  const usosOrdenados = filaAbierta
+    ? [...usosFiltrados].sort((a, b) => Number(String(b.id_uso) === String(filaAbierta)) - Number(String(a.id_uso) === String(filaAbierta)))
+    : usosFiltrados;
+
+  const gruposUsos = Object.values(usosOrdenados.reduce((grupos, uso) => {
+    const orden = uso.numero_orden || uso.orden || "Sin orden";
+    const planilla = uso.numero_planilla || uso.planilla || "Sin planilla";
+    const clave = `${orden}-${planilla}`;
+    if (!grupos[clave]) grupos[clave] = { clave, orden, planilla, usos: [] };
+    grupos[clave].usos.push(uso);
+    return grupos;
+  }, {}));
 
   return (
     <section className="uso-materiales">
@@ -293,12 +317,10 @@ export default function UsoMateriales() {
             onChange={(e) => setBusqueda(e.target.value)}
           />
         </div>
-        <div className="ui-table-card">
+        <div ref={listadoRef} className="ui-table-card listado-desplegable">
           <table className="ui-data-table">
             <thead>
               <tr>
-                <th>Planilla</th>
-                <th>Orden</th>
                 <th>Remito</th>
                 <th>Proveedor</th>
                 <th>Material</th>
@@ -309,8 +331,12 @@ export default function UsoMateriales() {
             </thead>
 
           <tbody>
-              {usosFiltrados.map((uso) => (
-                <Fragment key={uso.id_uso}>
+              {gruposUsos.map((grupo) => (
+                <Fragment key={grupo.clave}>
+                  <tr className="uso-grupo-header">
+                    <td colSpan="6"><strong>Orden {grupo.orden}</strong><span>Planilla {grupo.planilla} · {grupo.usos.length} {grupo.usos.length === 1 ? "registro" : "registros"}</span></td>
+                  </tr>
+                  {grupo.usos.map((uso) => <Fragment key={uso.id_uso}>
                   <tr
                     className={filaAbierta === uso.id_uso ? "uso-fila-abierta" : ""}
                     onClick={() =>
@@ -318,13 +344,11 @@ export default function UsoMateriales() {
                     }
                     style={{ cursor: "pointer" }}
                   >
-                    <td>{uso.numero_planilla || uso.planilla || "-"}</td>
-                    <td>{uso.numero_orden || uso.orden || "-"}</td>
-                    <td>{uso.numero_remito || "-"}</td>
+                    <td><span className="uso-flecha">{filaAbierta === uso.id_uso ? "▲" : "▼"}</span>{uso.numero_remito || "-"}</td>
                     <td>{uso.nombre_proveedor || uso.proveedor || "-"}</td>
                     <td>{uso.material || "-"}</td>
                     <td>{uso.color || "-"}</td>
-                    <td>{uso.cantidad_usada} <span className="uso-flecha">{filaAbierta === uso.id_uso ? "▲" : "▼"}</span></td>
+                    <td>{uso.cantidad_usada}</td>
                     <td>
                       <button
                         className="ui-btn ui-btn-secondary"
@@ -350,7 +374,7 @@ export default function UsoMateriales() {
 
                   {filaAbierta === uso.id_uso && (
                 <tr>
-                    <td colSpan="8">
+                    <td colSpan="6">
                       <div className="uso-detalle-compacto">
                         <div className="uso-detalle-header">
                           <div><span>Uso en producción</span><h3>{uso.material || "Material"} {uso.color ? `· ${uso.color}` : ""}</h3></div>
@@ -372,6 +396,7 @@ export default function UsoMateriales() {
                     </td>
                   </tr>
               )}
+                  </Fragment>)}
                 </Fragment>
               ))}
             </tbody>

@@ -30,7 +30,8 @@
 }
 
 .recepcion-fila-abierta { background: #eff6ff !important; }
-.recepcion-flecha { margin-left: 9px; color: var(--primary); font-size: 10px; }
+.recepcion-listado-desplegable { scroll-margin-top: 18px; }
+.recepcion-flecha { display: inline-block; width: 15px; margin-right: 6px; color: var(--primary); font-size: 10px; }
 .recepcion-detalle-compacto { margin: 4px; padding: 18px; border: 1px solid #dbe5f1; border-radius: 14px; background: #f8fbff; text-align: left; }
 .recepcion-detalle-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
 .recepcion-detalle-header span, .recepcion-datos-grid span, .recepcion-cantidades span, .recepcion-observaciones span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
@@ -96,3 +97,5 @@
   .recepcion-detalle-header { align-items: flex-start; flex-direction: column; }
   .recepcion-datos-grid { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 900px) { .recepcion-listado-desplegable { scroll-margin-top: 78px; } }

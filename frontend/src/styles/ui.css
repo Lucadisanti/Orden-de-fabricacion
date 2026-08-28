@@ -402,6 +402,18 @@
   gap: 16px;
 }
 
+.trazabilidad-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.trazabilidad-header-actions .ui-btn:disabled {
+  cursor: wait;
+  opacity: .6;
+}
+
 .planilla-resumen-header {
   display: flex;
   justify-content: space-between;
@@ -436,24 +448,9 @@ input[type="number"]::-webkit-outer-spin-button {
 @media (max-width: 1050px) {
   .ui-grid-2 { grid-template-columns: 1fr; }
 }
-.trazabilidad-totales {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin: 18px 0;
-}
-
-.trazabilidad-totales > div {
-  display: grid;
-  padding: 14px;
-  border: 1px solid var(--border-color, #dce3ec);
-  border-radius: 12px;
-  background: var(--primary-soft, #f2f7ff);
-}
-
-.trazabilidad-totales span,
-.trazabilidad-totales small { color: var(--text-muted); font-size: 12px; }
-.trazabilidad-totales strong { margin: 2px 0; color: var(--text-main); font-size: 24px; }
+.trazabilidad-objetivo { display: flex; align-items: baseline; gap: 8px; margin: 17px 0 10px; padding: 0 2px; }
+.trazabilidad-objetivo span { color: var(--text-muted); font-size: 13px; }
+.trazabilidad-objetivo strong { color: var(--text-main); font-size: 15px; }
 .trazabilidad-orden-activa { background: #dbeafe !important; }
 .trazabilidad-resumen { margin-bottom: 14px; }
 .trazabilidad-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; margin-bottom: 14px; }
@@ -478,13 +475,14 @@ input[type="number"]::-webkit-outer-spin-button {
 .trazabilidad-operarios > span { padding: 7px 10px; border: 1px solid #dbeafe; border-radius: 9px; background: #eff6ff; color: #334155; font-size: 13px; }
 .trazabilidad-planillas > .ui-table-card { max-height: none; overflow: visible; padding: 20px; }
 .trazabilidad-materiales-tabla { width: 100%; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px; }
-.trazabilidad-materiales-tabla .ui-data-table { min-width: 760px; }
+.trazabilidad-materiales-tabla .ui-data-table { min-width: 600px; }
 
 @media (max-width: 760px) {
-  .trazabilidad-totales { grid-template-columns: 1fr; }
   .trazabilidad-meta { grid-template-columns: 1fr 1fr; }
   .trazabilidad-etapas { grid-template-columns: 1fr; }
   .trazabilidad-planilla-meta { grid-template-columns: 1fr; }
+  .trazabilidad-detalle-header { align-items: stretch; flex-direction: column; }
+  .trazabilidad-header-actions { justify-content: flex-start; flex-wrap: wrap; }
 }
 
 @media (max-width: 1050px) {
@@ -531,6 +529,10 @@ input[type="number"]::-webkit-outer-spin-button {
 .trazabilidad-ordenes-table .ui-status-badge {
   white-space: normal;
   line-height: 1.2;
+}
+
+.ui-form-card.trazabilidad-detalle {
+  padding-top: 18px;
 }
 
 .trazabilidad-detalle-header {

@@ -1,10 +1,11 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/RecepcionMateriales.css";
 
 export default function RecepcionMateriales() {
+  const listadoRef = useRef(null);
   const [proveedores, setProveedores] = useState([]);
   const [materiales, setMateriales] = useState([]);
   const [colores, setColores] = useState([]);
@@ -62,6 +63,12 @@ export default function RecepcionMateriales() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarDatos();
   }, []);
+
+  useEffect(() => {
+    if (!filaAbierta) return;
+    const desplazamiento = window.setTimeout(() => listadoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    return () => window.clearTimeout(desplazamiento);
+  }, [filaAbierta]);
 
   const manejarCambio = (e) => {
     setForm({
@@ -141,6 +148,10 @@ export default function RecepcionMateriales() {
 
   return texto.includes(busqueda.toLowerCase());
   });
+
+  const lotesOrdenados = filaAbierta
+    ? [...lotesFiltrados].sort((a, b) => Number(String(b.id_lote) === String(filaAbierta)) - Number(String(a.id_lote) === String(filaAbierta)))
+    : lotesFiltrados;
 
   return (
     <section className="recepcion-materiales">
@@ -324,7 +335,7 @@ export default function RecepcionMateriales() {
         onChange={(e) => setBusqueda(e.target.value)}
       />
         </div>
-        <div className="ui-table-card">
+        <div ref={listadoRef} className="ui-table-card recepcion-listado-desplegable">
           <table className="ui-data-table">
             <thead>
               <tr>
@@ -339,7 +350,7 @@ export default function RecepcionMateriales() {
             </thead>
 
             <tbody>
-              {lotesFiltrados.map((lote) => (
+              {lotesOrdenados.map((lote) => (
                 <Fragment key={lote.id_lote}>
                   <tr
                     className={filaAbierta === lote.id_lote ? "recepcion-fila-abierta" : ""}
@@ -350,18 +361,13 @@ export default function RecepcionMateriales() {
                     aria-expanded={filaAbierta === lote.id_lote}
                     title="Ver detalle de la recepción"
                   >
-                    <td>{lote.nombre_proveedor || lote.proveedor || "-"}</td>
+                    <td><span className="recepcion-flecha" aria-hidden="true">{filaAbierta === lote.id_lote ? "▲" : "▼"}</span>{lote.nombre_proveedor || lote.proveedor || "-"}</td>
                     <td>{lote.material}</td>
                     <td>{lote.color}</td>
                     <td>{lote.numero_remito}</td>
                     <td>{lote.cantidad_solicitada}</td>
                     <td>{lote.cantidad_recibida}</td>
-                    <td>
-                      {lote.pendiente}
-                      <span className="recepcion-flecha" aria-hidden="true">
-                        {filaAbierta === lote.id_lote ? "▲" : "▼"}
-                      </span>
-                    </td>
+                    <td>{lote.pendiente}</td>
                   </tr>
 
                   {filaAbierta === lote.id_lote && (

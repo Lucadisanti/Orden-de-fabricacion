@@ -164,14 +164,10 @@ export default function Trazabilidad() {
     ])
   );
 
-  const totalOrdenR013 = progresoPorGrupo.R013 || 0;
-
   const totalPlanificado = tallesOrden.reduce(
     (total, detalle) => total + Number(detalle.cantidad_pares || 0),
     0
   );
-
-  const paresPendientesR013 = Math.max(totalPlanificado - totalOrdenR013, 0);
 
   const totalMaterialesUsados = listaPlanillas.reduce(
     (total, planilla) => total + planilla.materiales.length,
@@ -189,6 +185,118 @@ export default function Trazabilidad() {
 
     return texto.includes(busquedaOrden.toLowerCase());
   });
+
+  const descargarPdf = async () => {
+    if (!ordenSeleccionada || cargandoMateriales) return;
+
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+    const margen = 12;
+    const ancho = pdf.internal.pageSize.getWidth();
+    const alto = pdf.internal.pageSize.getHeight();
+    let y = 34;
+    const valor = (dato) => String(dato ?? "-");
+
+    const tituloSeccion = (titulo) => {
+      pdf.setFillColor(235, 243, 255);
+      pdf.roundedRect(margen, y, ancho - margen * 2, 7, 1.5, 1.5, "F");
+      pdf.setTextColor(22, 58, 110);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9.5);
+      pdf.text(titulo, margen + 3, y + 5);
+      pdf.setTextColor(15, 23, 42);
+      y += 9;
+    };
+
+    const tabla = (head, body, opciones = {}) => {
+      autoTable(pdf, {
+        startY: y,
+        head: [head],
+        body,
+        margin: { left: margen, right: margen, top: 10, bottom: 12 },
+        theme: "grid",
+        styles: { font: "helvetica", fontSize: 7.2, cellPadding: 1.7, textColor: [30, 41, 59], lineColor: [203, 213, 225], overflow: "linebreak" },
+        headStyles: { fillColor: [25, 52, 91], textColor: [255, 255, 255], fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        pageBreak: "avoid",
+        ...opciones,
+      });
+      y = pdf.lastAutoTable.finalY + 4;
+    };
+
+    pdf.setFillColor(11, 22, 40);
+    pdf.rect(0, 0, ancho, 27, "F");
+    pdf.setTextColor(255, 226, 0);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(17);
+    pdf.text("BOHM", margen, 12);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(14);
+    pdf.text(`Informe de trazabilidad - Orden ${valor(ordenSeleccionada.numero_orden)}`, margen, 21);
+
+    tituloSeccion("Datos generales de la orden");
+    tabla(
+      ["Articulo", "Producto", "Color", "Fecha", "Estado", "Pares solicitados"],
+      [[valor(ordenSeleccionada.articulo_producto), valor(ordenSeleccionada.producto || ordenSeleccionada.nombre_producto), valor(ordenSeleccionada.color), valor(ordenSeleccionada.fecha), mostrarEstado(ordenSeleccionada.estado), valor(totalPlanificado)]],
+      { alternateRowStyles: {} }
+    );
+
+    tituloSeccion("Avance por etapa");
+    tabla(
+      ["Planilla", "Etapa", "Realizados", "Pendientes", "Avance"],
+      GRUPOS_PLANILLA.map((grupo) => {
+        const procesados = progresoPorGrupo[grupo.codigo] || 0;
+        return [grupo.codigo, grupo.titulo, valor(procesados), valor(Math.max(totalPlanificado - procesados, 0)), totalPlanificado ? `${Math.min(Math.round((procesados / totalPlanificado) * 100), 100)}%` : "0%"];
+      })
+    );
+
+    tituloSeccion("Planillas de produccion");
+    tabla(
+      ["Planilla", "Etapa", "Fecha", "Maquina", "Estado", "Total", "Produccion por talle", "Operarios asignados"],
+      listaPlanillas.length ? listaPlanillas.map((planilla) => {
+        const talles = tallesPorPlanilla[planilla.id_planilla] || [];
+        const operarios = operariosPorPlanilla[planilla.id_planilla] || [];
+        return [
+          valor(planilla.numero_planilla),
+          valor(planilla.tipo_planilla),
+          valor(planilla.fecha),
+          valor(planilla.nombre_maquina || planilla.maquina || "Sin maquina"),
+          mostrarEstado(planilla.estado),
+          `${obtenerTotalPlanilla(planilla.id_planilla)} pares`,
+          talles.length ? talles.map((detalle) => `${detalle.talle}: ${detalle.cantidad_pares}`).join(" | ") : "Sin registros",
+          operarios.length ? operarios.map((operario) => `${operario.nombre_operario} (${operario.etapa})`).join(" | ") : "Sin operarios",
+        ];
+      }) : [["Sin planillas registradas", "-", "-", "-", "-", "-", "-", "-"]],
+      { columnStyles: { 1: { cellWidth: 32 }, 3: { cellWidth: 34 }, 6: { cellWidth: 50 }, 7: { cellWidth: 48 } } }
+    );
+
+    tituloSeccion("Materiales utilizados");
+    const materialesPdf = listaPlanillas.flatMap((planilla) => planilla.materiales.map((item) => [
+      valor(planilla.numero_planilla),
+      valor(item.numero_remito),
+      valor(item.material),
+      valor(item.color),
+      valor(item.nombre_proveedor),
+      valor(item.cantidad_usada),
+    ]));
+    tabla(
+      ["Planilla", "Remito", "Material", "Color", "Proveedor", "Cantidad usada"],
+      materialesPdf.length ? materialesPdf : [["Sin materiales registrados", "-", "-", "-", "-", "-"]]
+    );
+
+    pdf.setDrawColor(203, 213, 225);
+    pdf.line(margen, alto - 11, ancho - margen, alto - 11);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(`Generado el ${new Date().toLocaleString("es-AR")}`, margen, alto - 6);
+    pdf.text("Informe completo de trazabilidad", ancho - margen, alto - 6, { align: "right" });
+
+    pdf.save(`trazabilidad-orden-${valor(ordenSeleccionada.numero_orden)}.pdf`);
+  };
 
   return (
     <section className="trazabilidad">
@@ -264,22 +372,26 @@ export default function Trazabilidad() {
               <>
                 <div className="planilla-resumen-header trazabilidad-detalle-header">
                   <h2>Orden {ordenSeleccionada.numero_orden}</h2>
-
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-secondary trazabilidad-volver-btn"
-                    onClick={() => {
-                      setOrdenSeleccionada(null);
-                      setMateriales([]);
-                      setTallesPorPlanilla({});
-                      setTallesOrden([]);
-                      setPlanillasDetalle([]);
-                      setOperariosPorPlanilla({});
-                      setPlanillaAbierta(null);
-                    }}
-                  >
-                    ← Volver a la lista
-                  </button>
+                  <div className="trazabilidad-header-actions">
+                    <button type="button" className="ui-btn ui-btn-primary" onClick={descargarPdf} disabled={cargandoMateriales}>
+                      Descargar PDF
+                    </button>
+                    <button
+                      type="button"
+                      className="ui-btn ui-btn-secondary trazabilidad-volver-btn"
+                      onClick={() => {
+                        setOrdenSeleccionada(null);
+                        setMateriales([]);
+                        setTallesPorPlanilla({});
+                        setTallesOrden([]);
+                        setPlanillasDetalle([]);
+                        setOperariosPorPlanilla({});
+                        setPlanillaAbierta(null);
+                      }}
+                    >
+                      ← Volver a la lista
+                    </button>
+                  </div>
                 </div>
                 <div className="ui-table-card trazabilidad-resumen">
                   <div className="trazabilidad-meta">
@@ -290,10 +402,9 @@ export default function Trazabilidad() {
                     <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(ordenSeleccionada.estado)}`}>{mostrarEstado(ordenSeleccionada.estado)}</span></strong></div>
                   </div>
 
-                  <div className="trazabilidad-totales">
-                    <div><span>Solicitados</span><strong>{totalPlanificado}</strong><small>pares</small></div>
-                    <div><span>Realizados R013</span><strong>{totalOrdenR013}</strong><small>pares</small></div>
-                    <div><span>Pendientes R013</span><strong>{paresPendientesR013}</strong><small>pares</small></div>
+                  <div className="trazabilidad-objetivo">
+                    <span>Objetivo de la orden</span>
+                    <strong>{totalPlanificado} pares solicitados</strong>
                   </div>
 
                   <div className="trazabilidad-etapas">
@@ -428,7 +539,6 @@ export default function Trazabilidad() {
                                 <thead>
                                   <tr>
                                     <th>Remito</th>
-                                    <th>Lote</th>
                                     <th>Material</th>
                                     <th>Color</th>
                                     <th>Proveedor</th>
@@ -440,7 +550,6 @@ export default function Trazabilidad() {
                                   {planilla.materiales.map((item) => (
                                     <tr key={item.id_uso}>
                                       <td>{item.numero_remito || "-"}</td>
-                                      <td>{item.codigo_lote || "-"}</td>
                                       <td>{item.material || "-"}</td>
                                       <td>{item.color || "-"}</td>
                                       <td>{item.nombre_proveedor || "-"}</td>

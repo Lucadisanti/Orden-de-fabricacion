@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
-import { obtenerMensajeError } from "../utils/errorMessages";
+import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/Ordenes.css";
 
@@ -216,7 +216,24 @@ export default function Ordenes() {
         mostrarToast("success", "Orden eliminada", "El registro se eliminó correctamente.");
       } catch (eliminarError) {
         console.error(eliminarError);
-        mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(eliminarError, "orden"));
+        if (esRegistroEnUso(eliminarError)) {
+          setConfirmacion({
+            title: "Orden con recorrido asociado",
+            message: "Esta orden tiene planillas, producción u otros datos vinculados. Si la eliminás, también se perderá todo ese recorrido en trazabilidad.",
+            confirmText: "Eliminar de todos modos",
+            danger: true,
+            onConfirm: async () => {
+              cerrarConfirmacion();
+              try {
+                await axios.delete(`${API_URL}/ordenes/${idOrden}?forzar=1`);
+                setOrdenes((actuales) => actuales.filter((orden) => orden.id_orden !== idOrden));
+                mostrarToast("success", "Orden eliminada", "También se eliminaron sus planillas y registros relacionados.");
+              } catch (errorForzado) {
+                mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(errorForzado, "orden"));
+              }
+            },
+          });
+        } else mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(eliminarError, "orden"));
       }
     },
   });

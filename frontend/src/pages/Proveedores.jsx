@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
-import { obtenerMensajeError } from "../utils/errorMessages";
+import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Proveedores.css";
 
 const API_URL = "/api";
@@ -42,7 +42,7 @@ export default function Proveedores() {
 
   const mostrarToast = (type, title, message) => setToast({ type, title, message });
 
-  const cargarProveedores = () => {
+  function cargarProveedores() {
     axios
       .get(`${API_URL}/proveedores/`)
       .then((response) => {
@@ -54,7 +54,7 @@ export default function Proveedores() {
         setError("No se pudieron cargar los proveedores.");
         setCargando(false);
       });
-  };
+  }
 
   const manejarCambio = (e) => {
     setProveedorForm({ ...proveedorForm, [e.target.name]: e.target.value });
@@ -146,8 +146,25 @@ export default function Proveedores() {
       setProveedores(proveedores.filter((proveedor) => proveedor.id_proveedor !== id_proveedor));
       mostrarToast("success", "Proveedor eliminado", "El registro se eliminó correctamente.");
         } catch (error) {
-      console.error(error);
-      mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "proveedor"));
+          console.error(error);
+          if (esRegistroEnUso(error)) {
+            pedirConfirmacion({
+              title: "Proveedor en uso",
+              message: "Este proveedor tiene recepciones asociadas. Si lo eliminás, también se perderán sus remitos, lotes y usos en trazabilidad.",
+              confirmText: "Eliminar de todos modos",
+              danger: true,
+              onConfirm: async () => {
+                cerrarConfirmacion();
+                try {
+                  await axios.delete(`${API_URL}/proveedores/${id_proveedor}?forzar=1`);
+                  setProveedores((actuales) => actuales.filter((proveedor) => proveedor.id_proveedor !== id_proveedor));
+                  mostrarToast("success", "Proveedor eliminado", "También se eliminaron sus registros relacionados.");
+                } catch (errorForzado) {
+                  mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(errorForzado, "proveedor"));
+                }
+              },
+            });
+          } else mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "proveedor"));
         }
       },
     });

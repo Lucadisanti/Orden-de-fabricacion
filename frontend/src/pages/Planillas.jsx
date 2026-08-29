@@ -4,7 +4,7 @@ import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
-import { obtenerMensajeError } from "../utils/errorMessages";
+import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/Planillas.css";
 
@@ -410,11 +410,25 @@ export default function Planillas() {
         } catch (error) {
           console.error(error);
 
-          if (error.response?.data?.error?.includes("foreign key constraint fails")) {
-            mostrarToast("warning", "No se puede eliminar", "La planilla tiene detalles, operarios o materiales asociados.");
-          } else {
-            mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "planilla"));
-          }
+          if (esRegistroEnUso(error)) {
+            pedirConfirmacion({
+              title: "Planilla con recorrido asociado",
+              message: "Esta planilla tiene producción, operarios o materiales vinculados. Si la eliminás, esos datos desaparecerán de la trazabilidad.",
+              confirmText: "Eliminar de todos modos",
+              danger: true,
+              onConfirm: async () => {
+                cerrarConfirmacion();
+                try {
+                  await axios.delete(`/api/planillas/${id_planilla}?forzar=1`);
+                  setPlanillas((actuales) => actuales.filter((planilla) => planilla.id_planilla !== id_planilla));
+                  if (planillaSeleccionada?.id_planilla === id_planilla) setPlanillaSeleccionada(null);
+                  mostrarToast("success", "Planilla eliminada", "También se eliminaron sus registros relacionados.");
+                } catch (errorForzado) {
+                  mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(errorForzado, "planilla"));
+                }
+              },
+            });
+          } else mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "planilla"));
         }
       },
     });

@@ -1,6 +1,6 @@
 from flask import request
 from utils.db_helpers import responder_lista, responder_uno, responder_accion
-from utils.forced_deletes import eliminar_planilla as eliminar_planilla_forzada, responder_borrado_forzado
+from utils.forced_deletes import eliminar_planilla as eliminar_planilla_forzada, responder_borrado_forzado, responder_borrado_simple
 
 
 def listar_planillas():
@@ -46,7 +46,7 @@ def actualizar_planilla(id_planilla):
 def eliminar_planilla(id_planilla):
     if request.args.get("forzar") == "1":
         return responder_borrado_forzado(eliminar_planilla_forzada, id_planilla, "planilla")
-    return responder_accion("sp_eliminar_planilla", (id_planilla,))
+    return responder_borrado_simple("planilla_produccion", "id_planilla", id_planilla, "planilla")
 
 
 def listar_detalles_planilla(id_planilla):

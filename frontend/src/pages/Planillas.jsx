@@ -391,7 +391,7 @@ export default function Planillas() {
   const eliminarPlanilla = (id_planilla) => {
     pedirConfirmacion({
       title: "Eliminar planilla",
-      message: "Esta acción eliminará la planilla seleccionada. Si tiene detalles, operarios o materiales asociados, el sistema no lo permitirá.",
+      message: "Esta acción eliminará la planilla seleccionada. Si tiene producción, operarios o materiales asociados, se pedirá una confirmación adicional.",
       confirmText: "Eliminar",
       danger: true,
       onConfirm: async () => {

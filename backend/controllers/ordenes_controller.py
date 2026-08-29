@@ -1,7 +1,7 @@
 from flask import jsonify, request
 from db.connection import get_connection
 from utils.db_helpers import responder_lista, responder_uno, responder_accion
-from utils.forced_deletes import eliminar_orden as eliminar_orden_forzada, responder_borrado_forzado
+from utils.forced_deletes import eliminar_orden as eliminar_orden_forzada, responder_borrado_forzado, responder_borrado_simple
 
 
 def _normalizar_talles(talles):
@@ -132,4 +132,4 @@ def listar_talles_orden(id_orden):
 def eliminar_orden(id_orden):
     if request.args.get("forzar") == "1":
         return responder_borrado_forzado(eliminar_orden_forzada, id_orden, "orden")
-    return responder_accion("sp_eliminar_orden", (id_orden,))
+    return responder_borrado_simple("orden_fabricacion", "id_orden", id_orden, "orden")

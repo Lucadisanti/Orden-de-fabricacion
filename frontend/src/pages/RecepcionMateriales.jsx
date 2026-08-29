@@ -109,7 +109,7 @@ export default function RecepcionMateriales() {
       const payload = esProveedor
         ? { nombre_proveedor: nombre, cuit: null, telefono: null, email: null }
         : { material: nombre };
-      const respuesta = await axios.post(`http://127.0.0.1:5000/api/${endpoint}/`, payload);
+      const respuesta = await axios.post(`/api/${endpoint}/`, payload);
       const nuevoId = respuesta.data[campoId];
       const nuevoItem = { [campoId]: nuevoId, [campoNombre]: nombre };
 
@@ -140,7 +140,7 @@ export default function RecepcionMateriales() {
     }
 
     try {
-      const respuesta = await axios.post("http://127.0.0.1:5000/api/colores/", {
+      const respuesta = await axios.post("/api/colores/", {
         color: nombre,
         codigo_color: codigo,
       });

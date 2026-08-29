@@ -155,7 +155,7 @@ CREATE TABLE remitos (
   recibido_por VARCHAR(45) NULL,
   proveedores_id_proveedor INT NOT NULL,
 
-  UNIQUE KEY uq_remitos_numero (numero_remito),
+  UNIQUE KEY uq_remito_proveedor (numero_remito, proveedores_id_proveedor),
   KEY idx_remitos_proveedor (proveedores_id_proveedor),
 
   CONSTRAINT fk_remitos_proveedores
@@ -170,7 +170,7 @@ CREATE TABLE lote_materiales (
   remitos_id_remito INT NOT NULL,
   materiales_id_material INT NOT NULL,
   colores_id_color INT NULL,
-  codigo_lote VARCHAR(45) NOT NULL,
+  codigo_lote VARCHAR(50) NULL,
   cantidad_solicitada DECIMAL(10,2) NOT NULL DEFAULT 0,
   cantidad_recibida DECIMAL(10,2) NOT NULL DEFAULT 0,
   pendiente DECIMAL(10,2) NOT NULL DEFAULT 0,
@@ -212,7 +212,6 @@ CREATE TABLE planilla_produccion (
   maquinas_id_maquina INT NULL,
   estado VARCHAR(45) NOT NULL DEFAULT 'pendiente',
 
-  UNIQUE KEY uq_planilla_numero (numero_planilla),
   KEY idx_planilla_orden (orden_fabricacion_id_orden),
   KEY idx_planilla_maquina (maquinas_id_maquina),
 

@@ -4,6 +4,7 @@ import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 import { obtenerMensajeError } from "../utils/errorMessages";
+import { formatearFecha } from "../utils/dateFormat";
 import "../styles/UsoMateriales.css";
 
 export default function UsoMateriales() {
@@ -387,7 +388,7 @@ export default function UsoMateriales() {
                           <div><span>Remito</span><strong>{uso.numero_remito || "-"}</strong></div>
                           <div><span>Proveedor</span><strong>{uso.nombre_proveedor || "-"}</strong></div>
                           <div><span>Estado de recepción</span><strong>{uso.estado_recepcion || "-"}</strong></div>
-                          <div><span>Fecha de entrega</span><strong>{uso.fecha_entrega || "-"}</strong></div>
+                          <div><span>Fecha de entrega</span><strong>{formatearFecha(uso.fecha_entrega)}</strong></div>
                           <div><span>Recibido por</span><strong>{uso.recibido_por || "-"}</strong></div>
                           <div><span>Cantidad recibida</span><strong>{uso.cantidad_recibida ?? "-"}</strong></div>
                         </div>

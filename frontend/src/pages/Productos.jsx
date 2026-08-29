@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
@@ -9,6 +10,9 @@ import "../styles/Productos.css";
 const API_URL = "/api";
 
 export default function Productos() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const altaDesdeOrden = searchParams.get("nuevo") === "1" && searchParams.get("volver") === "ordenes";
   const [productos, setProductos] = useState([]);
   const [colores, setColores] = useState([]);
   const [modelos, setModelos] = useState([]);
@@ -21,6 +25,7 @@ export default function Productos() {
   const [confirmacion, setConfirmacion] = useState(null);
   const [catalogoModal, setCatalogoModal] = useState(null);
   const formRef = useRef(null);
+  const altaDesdeOrdenAplicadaRef = useRef(false);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -152,6 +157,21 @@ export default function Productos() {
     desplazarAlFormulario();
   };
 
+  useEffect(() => {
+    if (!altaDesdeOrden || altaDesdeOrdenAplicadaRef.current) return;
+    altaDesdeOrdenAplicadaRef.current = true;
+    abrirFormularioNuevo();
+    // La consulta abre el formulario solamente al ingresar desde Órdenes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [altaDesdeOrden]);
+
+  const cancelarFormulario = () => {
+    setMostrarFormulario(false);
+    setEditando(false);
+    setIdEditando(null);
+    if (altaDesdeOrden) navigate("/ordenes?producto=cancelado");
+  };
+
   const iniciarEdicion = (producto) => {
     setEditando(true);
     setIdEditando(producto.id_producto);
@@ -201,8 +221,12 @@ export default function Productos() {
         await axios.put(`${API_URL}/productos/${idEditando}`, datos);
         mostrarToast("success", "Producto actualizado", "Los cambios se guardaron correctamente.");
       } else {
-        await axios.post(`${API_URL}/productos/`, datos);
+        const respuesta = await axios.post(`${API_URL}/productos/`, datos);
         mostrarToast("success", "Producto creado", "El producto se agregó correctamente.");
+        if (altaDesdeOrden) {
+          navigate(`/ordenes?producto=${respuesta.data.id_producto}`);
+          return;
+        }
       }
 
       setProductoForm({ modelos_calzado_id_modelo: "", punteras_id_puntera: "", adicionales: [""], nombre_producto: "", colores_id_color: "" });
@@ -368,15 +392,7 @@ export default function Productos() {
                 {editando ? "Actualizar" : "Guardar"}
               </button>
 
-              <button
-                type="button"
-                className="ui-btn ui-btn-secondary"
-                onClick={() => {
-                  setMostrarFormulario(false);
-                  setEditando(false);
-                  setIdEditando(null);
-                }}
-              >
+              <button type="button" className="ui-btn ui-btn-secondary" onClick={cancelarFormulario}>
                 Cancelar
               </button>
             </div>

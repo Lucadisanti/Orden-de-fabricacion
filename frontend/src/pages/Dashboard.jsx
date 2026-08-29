@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { formatearFecha } from "../utils/dateFormat";
 import "../styles/Dashboard.css";
 
 const API_URL = "/api";
@@ -29,8 +30,8 @@ function claseEstado(estado = "") {
 const secciones = {
   productos: { ruta: "/productos", endpoint: "/productos/", id: "id_producto", columnas: ["Artículo", "Producto", "Color"], celdas: (item) => [item.articulo_producto || "-", item.nombre_producto || "-", item.color || "Sin color"] },
   proveedores: { ruta: "/proveedores", endpoint: "/proveedores/", id: "id_proveedor", columnas: ["Proveedor", "CUIT", "Contacto"], celdas: (item) => [item.nombre_proveedor || "-", item.cuit || "-", item.telefono || item.email || "-"] },
-  ordenes: { ruta: "/ordenes", endpoint: "/ordenes/", id: "id_orden", accion: "Ver orden →", detalleRuta: (item) => `/ordenes?seleccion=${item.id_orden}`, columnas: ["N.º de orden", "Producto", "Fecha", "Estado"], celdas: (item) => [item.numero_orden || "-", item.producto || item.nombre_producto || "-", item.fecha || "-", <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>] },
-  planillas: { ruta: "/planillas", endpoint: "/planillas/", id: "id_planilla", accion: "Abrir detalle →", detalleRuta: (item) => `/planillas?seleccion=${item.id_planilla}`, columnas: ["N.º de planilla", "Orden", "Tipo", "Fecha", "Estado"], celdas: (item) => [item.numero_planilla || "-", item.numero_orden || item.orden || "-", item.tipo_planilla || "-", item.fecha || "-", <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>] },
+  ordenes: { ruta: "/ordenes", endpoint: "/ordenes/", id: "id_orden", accion: "Ver orden →", detalleRuta: (item) => `/ordenes?seleccion=${item.id_orden}`, columnas: ["N.º de orden", "Producto", "Fecha", "Estado"], celdas: (item) => [item.numero_orden || "-", item.producto || item.nombre_producto || "-", formatearFecha(item.fecha), <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>] },
+  planillas: { ruta: "/planillas", endpoint: "/planillas/", id: "id_planilla", accion: "Abrir detalle →", detalleRuta: (item) => `/planillas?seleccion=${item.id_planilla}`, columnas: ["N.º de planilla", "Orden", "Tipo", "Fecha", "Estado"], celdas: (item) => [item.numero_planilla || "-", item.numero_orden || item.orden || "-", item.tipo_planilla || "-", formatearFecha(item.fecha), <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>] },
 };
 
 function claveDesdeTitulo(titulo = "") {

@@ -1,7 +1,10 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import axios from "axios";
+import CatalogModal from "../components/CatalogModal";
+import PromptModal from "../components/PromptModal";
 import Toast from "../components/Toast";
 import { obtenerMensajeError } from "../utils/errorMessages";
+import { formatearFecha } from "../utils/dateFormat";
 import "../styles/RecepcionMateriales.css";
 
 export default function RecepcionMateriales() {
@@ -14,6 +17,7 @@ export default function RecepcionMateriales() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
+  const [altaRapida, setAltaRapida] = useState(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -83,6 +87,78 @@ export default function RecepcionMateriales() {
     return solicitada - recibida;
   };
 
+  const crearCatalogoRapido = async (nombre) => {
+    const esProveedor = altaRapida === "proveedor";
+    const catalogo = esProveedor ? proveedores : materiales;
+    const campoNombre = esProveedor ? "nombre_proveedor" : "material";
+    const campoId = esProveedor ? "id_proveedor" : "id_material";
+    const campoFormulario = esProveedor ? "proveedores_id_proveedor" : "materiales_id_material";
+    const existente = catalogo.find(
+      (item) => String(item[campoNombre] || "").trim().toLowerCase() === nombre.trim().toLowerCase(),
+    );
+
+    if (existente) {
+      setForm((actual) => ({ ...actual, [campoFormulario]: String(existente[campoId]) }));
+      setAltaRapida(null);
+      mostrarToast("info", "Ya estaba cargado", `${existente[campoNombre]} quedó seleccionado.`);
+      return;
+    }
+
+    try {
+      const endpoint = esProveedor ? "proveedores" : "materiales";
+      const payload = esProveedor
+        ? { nombre_proveedor: nombre, cuit: null, telefono: null, email: null }
+        : { material: nombre };
+      const respuesta = await axios.post(`http://127.0.0.1:5000/api/${endpoint}/`, payload);
+      const nuevoId = respuesta.data[campoId];
+      const nuevoItem = { [campoId]: nuevoId, [campoNombre]: nombre };
+
+      if (esProveedor) setProveedores((actuales) => [...actuales, nuevoItem]);
+      else setMateriales((actuales) => [...actuales, nuevoItem]);
+
+      setForm((actual) => ({ ...actual, [campoFormulario]: String(nuevoId) }));
+      setAltaRapida(null);
+      mostrarToast("success", esProveedor ? "Proveedor creado" : "Material creado", `${nombre} quedó seleccionado.`);
+    } catch (error) {
+      console.error(error);
+      mostrarToast("error", "No se pudo crear", obtenerMensajeError(error, esProveedor ? "proveedor" : "material"));
+    }
+  };
+
+  const crearColorRapido = async ({ codigo, nombre }) => {
+    const existente = colores.find(
+      (color) =>
+        String(color.codigo_color) === codigo ||
+        String(color.color || "").trim().toLowerCase() === nombre.trim().toLowerCase(),
+    );
+
+    if (existente) {
+      setForm((actual) => ({ ...actual, colores_id_color: String(existente.id_color) }));
+      setAltaRapida(null);
+      mostrarToast("info", "Ya estaba cargado", `${existente.color} quedó seleccionado.`);
+      return;
+    }
+
+    try {
+      const respuesta = await axios.post("http://127.0.0.1:5000/api/colores/", {
+        color: nombre,
+        codigo_color: codigo,
+      });
+      const nuevoColor = {
+        id_color: respuesta.data.id_color,
+        color: nombre,
+        codigo_color: codigo,
+      };
+      setColores((actuales) => [...actuales, nuevoColor]);
+      setForm((actual) => ({ ...actual, colores_id_color: String(nuevoColor.id_color) }));
+      setAltaRapida(null);
+      mostrarToast("success", "Color creado", `${codigo} - ${nombre} quedó seleccionado.`);
+    } catch (error) {
+      console.error(error);
+      mostrarToast("error", "No se pudo crear", obtenerMensajeError(error, "color"));
+    }
+  };
+
   const guardarRecepcion = async (e) => {
     e.preventDefault();
 
@@ -101,7 +177,7 @@ export default function RecepcionMateriales() {
       await axios.post("/api/lotes/", {
         remitos_id_remito: idRemito,
         materiales_id_material: Number(form.materiales_id_material),
-        colores_id_color: Number(form.colores_id_color),
+        colores_id_color: form.colores_id_color ? Number(form.colores_id_color) : null,
         codigo_lote: null,
         cantidad_solicitada: Number(form.cantidad_solicitada),
         cantidad_recibida: Number(form.cantidad_recibida),
@@ -156,6 +232,24 @@ export default function RecepcionMateriales() {
   return (
     <section className="recepcion-materiales">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+      <PromptModal
+        open={Boolean(altaRapida && altaRapida !== "color")}
+        title={altaRapida === "proveedor" ? "Nuevo proveedor" : "Nuevo material"}
+        label={altaRapida === "proveedor" ? "Nombre del proveedor" : "Nombre del material"}
+        placeholder={altaRapida === "proveedor" ? "Ej. Cueros del Sur" : "Ej. Cuero vacuno"}
+        confirmText="Crear y seleccionar"
+        onConfirm={crearCatalogoRapido}
+        onCancel={() => setAltaRapida(null)}
+      />
+      {altaRapida === "color" && (
+        <CatalogModal
+          open
+          title="Nuevo color"
+          codeLength={2}
+          onConfirm={crearColorRapido}
+          onCancel={() => setAltaRapida(null)}
+        />
+      )}
      <div className="ui-page-header ui-page-header-row">
         <div>
           <h1>Recepción de materiales</h1>
@@ -176,131 +270,96 @@ export default function RecepcionMateriales() {
 
         <form onSubmit={guardarRecepcion} className="form-recepcion">
           <div className="form-grid">
-            <input
-              type="text"
-              name="numero_remito"
-              placeholder="Número de remito"
-              value={form.numero_remito}
-              onChange={manejarCambio}
-              required
-            />
+            <label className="recepcion-campo">
+              <span>Número de remito</span>
+              <input type="text" name="numero_remito" placeholder="Ingrese el número" value={form.numero_remito} onChange={manejarCambio} required />
+            </label>
 
-            <select
-              name="proveedores_id_proveedor"
-              value={form.proveedores_id_proveedor}
-              onChange={manejarCambio}
-              required
-            >
-              <option value="">Seleccione proveedor</option>
-              {proveedores.map((proveedor) => (
-                <option
-                  key={proveedor.id_proveedor}
-                  value={proveedor.id_proveedor}
-                >
-                  {proveedor.nombre_proveedor}
-                </option>
-              ))}
-            </select>
+            <label className="recepcion-campo">
+              <span>Proveedor</span>
+              <div className="recepcion-selector-row">
+                <select name="proveedores_id_proveedor" value={form.proveedores_id_proveedor} onChange={manejarCambio} required>
+                  <option value="">Seleccione proveedor</option>
+                  {proveedores.map((proveedor) => (
+                    <option key={proveedor.id_proveedor} value={proveedor.id_proveedor}>{proveedor.nombre_proveedor}</option>
+                  ))}
+                </select>
+                <button type="button" className="recepcion-agregar-btn" onClick={() => setAltaRapida("proveedor")} title="Crear proveedor" aria-label="Crear proveedor">+</button>
+              </div>
+            </label>
 
-            <input
-              type="date"
-              name="fecha_solicitud"
-              value={form.fecha_solicitud}
-              onChange={manejarCambio}
-              required
-            />
+            <label className="recepcion-campo">
+              <span>Fecha de solicitud</span>
+              <input type="date" name="fecha_solicitud" value={form.fecha_solicitud} onChange={manejarCambio} required />
+            </label>
 
-            <input
-              type="date"
-              name="fecha_entrega"
-              value={form.fecha_entrega}
-              onChange={manejarCambio}
-            />
+            <label className="recepcion-campo">
+              <span>Fecha de entrega (opcional)</span>
+              <input type="date" name="fecha_entrega" value={form.fecha_entrega} onChange={manejarCambio} />
+            </label>
 
-            <select
-              name="estado_recepcion"
-              value={form.estado_recepcion}
-              onChange={manejarCambio}
-              required
-            >
-              <option value="pendiente">Pendiente</option>
-              <option value="parcial">Parcial</option>
-              <option value="recibido">Recibido</option>
-            </select>
+            <label className="recepcion-campo">
+              <span>Estado de recepción</span>
+              <select name="estado_recepcion" value={form.estado_recepcion} onChange={manejarCambio} required>
+                <option value="pendiente">Pendiente</option>
+                <option value="parcial">Parcial</option>
+                <option value="recibido">Recibido</option>
+              </select>
+            </label>
 
-            <input
-              type="text"
-              name="recibido_por"
-              placeholder="Recibido por"
-              value={form.recibido_por}
-              onChange={manejarCambio}
-            />
+            <label className="recepcion-campo">
+              <span>Recibido por</span>
+              <input type="text" name="recibido_por" placeholder="Nombre de quien recibe" value={form.recibido_por} onChange={manejarCambio} />
+            </label>
 
-            <select
-              name="materiales_id_material"
-              value={form.materiales_id_material}
-              onChange={manejarCambio}
-              required
-            >
-              <option value="">Seleccione material</option>
-              {materiales.map((material) => (
-                <option
-                  key={material.id_material}
-                  value={material.id_material}
-                >
-                  {material.material}
-                </option>
-              ))}
-            </select>
+            <label className="recepcion-campo">
+              <span>Material</span>
+              <div className="recepcion-selector-row">
+                <select name="materiales_id_material" value={form.materiales_id_material} onChange={manejarCambio} required>
+                  <option value="">Seleccione material</option>
+                  {materiales.map((material) => (
+                    <option key={material.id_material} value={material.id_material}>{material.material}</option>
+                  ))}
+                </select>
+                <button type="button" className="recepcion-agregar-btn" onClick={() => setAltaRapida("material")} title="Crear material" aria-label="Crear material">+</button>
+              </div>
+            </label>
 
-            <select
-              name="colores_id_color"
-              value={form.colores_id_color}
-              onChange={manejarCambio}
-              required
-            >
-              <option value="">Seleccione color</option>
-              {colores.map((color) => (
-                <option key={color.id_color} value={color.id_color}>
-                  {color.color}
-                </option>
-              ))}
-            </select>
+            <label className="recepcion-campo">
+              <span>Color (opcional)</span>
+              <div className="recepcion-selector-row">
+                <select name="colores_id_color" value={form.colores_id_color} onChange={manejarCambio}>
+                  <option value="">Sin color</option>
+                  {colores.map((color) => (
+                    <option key={color.id_color} value={color.id_color}>
+                      {color.codigo_color ? `${color.codigo_color} - ${color.color}` : color.color}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="recepcion-agregar-btn" onClick={() => setAltaRapida("color")} title="Crear color" aria-label="Crear color">+</button>
+              </div>
+            </label>
 
-            <input
-              type="number"
-              step="0.01"
-              name="cantidad_solicitada"
-              placeholder="Cantidad solicitada"
-              value={form.cantidad_solicitada}
-              onChange={manejarCambio}
-              required
-            />
+            <label className="recepcion-campo">
+              <span>Cantidad solicitada</span>
+              <input type="number" step="0.01" name="cantidad_solicitada" placeholder="0" value={form.cantidad_solicitada} onChange={manejarCambio} required />
+            </label>
 
-            <input
-              type="number"
-              step="0.01"
-              name="cantidad_recibida"
-              placeholder="Cantidad recibida"
-              value={form.cantidad_recibida}
-              onChange={manejarCambio}
-              required
-            />
+            <label className="recepcion-campo">
+              <span>Cantidad recibida</span>
+              <input type="number" step="0.01" name="cantidad_recibida" placeholder="0" value={form.cantidad_recibida} onChange={manejarCambio} required />
+            </label>
 
-            <input
-              type="number"
-              value={calcularPendiente()}
-              readOnly
-              placeholder="Pendiente"
-            />
+            <label className="recepcion-campo">
+              <span>Cantidad pendiente</span>
+              <input type="number" value={calcularPendiente()} readOnly />
+            </label>
           </div>
 
-          <textarea
-            name="observaciones"
-            placeholder="Observaciones"
-            value={form.observaciones}
-            onChange={manejarCambio}
-          />
+          <label className="recepcion-campo">
+            <span>Observaciones (opcional)</span>
+            <textarea name="observaciones" placeholder="Agregue una observación" value={form.observaciones} onChange={manejarCambio} />
+          </label>
 
           <div className="ui-form-actions">
               <button type="submit" className="ui-btn ui-btn-primary">
@@ -386,8 +445,8 @@ export default function RecepcionMateriales() {
                           <div><span>Proveedor</span><strong>{lote.nombre_proveedor || lote.proveedor || "-"}</strong></div>
                           <div><span>Material</span><strong>{lote.material || "-"} {lote.color ? `· ${lote.color}` : ""}</strong></div>
                           <div><span>Recibido por</span><strong>{lote.recibido_por || "-"}</strong></div>
-                          <div><span>Fecha de solicitud</span><strong>{lote.fecha_solicitud || "-"}</strong></div>
-                          <div><span>Fecha de entrega</span><strong>{lote.fecha_entrega || "-"}</strong></div>
+                          <div><span>Fecha de solicitud</span><strong>{formatearFecha(lote.fecha_solicitud)}</strong></div>
+                          <div><span>Fecha de entrega</span><strong>{formatearFecha(lote.fecha_entrega)}</strong></div>
                         </div>
 
                         <div className="recepcion-cantidades">

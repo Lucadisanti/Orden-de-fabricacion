@@ -130,7 +130,7 @@ export default function Planillas() {
     }
 
     try {
-      const respuesta = await axios.post("http://127.0.0.1:5000/api/maquinas/", { nombre_maquina: nombre });
+      const respuesta = await axios.post("/api/maquinas/", { nombre_maquina: nombre });
       const nuevaMaquina = { id_maquina: respuesta.data.id_maquina, nombre_maquina: nombre };
       setMaquinas((actuales) => [...actuales, nuevaMaquina]);
       setPlanillaForm((actual) => ({ ...actual, maquinas_id_maquina: String(nuevaMaquina.id_maquina) }));

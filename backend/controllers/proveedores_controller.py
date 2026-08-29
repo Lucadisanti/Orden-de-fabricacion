@@ -1,6 +1,6 @@
 from flask import request
 from utils.db_helpers import responder_lista, responder_uno, responder_accion
-from utils.forced_deletes import eliminar_proveedor as eliminar_proveedor_forzado, responder_borrado_forzado
+from utils.forced_deletes import eliminar_proveedor as eliminar_proveedor_forzado, responder_borrado_forzado, responder_borrado_simple
 
 
 def _texto_opcional(valor):
@@ -54,4 +54,4 @@ def actualizar_proveedor(id_proveedor):
 def eliminar_proveedor(id_proveedor):
     if request.args.get("forzar") == "1":
         return responder_borrado_forzado(eliminar_proveedor_forzado, id_proveedor, "proveedor")
-    return responder_accion("sp_eliminar_proveedor", (id_proveedor,))
+    return responder_borrado_simple("proveedores", "id_proveedor", id_proveedor, "proveedor")

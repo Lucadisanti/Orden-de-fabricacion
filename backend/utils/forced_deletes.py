@@ -84,3 +84,36 @@ def responder_borrado_forzado(eliminador, id_registro, entidad):
             cursor.close()
         if conn:
             conn.close()
+
+
+def responder_borrado_simple(tabla, campo_id, id_registro, entidad):
+    tablas_permitidas = {
+        "proveedores": "id_proveedor",
+        "materiales": "id_material",
+        "producto": "id_producto",
+        "orden_fabricacion": "id_orden",
+        "planilla_produccion": "id_planilla",
+    }
+    if tablas_permitidas.get(tabla) != campo_id:
+        return jsonify({"mensaje": "Operación de eliminación no permitida"}), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"DELETE FROM {tabla} WHERE {campo_id} = %s", (id_registro,))
+        if not cursor.rowcount:
+            conn.rollback()
+            return jsonify({"mensaje": f"{entidad.capitalize()} no encontrado"}), 404
+        conn.commit()
+        return jsonify({"mensaje": f"{entidad.capitalize()} eliminado correctamente"}), 200
+    except Exception as error:
+        if conn:
+            conn.rollback()
+        return responder_error_db(error)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

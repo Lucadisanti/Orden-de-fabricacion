@@ -1,6 +1,7 @@
 from flask import jsonify, request
 from db.connection import get_connection
 from utils.db_helpers import responder_lista, responder_uno, responder_accion
+from utils.forced_deletes import eliminar_producto as eliminar_producto_forzado, responder_borrado_forzado
 
 
 def validar_producto(data):
@@ -160,4 +161,6 @@ def actualizar_producto(id_producto):
 
 
 def eliminar_producto(id_producto):
+    if request.args.get("forzar") == "1":
+        return responder_borrado_forzado(eliminar_producto_forzado, id_producto, "producto")
     return responder_accion("sp_eliminar_producto", (id_producto,))

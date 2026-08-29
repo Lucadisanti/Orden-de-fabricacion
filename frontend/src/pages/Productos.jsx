@@ -4,7 +4,7 @@ import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 import CatalogModal from "../components/CatalogModal";
-import { obtenerMensajeError } from "../utils/errorMessages";
+import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Productos.css";
 
 const API_URL = "http://127.0.0.1:5000/api";
@@ -254,8 +254,25 @@ export default function Productos() {
       setProductos(productos.filter((producto) => producto.id_producto !== id_producto));
       mostrarToast("success", "Producto eliminado", "El registro se eliminó correctamente.");
         } catch (error) {
-      console.error(error);
-      mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "producto"));
+          console.error(error);
+          if (esRegistroEnUso(error)) {
+            pedirConfirmacion({
+              title: "Producto en uso",
+              message: "Este producto tiene órdenes asociadas. Si lo eliminás, también se eliminarán esas órdenes, sus planillas y el recorrido de trazabilidad.",
+              confirmText: "Eliminar de todos modos",
+              danger: true,
+              onConfirm: async () => {
+                cerrarConfirmacion();
+                try {
+                  await axios.delete(`${API_URL}/productos/${id_producto}?forzar=1`);
+                  setProductos((actuales) => actuales.filter((producto) => producto.id_producto !== id_producto));
+                  mostrarToast("success", "Producto eliminado", "También se eliminaron sus registros relacionados.");
+                } catch (errorForzado) {
+                  mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(errorForzado, "producto"));
+                }
+              },
+            });
+          } else mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "producto"));
         }
       },
     });

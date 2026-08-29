@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
-import { obtenerMensajeError } from "../utils/errorMessages";
+import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Materiales.css";
 
 const API_URL = "http://127.0.0.1:5000/api";
@@ -39,7 +39,7 @@ export default function Materiales() {
     setToast({ type, title, message });
   };
 
-  const cargarMateriales = () => {
+  function cargarMateriales() {
     axios
       .get(`${API_URL}/materiales/`)
       .then((response) => {
@@ -51,7 +51,7 @@ export default function Materiales() {
         setError("No se pudieron cargar los materiales.");
         setCargando(false);
       });
-  };
+  }
 
   const manejarCambio = (e) => {
     setMaterialForm({ ...materialForm, [e.target.name]: e.target.value });
@@ -129,8 +129,25 @@ export default function Materiales() {
       setMateriales(materiales.filter((material) => material.id_material !== id_material));
       mostrarToast("success", "Material eliminado", "El registro se eliminó correctamente.");
         } catch (error) {
-      console.error(error);
-      mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "material"));
+          console.error(error);
+          if (esRegistroEnUso(error)) {
+            pedirConfirmacion({
+              title: "Material en uso",
+              message: "Este material tiene lotes o usos asociados. Si lo eliminás, esos registros desaparecerán de la trazabilidad.",
+              confirmText: "Eliminar de todos modos",
+              danger: true,
+              onConfirm: async () => {
+                cerrarConfirmacion();
+                try {
+                  await axios.delete(`${API_URL}/materiales/${id_material}?forzar=1`);
+                  setMateriales((actuales) => actuales.filter((material) => material.id_material !== id_material));
+                  mostrarToast("success", "Material eliminado", "También se eliminaron sus registros relacionados.");
+                } catch (errorForzado) {
+                  mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(errorForzado, "material"));
+                }
+              },
+            });
+          } else mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "material"));
         }
       },
     });

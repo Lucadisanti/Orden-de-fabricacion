@@ -40,3 +40,7 @@ export function obtenerMensajeError(error, entidad = "registro") {
 
   return raw || "No se pudo realizar la operación.";
 }
+
+export function esRegistroEnUso(error) {
+  return error?.response?.status === 409 && error?.response?.data?.codigo === "REGISTRO_EN_USO";
+}

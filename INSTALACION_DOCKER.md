@@ -73,14 +73,13 @@ El archivo se guarda dentro de `backups`. Esta carpeta debe copiarse periódicam
 
 1. Cerrar la aplicacion en los navegadores.
 2. Copiar los archivos de la nueva version sobre la carpeta existente, conservando `.env.docker` y `backups`.
-3. Si la version incluye una migracion SQL, aplicarla de acuerdo con las notas de esa version antes de continuar.
-4. Ejecutar:
+3. Ejecutar:
 
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\scripts\actualizar.ps1
    ```
 
-El script crea primero un backup y luego reconstruye frontend y backend. El volumen de MariaDB permanece intacto.
+El script crea primero un backup y luego reconstruye frontend y backend. El volumen de MariaDB permanece intacto. Las actualizaciones de estructura necesarias se aplican automaticamente antes de iniciar el backend.
 
 ## Comprobaciones utiles
 

@@ -3,7 +3,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
+import PromptModal from "../components/PromptModal";
 import { obtenerMensajeError } from "../utils/errorMessages";
+import { formatearFecha } from "../utils/dateFormat";
 import "../styles/Planillas.css";
 
 export default function Planillas() {
@@ -29,6 +31,7 @@ export default function Planillas() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
+  const [mostrarAltaMaquina, setMostrarAltaMaquina] = useState(false);
   const formRef = useRef(null);
   const planillaAbiertaRef = useRef(null);
   const listadoRef = useRef(null);
@@ -114,6 +117,31 @@ export default function Planillas() {
   const pedirConfirmacion = (config) => setConfirmacion(config);
   const cerrarConfirmacion = () => setConfirmacion(null);
 
+  const crearMaquinaRapida = async (nombre) => {
+    const existente = maquinas.find(
+      (maquina) => String(maquina.nombre_maquina || maquina.maquina || "").trim().toLowerCase() === nombre.trim().toLowerCase(),
+    );
+
+    if (existente) {
+      setPlanillaForm((actual) => ({ ...actual, maquinas_id_maquina: String(existente.id_maquina) }));
+      setMostrarAltaMaquina(false);
+      mostrarToast("info", "Ya estaba cargada", `${existente.nombre_maquina || existente.maquina} quedó seleccionada.`);
+      return;
+    }
+
+    try {
+      const respuesta = await axios.post("http://127.0.0.1:5000/api/maquinas/", { nombre_maquina: nombre });
+      const nuevaMaquina = { id_maquina: respuesta.data.id_maquina, nombre_maquina: nombre };
+      setMaquinas((actuales) => [...actuales, nuevaMaquina]);
+      setPlanillaForm((actual) => ({ ...actual, maquinas_id_maquina: String(nuevaMaquina.id_maquina) }));
+      setMostrarAltaMaquina(false);
+      mostrarToast("success", "Inyectora creada", `${nombre} quedó seleccionada.`);
+    } catch (error) {
+      console.error(error);
+      mostrarToast("error", "No se pudo crear", obtenerMensajeError(error, "inyectora"));
+    }
+  };
+
 
   async function cargarDatos() {
     try {
@@ -177,10 +205,18 @@ export default function Planillas() {
   };
 
   const manejarCambioTalle = (talle, valor) => {
-    const soloNumeros = valor.replace(/\D/g, "");
+    const esperado = Number(esperadosPorTalle[String(talle)] || 0);
+    const realizado = Number(realizadosPorTalle[String(talle)] || 0);
+    const pendiente = Math.max(esperado - realizado, 0);
+    if (pendiente === 0) return;
+
+    const soloNumeros = valor.replace(/\D/g, "").slice(0, 3);
+    const cantidadLimitada = soloNumeros
+      ? String(Math.min(Number(soloNumeros), pendiente, 999))
+      : "";
     setTallesForm((valoresActuales) => ({
       ...valoresActuales,
-      [talle]: soloNumeros,
+      [talle]: cantidadLimitada,
     }));
   };
 
@@ -216,7 +252,10 @@ export default function Planillas() {
   const manejarEnterTalle = (event, index) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
-    if (index < tallesDisponibles.length - 1) talleRefs.current[index + 1]?.focus();
+    const siguiente = talleRefs.current
+      .slice(index + 1)
+      .find((elemento) => elemento && !elemento.disabled);
+    if (siguiente) siguiente.focus();
     else guardarTallesRef.current?.focus();
   };
 
@@ -480,10 +519,18 @@ export default function Planillas() {
         talle,
         cantidad: Number(tallesForm[talle] || 0),
       }))
-      .filter((item) => item.cantidad > 0);
+      .filter((item) => item.cantidad > 0 && Number(esperadosPorTalle[String(item.talle)] || 0) > 0);
 
     if (tallesConCantidad.length === 0) {
       mostrarToast("warning", "Faltan cantidades", "Debe cargar al menos una cantidad mayor a cero.");
+      return;
+    }
+
+    const cantidadInvalida = tallesConCantidad.find(
+      (item) => !Number.isInteger(item.cantidad) || item.cantidad < 1 || item.cantidad > 999,
+    );
+    if (cantidadInvalida) {
+      mostrarToast("warning", "Cantidad inválida", "Cada casillero admite entre 1 y 999 pares enteros.");
       return;
     }
 
@@ -648,6 +695,16 @@ export default function Planillas() {
     <section className="planillas">
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
 
+      <PromptModal
+        open={mostrarAltaMaquina}
+        title="Nueva inyectora"
+        label="Nombre de la inyectora"
+        placeholder="Ej. Inyectora Main Group"
+        confirmText="Crear y seleccionar"
+        onConfirm={crearMaquinaRapida}
+        onCancel={() => setMostrarAltaMaquina(false)}
+      />
+
       <ConfirmModal
         open={Boolean(confirmacion)}
         title={confirmacion?.title}
@@ -710,20 +767,24 @@ export default function Planillas() {
               )}
             </select>
 
-            {planillaForm.tipo_planilla === "Calzado e Inyección" && <select
-              name="maquinas_id_maquina"
-              value={planillaForm.maquinas_id_maquina}
-              onChange={manejarCambio}
-              required
-            >
-              <option value="">Seleccione inyectora</option>
-
-              {maquinas.filter((maquina) => /SULPOL|BGM/i.test(maquina.nombre_maquina || maquina.maquina || "")).map((maquina) => (
-                <option key={maquina.id_maquina} value={maquina.id_maquina}>
-                  {maquina.nombre_maquina || maquina.maquina}
-                </option>
-              ))}
-            </select>}
+            {planillaForm.tipo_planilla === "Calzado e Inyección" && (
+              <div className="planilla-selector-con-alta">
+                <select
+                  name="maquinas_id_maquina"
+                  value={planillaForm.maquinas_id_maquina}
+                  onChange={manejarCambio}
+                  required
+                >
+                  <option value="">Seleccione inyectora</option>
+                  {maquinas.map((maquina) => (
+                    <option key={maquina.id_maquina} value={maquina.id_maquina}>
+                      {maquina.nombre_maquina || maquina.maquina}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="planilla-alta-maquina" onClick={() => setMostrarAltaMaquina(true)} title="Crear inyectora" aria-label="Crear inyectora">+</button>
+              </div>
+            )}
 
             <select
               name="estado"
@@ -826,18 +887,23 @@ export default function Planillas() {
                 <tr className="fila-carga">
                   <th>Cargar ahora</th>
                   {tallesDisponibles.map((talle, index) => {
-                    const excede = Number(tallesForm[talle] || 0) + Number(realizadosPorTalle[String(talle)] || 0) > Number(esperadosPorTalle[String(talle)] || 0) && Number(esperadosPorTalle[String(talle)] || 0) > 0;
+                    const esperado = Number(esperadosPorTalle[String(talle)] || 0);
+                    const realizado = Number(realizadosPorTalle[String(talle)] || 0);
+                    const pendiente = Math.max(esperado - realizado, 0);
                     return <td key={talle}>
                       <input
                         ref={(elemento) => { talleRefs.current[index] = elemento; }}
                         type="text"
                         inputMode="numeric"
                         pattern="[0-9]*"
+                        maxLength={3}
+                        disabled={pendiente === 0}
+                        max={Math.min(pendiente, 999)}
                         value={tallesForm[talle]}
                         onInput={(e) => manejarCambioTalle(talle, e.currentTarget.value)}
                         onKeyDown={(e) => manejarEnterTalle(e, index)}
-                        className={excede ? "talle-excedido" : ""}
                         aria-label={`Cantidad producida para talle ${talle}`}
+                        title={pendiente === 0 ? "Este talle no tiene pares pendientes" : `Máximo disponible: ${Math.min(pendiente, 999)} pares`}
                       />
                     </td>
                   })}
@@ -1061,7 +1127,7 @@ export default function Planillas() {
                   <td>{planilla.numero_orden || planilla.orden || "-"}</td>
                   <td>{planilla.tipo_planilla}</td>
                   <td>{planilla.nombre_maquina || planilla.maquina || "-"}</td>
-                  <td>{planilla.fecha}</td>
+                  <td>{formatearFecha(planilla.fecha)}</td>
                   <td>
                     <span
                       className={`ui-status-badge ${getEstadoClass(
@@ -1100,7 +1166,7 @@ export default function Planillas() {
 
                         <div className="planilla-detalle-meta">
                           <div><span>Orden</span><strong>{planilla.numero_orden || planilla.orden || "-"}</strong></div>
-                          <div><span>Fecha</span><strong>{planilla.fecha || "-"}</strong></div>
+                          <div><span>Fecha</span><strong>{formatearFecha(planilla.fecha)}</strong></div>
                           <div><span>Máquina</span><strong>{planilla.nombre_maquina || planilla.maquina || "-"}</strong></div>
                           <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(planilla.estado)}`}>{planilla.estado || "Pendiente"}</span></strong></div>
                         </div>

@@ -443,7 +443,7 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .ui-grid-2 > * { min-width: 0; }
 .trazabilidad-columna-listado { min-width: 0; }
-.trazabilidad-listado > h2 { margin: 0; padding: 18px 16px 12px; color: #263b57; font-size: 18px; }
+.trazabilidad-listado > h2 { margin: 0; padding: 14px 14px 9px; color: #263b57; font-size: 18px; }
 
 @media (max-width: 1050px) {
   .ui-grid-2 { grid-template-columns: 1fr; }
@@ -505,28 +505,37 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .trazabilidad-ordenes-table th,
 .trazabilidad-ordenes-table td {
-  padding: 14px 12px;
+  padding: 10px 8px;
   overflow-wrap: anywhere;
 }
 
 .trazabilidad-ordenes-table th:nth-child(1),
 .trazabilidad-ordenes-table td:nth-child(1) {
-  width: 34%;
+  width: 19%;
 }
 
 .trazabilidad-ordenes-table th:nth-child(2),
 .trazabilidad-ordenes-table td:nth-child(2) {
-  width: 28%;
+  width: 23%;
 }
 
 .trazabilidad-ordenes-table th:nth-child(3),
 .trazabilidad-ordenes-table td:nth-child(3) {
-  width: 38%;
+  width: 24%;
+  white-space: nowrap;
+}
+
+.trazabilidad-ordenes-table th:nth-child(4),
+.trazabilidad-ordenes-table td:nth-child(4) {
+  width: 34%;
   text-align: left;
   min-width: 0;
 }
 
 .trazabilidad-ordenes-table .ui-status-badge {
+  max-width: 100%;
+  padding: 6px 9px;
+  font-size: 12px;
   white-space: normal;
   line-height: 1.2;
 }

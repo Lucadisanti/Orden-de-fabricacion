@@ -186,7 +186,12 @@ CREATE PROCEDURE sp_crear_proveedor(
 )
 BEGIN
   INSERT INTO proveedores (nombre_proveedor, cuit, telefono, email)
-  VALUES (p_nombre_proveedor, p_cuit, p_telefono, p_email);
+  VALUES (
+    TRIM(p_nombre_proveedor),
+    NULLIF(TRIM(p_cuit), ''),
+    NULLIF(TRIM(p_telefono), ''),
+    NULLIF(TRIM(p_email), '')
+  );
 
   SELECT LAST_INSERT_ID() AS id_proveedor, 'Proveedor creado correctamente' AS mensaje;
 END$$
@@ -201,10 +206,10 @@ CREATE PROCEDURE sp_actualizar_proveedor(
 )
 BEGIN
   UPDATE proveedores
-  SET nombre_proveedor = p_nombre_proveedor,
-      cuit = p_cuit,
-      telefono = p_telefono,
-      email = p_email
+  SET nombre_proveedor = TRIM(p_nombre_proveedor),
+      cuit = NULLIF(TRIM(p_cuit), ''),
+      telefono = NULLIF(TRIM(p_telefono), ''),
+      email = NULLIF(TRIM(p_email), '')
   WHERE id_proveedor = p_id_proveedor;
 
   SELECT ROW_COUNT() AS filas_afectadas, 'Proveedor actualizado correctamente' AS mensaje;

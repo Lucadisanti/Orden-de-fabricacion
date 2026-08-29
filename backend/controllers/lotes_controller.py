@@ -17,7 +17,7 @@ def crear_lote():
         (
             data.get("remitos_id_remito"),
             data.get("materiales_id_material"),
-            data.get("colores_id_color"),
+            data.get("colores_id_color") or None,
             data.get("codigo_lote"),
             data.get("cantidad_solicitada"),
             data.get("cantidad_recibida"),
@@ -36,7 +36,7 @@ def actualizar_lote(id_lote):
             id_lote,
             data.get("remitos_id_remito"),
             data.get("materiales_id_material"),
-            data.get("colores_id_color"),
+            data.get("colores_id_color") or None,
             data.get("codigo_lote"),
             data.get("cantidad_solicitada"),
             data.get("cantidad_recibida"),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
+import { formatearFecha } from "../utils/dateFormat";
 import "../styles/ui.css";
 
 const API_URL = "http://127.0.0.1:5000/api";
@@ -180,6 +181,7 @@ export default function Trazabilidad() {
       ${orden.producto || orden.nombre_producto || ""}
       ${orden.articulo_producto || ""}
       ${orden.color || ""}
+      ${orden.fecha || ""}
       ${orden.estado || ""}
     `.toLowerCase();
 
@@ -240,7 +242,7 @@ export default function Trazabilidad() {
     tituloSeccion("Datos generales de la orden");
     tabla(
       ["Articulo", "Producto", "Color", "Fecha", "Estado", "Pares solicitados"],
-      [[valor(ordenSeleccionada.articulo_producto), valor(ordenSeleccionada.producto || ordenSeleccionada.nombre_producto), valor(ordenSeleccionada.color), valor(ordenSeleccionada.fecha), mostrarEstado(ordenSeleccionada.estado), valor(totalPlanificado)]],
+      [[valor(ordenSeleccionada.articulo_producto), valor(ordenSeleccionada.producto || ordenSeleccionada.nombre_producto), valor(ordenSeleccionada.color), formatearFecha(ordenSeleccionada.fecha), mostrarEstado(ordenSeleccionada.estado), valor(totalPlanificado)]],
       { alternateRowStyles: {} }
     );
 
@@ -262,7 +264,7 @@ export default function Trazabilidad() {
         return [
           valor(planilla.numero_planilla),
           valor(planilla.tipo_planilla),
-          valor(planilla.fecha),
+          formatearFecha(planilla.fecha),
           valor(planilla.nombre_maquina || planilla.maquina || "Sin maquina"),
           mostrarEstado(planilla.estado),
           `${obtenerTotalPlanilla(planilla.id_planilla)} pares`,
@@ -320,7 +322,7 @@ export default function Trazabilidad() {
             <input
                 className="ui-input"
                 type="text"
-                placeholder="Buscar por orden, producto, artículo, color o estado..."
+                placeholder="Buscar por orden, producto, artículo, color, fecha o estado..."
                 value={busquedaOrden}
                 onChange={(e) => setBusquedaOrden(e.target.value)}
               />
@@ -332,6 +334,7 @@ export default function Trazabilidad() {
                 <tr>
                   <th>Nº Orden</th>
                   <th>Artículo</th>
+                  <th>Fecha</th>
                   <th>Estado</th>
                 </tr>
               </thead>
@@ -346,6 +349,7 @@ export default function Trazabilidad() {
                   >
                     <td>{orden.numero_orden}</td>
                     <td>{orden.articulo_producto || "-"}</td>
+                    <td>{formatearFecha(orden.fecha)}</td>
                     <td>
                       <span
                         className={`ui-status-badge ${getEstadoClass(
@@ -398,7 +402,7 @@ export default function Trazabilidad() {
                     <div><span>Artículo</span><strong>{ordenSeleccionada.articulo_producto || "-"}</strong></div>
                     <div><span>Producto</span><strong>{ordenSeleccionada.producto || ordenSeleccionada.nombre_producto || "-"}</strong></div>
                     <div><span>Color</span><strong>{ordenSeleccionada.color || "-"}</strong></div>
-                    <div><span>Fecha</span><strong>{ordenSeleccionada.fecha || "-"}</strong></div>
+                    <div><span>Fecha</span><strong>{formatearFecha(ordenSeleccionada.fecha)}</strong></div>
                     <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(ordenSeleccionada.estado)}`}>{mostrarEstado(ordenSeleccionada.estado)}</span></strong></div>
                   </div>
 
@@ -496,7 +500,7 @@ export default function Trazabilidad() {
                         {estaAbierta && (
                           <>
                             <div className="trazabilidad-planilla-meta">
-                              <div><span>Fecha</span><strong>{planilla.fecha || "-"}</strong></div>
+                              <div><span>Fecha</span><strong>{formatearFecha(planilla.fecha)}</strong></div>
                               <div><span>Máquina</span><strong>{planilla.maquina || "Sin máquina"}</strong></div>
                               <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(planilla.estado)}`}>{mostrarEstado(planilla.estado)}</span></strong></div>
                             </div>

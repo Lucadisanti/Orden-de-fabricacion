@@ -4,6 +4,7 @@ import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 import { obtenerMensajeError } from "../utils/errorMessages";
+import { formatearFecha } from "../utils/dateFormat";
 import "../styles/Ordenes.css";
 
 const API_URL = "http://127.0.0.1:5000/api";
@@ -14,6 +15,7 @@ export default function Ordenes() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const ordenSeleccionadaId = searchParams.get("seleccion");
+  const productoCreadoId = searchParams.get("producto");
   const [ordenes, setOrdenes] = useState([]);
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -32,6 +34,35 @@ export default function Ordenes() {
   const ordenDestinoRef = useRef(null);
 
   useEffect(() => { cargarDatos(); }, []);
+
+  useEffect(() => {
+    if (!productoCreadoId || cargando) return;
+    const borrador = sessionStorage.getItem("borrador-nueva-orden");
+    if (!borrador) return;
+
+    try {
+      const datos = JSON.parse(borrador);
+      const productoSeleccionado = productoCreadoId === "cancelado"
+        ? datos.ordenForm.producto_id_producto
+        : productoCreadoId;
+      // La navegación de regreso restaura el borrador una sola vez.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOrdenForm({ ...datos.ordenForm, producto_id_producto: productoSeleccionado });
+      setTallesForm(datos.tallesForm || crearTallesVacios());
+      setEditando(Boolean(datos.editando));
+      setIdEditando(datos.idEditando || null);
+      setMostrarFormulario(true);
+      desplazarAlFormulario();
+      if (productoCreadoId !== "cancelado") {
+        mostrarToast("success", "Producto creado", "El nuevo producto quedó seleccionado en la orden.");
+      }
+    } catch (errorBorrador) {
+      console.error(errorBorrador);
+    } finally {
+      sessionStorage.removeItem("borrador-nueva-orden");
+      navigate("/ordenes", { replace: true });
+    }
+  }, [cargando, navigate, productoCreadoId]);
 
   useEffect(() => {
     if (!ordenSeleccionadaId || cargando) return;
@@ -88,6 +119,16 @@ export default function Ordenes() {
     setTallesForm(crearTallesVacios());
     setMostrarFormulario(true);
     desplazarAlFormulario();
+  };
+
+  const abrirAltaProducto = () => {
+    sessionStorage.setItem("borrador-nueva-orden", JSON.stringify({
+      ordenForm,
+      tallesForm,
+      editando,
+      idEditando,
+    }));
+    navigate("/productos?nuevo=1&volver=ordenes");
   };
 
   const iniciarEdicion = async (orden) => {
@@ -202,12 +243,15 @@ export default function Ordenes() {
           <form onSubmit={guardarOrden} className="form-orden">
             <div className="orden-datos-grid">
               <label>Producto
-                <select value={ordenForm.producto_id_producto} onChange={(e) => setOrdenForm({ ...ordenForm, producto_id_producto: e.target.value })} required>
-                  <option value="">Seleccione producto</option>
-                  {productos.map((producto) => <option key={producto.id_producto} value={producto.id_producto}>
-                    {producto.articulo_producto} - {producto.nombre_producto} {producto.color ? `(${producto.color})` : ""}
-                  </option>)}
-                </select>
+                <div className="orden-producto-selector">
+                  <select value={ordenForm.producto_id_producto} onChange={(e) => setOrdenForm({ ...ordenForm, producto_id_producto: e.target.value })} required>
+                    <option value="">Seleccione producto</option>
+                    {productos.map((producto) => <option key={producto.id_producto} value={producto.id_producto}>
+                      {producto.articulo_producto} - {producto.nombre_producto} {producto.color ? `(${producto.color})` : ""}
+                    </option>)}
+                  </select>
+                  <button type="button" className="orden-alta-producto" onClick={abrirAltaProducto} title="Crear producto" aria-label="Crear producto">+</button>
+                </div>
               </label>
               <label>Número de orden<input type="text" value={ordenForm.numero_orden} onChange={(e) => setOrdenForm({ ...ordenForm, numero_orden: e.target.value })} required /></label>
               <label>Fecha<input type="date" value={ordenForm.fecha} onChange={(e) => setOrdenForm({ ...ordenForm, fecha: e.target.value })} required /></label>
@@ -246,7 +290,7 @@ export default function Ordenes() {
           <thead><tr><th>Nº Orden</th><th>Artículo</th><th>Producto</th><th>Color</th><th>Total solicitado</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>{ordenesFiltradas.map((orden) => <tr key={orden.id_orden} ref={String(orden.id_orden) === String(ordenSeleccionadaId) ? ordenDestinoRef : null} className={String(orden.id_orden) === String(ordenSeleccionadaId) ? "orden-fila-seleccionada" : ""}>
             <td>{orden.numero_orden}</td><td>{orden.articulo_producto || "-"}</td><td>{orden.producto || "-"}</td><td>{orden.color || "-"}</td>
-            <td><strong>{Number(orden.total_pares || 0)} pares</strong></td><td>{orden.fecha}</td>
+            <td><strong>{Number(orden.total_pares || 0)} pares</strong></td><td>{formatearFecha(orden.fecha)}</td>
             <td><span className={`ui-status-badge ${getEstadoClass(orden.estado)}`}>{mostrarEstado(orden.estado)}</span></td>
             <td><button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(orden)}>Editar</button>
               <button className="ui-btn ui-btn-danger" onClick={() => eliminarOrden(orden.id_orden)}>Eliminar</button></td>

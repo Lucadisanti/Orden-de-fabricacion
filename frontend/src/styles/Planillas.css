@@ -81,7 +81,47 @@
   border-color: #fbbf24;
 }
 .fila-carga th, .fila-carga td { background: #f8fafc; }
-.planilla-talles-comparacion .columna-total { width: 82px; min-width: 82px; border-left: 2px solid #cbd5e1; text-align: center; white-space: nowrap; font-weight: 900; }
+.planilla-talles-comparacion .columna-total {
+  position: sticky;
+  right: 0;
+  z-index: 4;
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
+  border-left: 2px solid #cbd5e1;
+  background-clip: padding-box;
+  box-shadow: -9px 0 10px -10px rgba(15, 23, 42, .75);
+  text-align: center;
+  white-space: nowrap;
+  font-weight: 900;
+}
+
+.planilla-selector-con-alta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  gap: 8px;
+}
+
+.planilla-selector-con-alta select { min-width: 0; }
+
+.planilla-alta-maquina {
+  width: 46px;
+  min-width: 46px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.planilla-alta-maquina:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.planilla-talles-comparacion thead .columna-total { z-index: 6; }
 .planilla-talles-comparacion thead .columna-total { color: var(--primary, #2367c9); }
 .planilla-talles-comparacion .total-carga-actual { color: var(--primary, #2367c9); font-size: 16px; }
 

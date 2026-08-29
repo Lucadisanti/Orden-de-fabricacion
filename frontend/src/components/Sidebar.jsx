@@ -81,8 +81,10 @@ export default function Sidebar() {
             >
               <span aria-hidden="true">{tema === "dia" ? "☾" : "☀"}</span>
             </button>
-            <time dateTime={ahora.toISOString()}>{hora}</time>
-            <span>{fecha}</span>
+            <div className="sidebar-clock-info">
+              <time dateTime={ahora.toISOString()}>{hora}</time>
+              <span>{fecha}</span>
+            </div>
           </div>
         </div>
       </aside>

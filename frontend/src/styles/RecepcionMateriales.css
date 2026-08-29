@@ -14,6 +14,42 @@
   gap: 12px;
 }
 
+.recepcion-campo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.recepcion-selector-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  gap: 8px;
+}
+
+.recepcion-selector-row select { min-width: 0; }
+
+.recepcion-agregar-btn {
+  width: 46px;
+  min-width: 46px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recepcion-agregar-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .recepcion-materiales .form-recepcion textarea {
   min-height: 90px;
   resize: vertical;

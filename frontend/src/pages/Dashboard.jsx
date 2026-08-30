@@ -4,7 +4,7 @@ import axios from "axios";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/Dashboard.css";
 
-const API_URL = "http://127.0.0.1:5000/api";
+const API_URL = "/api";
 
 const resumenInicial = [
   { clave: "productos", titulo: "Productos", valor: "-", detalle: "Modelos registrados" },

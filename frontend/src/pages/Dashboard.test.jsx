@@ -29,7 +29,7 @@ describe("Inicio", () => {
     axios.get.mockResolvedValueOnce({ data: { total_productos: 10, total_proveedores: 6, total_ordenes: 8, total_planillas: 12 } });
     renderDashboard();
 
-    expect(axios.get).toHaveBeenCalledWith("http://127.0.0.1:5000/api/dashboard/resumen");
+    expect(axios.get).toHaveBeenCalledWith("/api/dashboard/resumen");
     expect(await screen.findByRole("heading", { name: "10" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "12" })).toBeInTheDocument();
   });
@@ -61,7 +61,7 @@ describe("Inicio", () => {
 
     expect((await screen.findAllByText("Zapato")).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /Ver todos/i })).toHaveAttribute("href", "/productos");
-    expect(axios.get).toHaveBeenCalledWith("http://127.0.0.1:5000/api/productos/");
+    expect(axios.get).toHaveBeenCalledWith("/api/productos/");
   });
 
   it("muestra un mensaje controlado cuando falla la API", async () => {

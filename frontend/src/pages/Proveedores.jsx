@@ -5,7 +5,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Proveedores.css";
 
-const API_URL = "http://127.0.0.1:5000/api";
+const API_URL = "/api";
 
 export default function Proveedores() {
   const [proveedores, setProveedores] = useState([]);

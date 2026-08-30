@@ -7,7 +7,7 @@ import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/Ordenes.css";
 
-const API_URL = "http://127.0.0.1:5000/api";
+const API_URL = "/api";
 const TALLES = Array.from({ length: 13 }, (_, index) => index + 35);
 const crearTallesVacios = () => Object.fromEntries(TALLES.map((talle) => [talle, ""]));
 

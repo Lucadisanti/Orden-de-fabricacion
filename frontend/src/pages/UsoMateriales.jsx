@@ -175,6 +175,13 @@ export default function UsoMateriales() {
     });
   };
 
+  const obtenerFechaUso = (uso) => {
+    const planilla = planillas.find(
+      (item) => String(item.id_planilla) === String(uso.planilla_produccion_id_planilla),
+    );
+    return formatearFecha(planilla?.fecha);
+  };
+
   const usosFiltrados = usos.filter((uso) => {
   const texto = `
     ${uso.numero_planilla || ""}
@@ -326,7 +333,7 @@ export default function UsoMateriales() {
                 <th>Proveedor</th>
                 <th>Material</th>
                 <th>Color</th>
-                <th>Cantidad usada</th>
+                <th>Fecha de uso</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -349,7 +356,7 @@ export default function UsoMateriales() {
                     <td>{uso.nombre_proveedor || uso.proveedor || "-"}</td>
                     <td>{uso.material || "-"}</td>
                     <td>{uso.color || "-"}</td>
-                    <td>{uso.cantidad_usada}</td>
+                    <td>{obtenerFechaUso(uso)}</td>
                     <td>
                       <button
                         className="ui-btn ui-btn-secondary"
@@ -379,7 +386,6 @@ export default function UsoMateriales() {
                       <div className="uso-detalle-compacto">
                         <div className="uso-detalle-header">
                           <div><span>Uso en producción</span><h3>{uso.material || "Material"} {uso.color ? `· ${uso.color}` : ""}</h3></div>
-                          <div className="uso-cantidad-destacada"><span>Cantidad utilizada</span><strong>{uso.cantidad_usada}</strong></div>
                         </div>
                         <div className="uso-datos-grid">
                           <div><span>Orden</span><strong>{uso.numero_orden || "-"}</strong></div>

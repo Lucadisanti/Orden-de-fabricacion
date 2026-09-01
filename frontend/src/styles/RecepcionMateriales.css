@@ -98,7 +98,8 @@
 .recepcion-cantidades .sin-pendiente { border-color: #bbf7d0; background: #f0fdf4; }
 .recepcion-observaciones { margin-top: 13px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
 .recepcion-observaciones p { margin-top: 3px; color: var(--text-main); line-height: 1.45; }
-.recepcion-acciones-tabla { display: flex; gap: 8px; white-space: nowrap; }
+.recepcion-materiales .ui-data-table th:last-child { text-align: right; }
+.recepcion-acciones-tabla { display: flex; align-items: center; justify-content: flex-end; gap: 8px; white-space: nowrap; }
 .recepcion-acciones-tabla .ui-btn { padding: 8px 12px; }
 
 .detalle-card {

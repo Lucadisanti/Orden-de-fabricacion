@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import bohmLogo from "../assets/bohm-logo.png";
 import "../styles/Sidebar.css";
 
 const enlaces = [
   ["/", "Inicio"],
-  ["/productos", "Productos"],
-  ["/proveedores", "Proveedores"],
-  ["/materiales", "Materiales"],
   ["/recepcion-materiales", "Recepción Materiales"],
   ["/ordenes", "Órdenes"],
   ["/planillas", "Planillas"],
@@ -15,8 +12,18 @@ const enlaces = [
   ["/trazabilidad", "Trazabilidad"],
 ];
 
+const enlacesDatosGenerales = [
+  ["/productos", "Productos"],
+  ["/proveedores", "Proveedores"],
+  ["/materiales", "Materiales"],
+];
+
 export default function Sidebar() {
+  const location = useLocation();
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [datosGeneralesAbiertos, setDatosGeneralesAbiertos] = useState(() => (
+    enlacesDatosGenerales.some(([ruta]) => location.pathname.startsWith(ruta))
+  ));
   const [ahora, setAhora] = useState(() => new Date());
   const [tema, setTema] = useState(() => localStorage.getItem("tema") || "dia");
   const cerrarMenu = () => setMenuAbierto(false);
@@ -42,6 +49,13 @@ export default function Sidebar() {
     month: "long",
   }).format(ahora);
   const fecha = fechaSinFormato.charAt(0).toUpperCase() + fechaSinFormato.slice(1);
+  const datosGeneralesActivos = enlacesDatosGenerales.some(
+    ([ruta]) => location.pathname.startsWith(ruta),
+  );
+  const irAOtroApartado = () => {
+    setDatosGeneralesAbiertos(false);
+    cerrarMenu();
+  };
 
   return (
     <>
@@ -65,8 +79,27 @@ export default function Sidebar() {
 
         <div className="sidebar-content">
           <nav className="sidebar-menu" aria-label="Navegación principal">
-            {enlaces.map(([ruta, nombre]) => (
-              <NavLink key={ruta} to={ruta} onClick={cerrarMenu}>{nombre}</NavLink>
+            <NavLink to="/" onClick={irAOtroApartado}>Inicio</NavLink>
+            <div className={`sidebar-submenu ${datosGeneralesAbiertos ? "abierto" : ""}`}>
+              <button
+                type="button"
+                className={`sidebar-submenu-toggle ${datosGeneralesActivos ? "activo" : ""}`}
+                aria-expanded={datosGeneralesAbiertos}
+                onClick={() => setDatosGeneralesAbiertos((abierto) => !abierto)}
+              >
+                <span>Datos generales</span>
+                <span className="sidebar-submenu-flecha" aria-hidden="true"></span>
+              </button>
+              {datosGeneralesAbiertos && (
+                <div className="sidebar-submenu-enlaces">
+                  {enlacesDatosGenerales.map(([ruta, nombre]) => (
+                    <NavLink key={ruta} to={ruta} onClick={() => { setDatosGeneralesAbiertos(true); cerrarMenu(); }}>{nombre}</NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+            {enlaces.slice(1).map(([ruta, nombre]) => (
+              <NavLink key={ruta} to={ruta} onClick={irAOtroApartado}>{nombre}</NavLink>
             ))}
           </nav>
 

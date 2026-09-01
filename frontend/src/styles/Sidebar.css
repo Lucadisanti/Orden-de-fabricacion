@@ -23,6 +23,14 @@
 .sidebar-menu a { display: flex; align-items: center; min-height: 42px; padding: 11px 14px; border-radius: 12px; color: #dbeafe; font-size: 15px; font-weight: 600; text-decoration: none; transition: background .16s ease, color .16s ease, transform .16s ease; }
 .sidebar-menu a:hover { background: rgba(96, 165, 250, .14); color: #fff; transform: translateX(2px); }
 .sidebar-menu a.active { background: #2563eb; color: #fff; box-shadow: 0 10px 22px rgba(37, 99, 235, .28); }
+.sidebar-submenu { display: flex; flex-direction: column; gap: 5px; }
+.sidebar-submenu-toggle { width: 100%; min-height: 42px; padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; border: 0; border-radius: 12px; background: transparent; color: #dbeafe; font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; transition: background .16s ease, color .16s ease; }
+.sidebar-submenu-toggle:hover, .sidebar-submenu-toggle.activo { background: rgba(96, 165, 250, .14); color: #fff; }
+.sidebar-submenu-flecha { width: 8px; height: 8px; margin-right: 3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .18s ease; }
+.sidebar-submenu.abierto .sidebar-submenu-flecha { transform: rotate(225deg); }
+.sidebar-submenu-enlaces { display: flex; flex-direction: column; gap: 4px; padding-left: 12px; }
+.sidebar-submenu-enlaces a { min-height: 36px; padding: 8px 12px; border-left: 2px solid rgba(148, 163, 184, .28); border-radius: 0 10px 10px 0; font-size: 14px; }
+.sidebar-submenu-enlaces a.active { border-left-color: #60a5fa; }
 .sidebar-toggle, .sidebar-overlay { display: none; }
 
 .sidebar-clock {

@@ -1,0 +1,18 @@
+.ui-list-tools { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+.ui-list-tools .ui-search-bar { flex: 1; margin-bottom: 0; }
+.ui-sort-controls { display: flex; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+.ui-sort-controls label { display: flex; flex-direction: column; gap: 5px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.ui-sort-controls select { min-width: 175px; height: 46px; padding: 0 36px 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); color: var(--text-main); font-weight: 600; }
+.ui-sort-direction { min-width: 132px; height: 46px; }
+
+@media (max-width: 850px) {
+  .ui-list-tools { align-items: stretch; flex-direction: column; }
+  .ui-sort-controls { width: 100%; }
+  .ui-sort-controls label { flex: 1; }
+  .ui-sort-controls select { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .ui-sort-controls { align-items: stretch; flex-direction: column; }
+  .ui-sort-direction { width: 100%; }
+}

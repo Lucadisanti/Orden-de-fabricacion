@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
+import SortControls from "../components/SortControls";
+import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/Ordenes.css";
@@ -24,6 +26,7 @@ export default function Ordenes() {
   const [confirmacion, setConfirmacion] = useState(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  const ordenListado = useSortPreference("ordenes-orden", "fecha", "desc");
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
   const [tallesForm, setTallesForm] = useState(crearTallesVacios);
@@ -242,6 +245,12 @@ export default function Ordenes() {
     `${orden.numero_orden || ""} ${orden.articulo_producto || ""} ${orden.producto || ""} ${orden.color || ""} ${orden.fecha || ""} ${orden.estado || ""}`
       .toLowerCase().includes(busqueda.toLowerCase())
   );
+  const ordenesOrdenadas = ordenarRegistros(ordenesFiltradas, (orden) => ({
+    fecha: orden.fecha,
+    numero: orden.numero_orden,
+    producto: orden.producto || orden.nombre_producto,
+    cantidad: Number(orden.total_pares || 0),
+  })[ordenListado.campo], ordenListado.direccion);
 
   return (
     <section className="ordenes">
@@ -299,13 +308,21 @@ export default function Ordenes() {
       {cargando && <p>Cargando órdenes...</p>}
       {error && <p>{error}</p>}
       {!cargando && !error && <>
-        <div className="ui-search-bar">
-          <input className="ui-input" type="text" placeholder="Buscar por orden, artículo, producto, color, fecha o estado..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        <div className="ui-list-tools">
+          <div className="ui-search-bar">
+            <input className="ui-input" type="text" placeholder="Buscar por orden, artículo, producto, color, fecha o estado..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+          </div>
+          <SortControls opciones={[
+            { value: "fecha", label: "Fecha" },
+            { value: "numero", label: "Número de orden" },
+            { value: "producto", label: "Producto" },
+            { value: "cantidad", label: "Cantidad de pares" },
+          ]} {...ordenListado} />
         </div>
         <div className="ui-table-card">
         <table className="ui-data-table">
           <thead><tr><th>Nº Orden</th><th>Artículo</th><th>Producto</th><th>Color</th><th>Total solicitado</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
-          <tbody>{ordenesFiltradas.map((orden) => <tr key={orden.id_orden} ref={String(orden.id_orden) === String(ordenSeleccionadaId) ? ordenDestinoRef : null} className={String(orden.id_orden) === String(ordenSeleccionadaId) ? "orden-fila-seleccionada" : ""}>
+          <tbody>{ordenesOrdenadas.map((orden) => <tr key={orden.id_orden} ref={String(orden.id_orden) === String(ordenSeleccionadaId) ? ordenDestinoRef : null} className={String(orden.id_orden) === String(ordenSeleccionadaId) ? "orden-fila-seleccionada" : ""}>
             <td>{orden.numero_orden}</td><td>{orden.articulo_producto || "-"}</td><td>{orden.producto || "-"}</td><td>{orden.color || "-"}</td>
             <td><strong>{Number(orden.total_pares || 0)} pares</strong></td><td>{formatearFecha(orden.fecha)}</td>
             <td><span className={`ui-status-badge ${getEstadoClass(orden.estado)}`}>{mostrarEstado(orden.estado)}</span></td>

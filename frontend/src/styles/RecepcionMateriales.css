@@ -10,7 +10,7 @@
 
 .recepcion-materiales .form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -55,10 +55,24 @@
   resize: vertical;
 }
 
+.recepcion-materiales-lineas { display: flex; flex-direction: column; gap: 14px; }
+.recepcion-lineas-titulo { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 8px; }
+.recepcion-lineas-titulo h3 { color: var(--text-main); font-size: 18px; }
+.recepcion-lineas-titulo p { margin-top: 3px; color: var(--text-muted); font-size: 13px; }
+.recepcion-linea { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+.recepcion-linea-header { display: flex; align-items: center; justify-content: space-between; color: var(--text-main); }
+.recepcion-quitar-linea { border: 0; background: transparent; color: #dc2626; font-weight: 700; cursor: pointer; }
+.recepcion-detalle-materiales { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
+.recepcion-detalle-material { padding: 14px; border: 1px solid #dce5f0; border-radius: 10px; background: var(--bg-card); }
+.recepcion-detalle-material > div:first-child { display: flex; flex-direction: column; gap: 3px; }
+.recepcion-detalle-material span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.recepcion-detalle-material p { margin-top: 10px; color: var(--text-main); }
+
 @media (max-width: 800px) {
   .recepcion-materiales .form-grid {
     grid-template-columns: 1fr;
   }
+  .recepcion-lineas-titulo { align-items: stretch; flex-direction: column; }
 }
 
 .ui-table-card .ui-input{
@@ -84,6 +98,8 @@
 .recepcion-cantidades .sin-pendiente { border-color: #bbf7d0; background: #f0fdf4; }
 .recepcion-observaciones { margin-top: 13px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
 .recepcion-observaciones p { margin-top: 3px; color: var(--text-main); line-height: 1.45; }
+.recepcion-acciones-tabla { display: flex; gap: 8px; white-space: nowrap; }
+.recepcion-acciones-tabla .ui-btn { padding: 8px 12px; }
 
 .detalle-card {
   background: #ffffff;

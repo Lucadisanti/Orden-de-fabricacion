@@ -4,6 +4,8 @@ import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
+import SortControls from "../components/SortControls";
+import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/Planillas.css";
@@ -42,6 +44,7 @@ export default function Planillas() {
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  const ordenListado = useSortPreference("planillas-orden", "fecha", "desc");
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
 
@@ -701,9 +704,15 @@ export default function Planillas() {
     return texto.includes(busqueda.toLowerCase());
     });
 
+    const planillasConOrden = ordenarRegistros(planillasFiltradas, (planilla) => ({
+      fecha: planilla.fecha,
+      numero: planilla.numero_planilla,
+      orden: planilla.numero_orden || planilla.orden,
+      maquina: planilla.maquina || planilla.nombre_maquina,
+    })[ordenListado.campo], ordenListado.direccion);
     const planillasOrdenadas = filaDetalleAbierta
-      ? [...planillasFiltradas].sort((a, b) => Number(String(b.id_planilla) === String(filaDetalleAbierta)) - Number(String(a.id_planilla) === String(filaDetalleAbierta)))
-      : planillasFiltradas;
+      ? [...planillasConOrden].sort((a, b) => Number(String(b.id_planilla) === String(filaDetalleAbierta)) - Number(String(a.id_planilla) === String(filaDetalleAbierta)))
+      : planillasConOrden;
 
   return (
     <section className="planillas">
@@ -1103,14 +1112,22 @@ export default function Planillas() {
 
       {!cargando && !error && (
         <>
-        <div className="ui-search-bar">
-          <input
-            className="ui-input"
-            type="text"
-            placeholder="Buscar por planilla, orden, tipo, máquina, fecha o estado..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
+        <div className="ui-list-tools">
+          <div className="ui-search-bar">
+            <input
+              className="ui-input"
+              type="text"
+              placeholder="Buscar por planilla, orden, tipo, máquina, fecha o estado..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+            />
+          </div>
+          <SortControls opciones={[
+            { value: "fecha", label: "Fecha" },
+            { value: "numero", label: "Número de planilla" },
+            { value: "orden", label: "Orden de fabricación" },
+            { value: "maquina", label: "Máquina" },
+          ]} {...ordenListado} />
         </div>
         <div ref={listadoRef} className={`ui-table-card planillas-listado-card ${filaDetalleAbierta ? "detalle-visible" : ""}`}>
           <table className="ui-data-table">

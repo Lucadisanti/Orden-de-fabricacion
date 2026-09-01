@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
+import SortControls from "../components/SortControls";
+import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/ui.css";
 
@@ -34,6 +36,7 @@ export default function Trazabilidad() {
   const [planillaAbierta, setPlanillaAbierta] = useState(null);
   const [bloqueAbierto, setBloqueAbierto] = useState("planillas");
   const [busquedaOrden, setBusquedaOrden] = useState("");
+  const ordenListado = useSortPreference("trazabilidad-orden", "fecha", "desc");
 
   const mostrarToast = (type, title, message) => {
     setToast({ type, title, message });
@@ -187,6 +190,12 @@ export default function Trazabilidad() {
 
     return texto.includes(busquedaOrden.toLowerCase());
   });
+  const ordenesOrdenadas = ordenarRegistros(ordenesFiltradas, (orden) => ({
+    fecha: orden.fecha,
+    numero: orden.numero_orden,
+    producto: orden.producto || orden.nombre_producto,
+    articulo: orden.articulo_producto,
+  })[ordenListado.campo], ordenListado.direccion);
 
   const descargarPdf = async () => {
     if (!ordenSeleccionada || cargandoMateriales) return;
@@ -318,14 +327,22 @@ export default function Trazabilidad() {
       {!cargando && !error && (
         <div className="ui-grid-2">
           <div className={`trazabilidad-columna-listado ${ordenSeleccionada ? "oculto-movil" : ""}`}>
-            <div className="ui-search-bar">
-            <input
-                className="ui-input"
-                type="text"
-                placeholder="Buscar por orden, producto, artículo, color, fecha o estado..."
-                value={busquedaOrden}
-                onChange={(e) => setBusquedaOrden(e.target.value)}
-              />
+            <div className="ui-list-tools">
+              <div className="ui-search-bar">
+                <input
+                  className="ui-input"
+                  type="text"
+                  placeholder="Buscar por orden, producto, artículo, color, fecha o estado..."
+                  value={busquedaOrden}
+                  onChange={(e) => setBusquedaOrden(e.target.value)}
+                />
+              </div>
+              <SortControls opciones={[
+                { value: "fecha", label: "Fecha" },
+                { value: "numero", label: "Número de orden" },
+                { value: "producto", label: "Producto" },
+                { value: "articulo", label: "Artículo" },
+              ]} {...ordenListado} />
             </div>
             <div className="ui-table-card trazabilidad-listado">
             <h2>Órdenes de fabricación</h2>
@@ -340,7 +357,7 @@ export default function Trazabilidad() {
               </thead>
 
               <tbody>
-                {ordenesFiltradas.map((orden) => (
+                {ordenesOrdenadas.map((orden) => (
                   <tr
                     key={orden.id_orden}
                     className={ordenSeleccionada?.id_orden === orden.id_orden ? "trazabilidad-orden-activa" : ""}

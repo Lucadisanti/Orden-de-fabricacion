@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 import SortControls from "../components/SortControls";
+import Pagination from "../components/Pagination";
+import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
@@ -20,6 +22,8 @@ export default function Ordenes() {
   const productoCreadoId = searchParams.get("producto");
   const [ordenes, setOrdenes] = useState([]);
   const [productos, setProductos] = useState([]);
+  const [planillas, setPlanillas] = useState([]);
+  const [lotes, setLotes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
@@ -31,6 +35,11 @@ export default function Ordenes() {
   const [idEditando, setIdEditando] = useState(null);
   const [tallesForm, setTallesForm] = useState(crearTallesVacios);
   const [ordenForm, setOrdenForm] = useState({ producto_id_producto: "", numero_orden: "", fecha: "" });
+  const [operariosForm, setOperariosForm] = useState({ corte: "", aparado: "" });
+  const [materialesForm, setMaterialesForm] = useState([""]);
+  const [filaDetalleAbierta, setFilaDetalleAbierta] = useState(null);
+  const [resumenesOrden, setResumenesOrden] = useState({});
+  const [cargandoResumen, setCargandoResumen] = useState(null);
   const formRef = useRef(null);
   const talleRefs = useRef([]);
   const guardarRef = useRef(null);
@@ -52,6 +61,8 @@ export default function Ordenes() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOrdenForm({ ...datos.ordenForm, producto_id_producto: productoSeleccionado });
       setTallesForm(datos.tallesForm || crearTallesVacios());
+      setOperariosForm(datos.operariosForm || { corte: "", aparado: "" });
+      setMaterialesForm(datos.materialesForm || [""]);
       setEditando(Boolean(datos.editando));
       setIdEditando(datos.idEditando || null);
       setMostrarFormulario(true);
@@ -78,11 +89,14 @@ export default function Ordenes() {
 
   async function cargarDatos() {
     try {
-      const [ordenesRes, productosRes] = await Promise.all([
+      const [ordenesRes, productosRes, planillasRes, lotesRes] = await Promise.all([
         axios.get(`${API_URL}/ordenes/`), axios.get(`${API_URL}/productos/`),
+        axios.get(`${API_URL}/planillas/`), axios.get(`${API_URL}/lotes/`),
       ]);
       setOrdenes(ordenesRes.data);
       setProductos(productosRes.data);
+      setPlanillas(planillasRes.data);
+      setLotes(lotesRes.data);
       setError("");
     } catch (cargaError) {
       console.error(cargaError);
@@ -113,6 +127,8 @@ export default function Ordenes() {
     setEditando(false);
     setIdEditando(null);
     setTallesForm(crearTallesVacios());
+    setOperariosForm({ corte: "", aparado: "" });
+    setMaterialesForm([""]);
   };
 
   const abrirFormularioNuevo = () => {
@@ -120,6 +136,8 @@ export default function Ordenes() {
     setIdEditando(null);
     setOrdenForm({ producto_id_producto: "", numero_orden: "", fecha: "" });
     setTallesForm(crearTallesVacios());
+    setOperariosForm({ corte: "", aparado: "" });
+    setMaterialesForm([""]);
     setMostrarFormulario(true);
     desplazarAlFormulario();
   };
@@ -128,6 +146,8 @@ export default function Ordenes() {
     sessionStorage.setItem("borrador-nueva-orden", JSON.stringify({
       ordenForm,
       tallesForm,
+      operariosForm,
+      materialesForm,
       editando,
       idEditando,
     }));
@@ -145,12 +165,29 @@ export default function Ordenes() {
     setMostrarFormulario(true);
     desplazarAlFormulario();
     try {
-      const respuesta = await axios.get(`${API_URL}/ordenes/${orden.id_orden}/talles`);
+      const r013 = planillas.find((planilla) =>
+        Number(planilla.orden_fabricacion_id_orden) === Number(orden.id_orden)
+        && (planilla.numero_planilla?.toUpperCase() === "R013" || planilla.tipo_planilla === "Corte y Aparado")
+      );
+      const [respuesta, operariosRes, usosRes] = await Promise.all([
+        axios.get(`${API_URL}/ordenes/${orden.id_orden}/talles`),
+        r013 ? axios.get(`${API_URL}/planillas/${r013.id_planilla}/operarios`) : Promise.resolve({ data: [] }),
+        axios.get(`${API_URL}/uso-materiales/`),
+      ]);
       const talles = crearTallesVacios();
       respuesta.data.forEach((detalle) => {
         if (Object.hasOwn(talles, detalle.talle)) talles[detalle.talle] = detalle.cantidad_pares;
       });
       setTallesForm(talles);
+      setOperariosForm({
+        corte: operariosRes.data.find((item) => item.etapa?.toLowerCase() === "corte")?.nombre_operario || "",
+        aparado: operariosRes.data.find((item) => item.etapa?.toLowerCase() === "aparado")?.nombre_operario || "",
+      });
+      const materiales = r013
+        ? usosRes.data.filter((uso) => Number(uso.planilla_produccion_id_planilla) === Number(r013.id_planilla))
+          .map((uso) => String(uso.lote_materiales_id_lote || uso.id_lote)).filter(Boolean)
+        : [];
+      setMaterialesForm(materiales.length ? [...new Set(materiales), ""] : [""]);
     } catch (cargaError) {
       console.error(cargaError);
       mostrarToast("error", "No se cargaron los talles", "No se pudo obtener el detalle de la orden.");
@@ -165,6 +202,54 @@ export default function Ordenes() {
   };
 
   const totalPares = Object.values(tallesForm).reduce((total, cantidad) => total + Number(cantidad || 0), 0);
+
+  const manejarCambioMaterial = (index, valor) => setMaterialesForm((actuales) => {
+    const siguientes = [...actuales];
+    siguientes[index] = valor;
+    if (valor && index === siguientes.length - 1) siguientes.push("");
+    return siguientes;
+  });
+
+  const quitarMaterial = (index) => setMaterialesForm((actuales) => {
+    const siguientes = actuales.filter((_, posicion) => posicion !== index);
+    return siguientes.length ? siguientes : [""];
+  });
+
+  const obtenerR013 = (idOrden) => planillas.find((planilla) =>
+    Number(planilla.orden_fabricacion_id_orden) === Number(idOrden)
+    && (planilla.numero_planilla?.toUpperCase() === "R013" || planilla.tipo_planilla === "Corte y Aparado")
+  );
+
+  const alternarResumenOrden = async (orden) => {
+    if (filaDetalleAbierta === orden.id_orden) {
+      setFilaDetalleAbierta(null);
+      return;
+    }
+    setFilaDetalleAbierta(orden.id_orden);
+    if (resumenesOrden[orden.id_orden]) return;
+
+    setCargandoResumen(orden.id_orden);
+    try {
+      const r013 = obtenerR013(orden.id_orden);
+      const [tallesRes, operariosRes, usosRes] = await Promise.all([
+        axios.get(`${API_URL}/ordenes/${orden.id_orden}/talles`),
+        r013 ? axios.get(`${API_URL}/planillas/${r013.id_planilla}/operarios`) : Promise.resolve({ data: [] }),
+        axios.get(`${API_URL}/uso-materiales/`),
+      ]);
+      const materiales = r013
+        ? usosRes.data.filter((uso) => Number(uso.planilla_produccion_id_planilla) === Number(r013.id_planilla))
+        : [];
+      setResumenesOrden((actuales) => ({
+        ...actuales,
+        [orden.id_orden]: { r013, talles: tallesRes.data, operarios: operariosRes.data, materiales },
+      }));
+    } catch (cargaError) {
+      console.error(cargaError);
+      mostrarToast("error", "No se pudo abrir la orden", "No se pudo cargar el detalle de la R013.");
+    } finally {
+      setCargandoResumen(null);
+    }
+  };
 
   const guardarOrden = async (event) => {
     event.preventDefault();
@@ -183,20 +268,31 @@ export default function Ordenes() {
       talleRefs.current[0]?.focus();
       return;
     }
+    if (!operariosForm.corte.trim() || !operariosForm.aparado.trim()) {
+      mostrarToast("warning", "Faltan operarios", "Indicá los operarios responsables de corte y aparado.");
+      return;
+    }
+    const materiales = [...new Set(materialesForm.filter(Boolean).map(Number))];
+    if (materiales.length === 0) {
+      mostrarToast("warning", "Falta material", "Seleccioná al menos un material utilizado.");
+      return;
+    }
     const datos = {
       producto_id_producto: Number(ordenForm.producto_id_producto),
       numero_orden: numeroOrden,
       fecha: ordenForm.fecha,
       talles,
+      operario_corte: operariosForm.corte.trim(),
+      operario_aparado: operariosForm.aparado.trim(),
+      materiales,
     };
     try {
       if (editando) {
         await axios.put(`${API_URL}/ordenes/${idEditando}`, datos);
         mostrarToast("success", "Orden actualizada", "Los datos y cantidades por talle se guardaron.");
       } else {
-        const respuesta = await axios.post(`${API_URL}/ordenes/`, datos);
-        navigate(`/planillas?nueva=1&orden=${respuesta.data.id_orden}&fecha=${encodeURIComponent(datos.fecha)}`);
-        return;
+        await axios.post(`${API_URL}/ordenes/`, datos);
+        mostrarToast("success", "Orden creada", "La orden y su planilla R013 se guardaron correctamente.");
       }
       cerrarFormulario();
       cargarDatos();
@@ -251,6 +347,7 @@ export default function Ordenes() {
     producto: orden.producto || orden.nombre_producto,
     cantidad: Number(orden.total_pares || 0),
   })[ordenListado.campo], ordenListado.direccion);
+  const paginacionOrdenes = usePagination(ordenesOrdenadas);
 
   return (
     <section className="ordenes">
@@ -259,13 +356,13 @@ export default function Ordenes() {
         confirmText={confirmacion?.confirmText} danger={confirmacion?.danger} onCancel={cerrarConfirmacion} onConfirm={confirmacion?.onConfirm} />
 
       <div className="ui-page-header ui-page-header-row">
-        <div><h1>Órdenes de Fabricación</h1><p>Planificación de productos y cantidades solicitadas por talle.</p></div>
+        <div><h1>Órdenes de Fabricación</h1><p>Carga de la orden y su planilla R013 de corte y aparado.</p></div>
         <button className="ui-btn ui-btn-primary" onClick={abrirFormularioNuevo}>+ Nueva orden</button>
       </div>
 
       {mostrarFormulario && (
         <div className="ui-form-card" ref={formRef}>
-          <h2>{editando ? "Editar orden" : "Nueva orden"}</h2>
+          <h2>{editando ? "Editar orden y R013" : "Nueva orden · Planilla R013"}</h2>
           <form onSubmit={guardarOrden} className="form-orden">
             <div className="orden-datos-grid">
               <label>Producto
@@ -281,6 +378,7 @@ export default function Ordenes() {
               </label>
               <label>Número de orden<input type="text" value={ordenForm.numero_orden} onChange={(e) => setOrdenForm({ ...ordenForm, numero_orden: e.target.value })} required /></label>
               <label>Fecha<input type="date" value={ordenForm.fecha} onChange={(e) => setOrdenForm({ ...ordenForm, fecha: e.target.value })} required /></label>
+              <label>Planilla<input type="text" value="R013" readOnly aria-label="Planilla" /></label>
             </div>
 
             <div className="talles-orden-header">
@@ -296,6 +394,30 @@ export default function Ordenes() {
                     onKeyDown={(e) => manejarEnterTalle(e, index)} placeholder="0" />
                 </label>
               ))}
+            </div>
+            <div className="orden-r013-grid">
+              <label>Operario para corte
+                <input type="text" value={operariosForm.corte} onChange={(e) => setOperariosForm({ ...operariosForm, corte: e.target.value })} required />
+              </label>
+              <label>Operario para aparado
+                <input type="text" value={operariosForm.aparado} onChange={(e) => setOperariosForm({ ...operariosForm, aparado: e.target.value })} required />
+              </label>
+            </div>
+            <div className="orden-materiales">
+              <div><h3>Material utilizado</h3><p>Seleccioná uno o más materiales recibidos.</p></div>
+              {materialesForm.map((idSeleccionado, index) => <div className="orden-material-fila" key={index}>
+                <select value={idSeleccionado} onChange={(e) => manejarCambioMaterial(index, e.target.value)} aria-label={`Material ${index + 1}`}>
+                  <option value="">Seleccione material recibido</option>
+                  {lotes.map((lote) => {
+                    const idLote = String(lote.id_lote_materiales || lote.id_lote);
+                    const yaSeleccionado = materialesForm.some((valor, posicion) => posicion !== index && valor === idLote);
+                    return <option key={idLote} value={idLote} disabled={yaSeleccionado}>
+                      Remito {lote.numero_remito || "-"} - {lote.material || "Material"}{lote.color ? ` (${lote.color})` : ""}
+                    </option>;
+                  })}
+                </select>
+                {idSeleccionado && <button type="button" className="orden-material-quitar" onClick={() => quitarMaterial(index)} aria-label="Quitar material">×</button>}
+              </div>)}
             </div>
             <div className="ui-form-actions">
               <button ref={guardarRef} type="submit" className="ui-btn ui-btn-primary">{editando ? "Actualizar orden" : "Crear orden"}</button>
@@ -321,16 +443,51 @@ export default function Ordenes() {
         </div>
         <div className="ui-table-card">
         <table className="ui-data-table">
-          <thead><tr><th>Nº Orden</th><th>Artículo</th><th>Producto</th><th>Color</th><th>Total solicitado</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
-          <tbody>{ordenesOrdenadas.map((orden) => <tr key={orden.id_orden} ref={String(orden.id_orden) === String(ordenSeleccionadaId) ? ordenDestinoRef : null} className={String(orden.id_orden) === String(ordenSeleccionadaId) ? "orden-fila-seleccionada" : ""}>
-            <td>{orden.numero_orden}</td><td>{orden.articulo_producto || "-"}</td><td>{orden.producto || "-"}</td><td>{orden.color || "-"}</td>
-            <td><strong>{Number(orden.total_pares || 0)} pares</strong></td><td>{formatearFecha(orden.fecha)}</td>
+          <thead><tr><th>Nº Orden</th><th>Planilla</th><th>Artículo</th><th>Producto</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody>{paginacionOrdenes.pageItems.map((orden) => {
+            const abierta = filaDetalleAbierta === orden.id_orden;
+            const resumen = resumenesOrden[orden.id_orden];
+            return <Fragment key={orden.id_orden}><tr ref={String(orden.id_orden) === String(ordenSeleccionadaId) ? ordenDestinoRef : null}
+              className={`${String(orden.id_orden) === String(ordenSeleccionadaId) ? "orden-fila-seleccionada" : ""} ${abierta ? "orden-fila-abierta" : ""}`}
+              onClick={() => alternarResumenOrden(orden)} style={{ cursor: "pointer" }}>
+            <td><span className="orden-flecha">{abierta ? "▲" : "▼"}</span>{orden.numero_orden}</td><td><strong>R013</strong></td><td>{orden.articulo_producto || "-"}</td><td>{orden.producto || "-"}</td><td>{formatearFecha(orden.fecha)}</td>
             <td><span className={`ui-status-badge ${getEstadoClass(orden.estado)}`}>{mostrarEstado(orden.estado)}</span></td>
-            <td><button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(orden)}>Editar</button>
-              <button className="ui-btn ui-btn-danger" onClick={() => eliminarOrden(orden.id_orden)}>Eliminar</button></td>
-          </tr>)}</tbody>
+            <td><button className="ui-btn ui-btn-secondary" onClick={(event) => { event.stopPropagation(); iniciarEdicion(orden); }}>Editar</button>
+              <button className="ui-btn ui-btn-danger" onClick={(event) => { event.stopPropagation(); eliminarOrden(orden.id_orden); }}>Eliminar</button></td>
+          </tr>
+          {abierta && <tr className="orden-detalle-fila"><td colSpan="7">
+            <div className="orden-detalle">
+              {cargandoResumen === orden.id_orden && <p>Cargando detalle completo…</p>}
+              {resumen && <>
+                <div className="orden-detalle-header">
+                  <div><span>Orden de fabricación · Planilla R013</span><h3>Orden {orden.numero_orden} · Corte y Aparado</h3></div>
+                  <div className="orden-total-destacado"><span>Total solicitado</span><strong>{Number(orden.total_pares || 0)} pares</strong></div>
+                </div>
+                <div className="orden-detalle-meta">
+                  <div><span>Artículo</span><strong>{orden.articulo_producto || "-"}</strong></div>
+                  <div><span>Producto</span><strong>{orden.producto || "-"}</strong></div>
+                  <div><span>Color</span><strong>{orden.color || "-"}</strong></div>
+                  <div><span>Fecha</span><strong>{formatearFecha(orden.fecha)}</strong></div>
+                </div>
+                <div className="orden-detalle-grupos">
+                  <div><h4>Cantidad por talle</h4><div className="orden-detalle-chips">
+                    {resumen.talles.length ? resumen.talles.map((item) => <span key={item.id_detalle_orden || item.talle}>Talle {item.talle}: <strong>{item.cantidad_pares}</strong></span>) : <small>Sin talles cargados.</small>}
+                  </div></div>
+                  <div><h4>Operarios asignados</h4><div className="orden-detalle-chips">
+                    {resumen.operarios.length ? resumen.operarios.map((item) => <span key={item.id_operario_planilla}><strong>{item.nombre_operario}</strong> · {item.etapa}</span>) : <small>Sin operarios cargados.</small>}
+                  </div></div>
+                </div>
+                <div className="orden-materiales-resumen"><h4>Materiales utilizados</h4><div className="orden-detalle-chips">
+                  {resumen.materiales.length ? resumen.materiales.map((uso) => <span key={uso.id_uso}><strong>{uso.material || "Material"}</strong>{uso.color ? ` · ${uso.color}` : ""}{uso.numero_remito ? ` · Remito ${uso.numero_remito}` : ""}</span>) : <small>Sin materiales cargados.</small>}
+                </div></div>
+              </>}
+            </div>
+          </td></tr>}
+          </Fragment>;
+          })}</tbody>
         </table>
         </div>
+        <Pagination {...paginacionOrdenes} />
       </>}
     </section>
   );

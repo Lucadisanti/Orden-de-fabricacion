@@ -4,6 +4,8 @@ import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 import CatalogModal from "../components/CatalogModal";
+import Pagination from "../components/Pagination";
+import usePagination from "../hooks/usePagination";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Productos.css";
 
@@ -286,7 +288,8 @@ export default function Productos() {
   `.toLowerCase();
 
   return texto.includes(busqueda.toLowerCase());
-});
+  });
+  const paginacionProductos = usePagination(productosFiltrados);
 
   const modeloSeleccionado = modelos.find((item) => String(item.id_modelo) === String(productoForm.modelos_calzado_id_modelo));
   const punteraSeleccionada = punteras.find((item) => String(item.id_puntera) === String(productoForm.punteras_id_puntera));
@@ -443,7 +446,7 @@ export default function Productos() {
             </thead>
 
             <tbody>
-              {productosFiltrados.map((producto) => (
+              {paginacionProductos.pageItems.map((producto) => (
                 <tr key={producto.id_producto}>
                   <td>{producto.articulo_producto}</td>
                   <td>{producto.nombre_producto}</td>
@@ -461,6 +464,7 @@ export default function Productos() {
             </tbody>
           </table>
         </div>
+        <Pagination {...paginacionProductos} />
         </>
       )}
     </section>

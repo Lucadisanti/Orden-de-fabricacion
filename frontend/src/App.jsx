@@ -11,6 +11,7 @@ import Planillas from "./pages/Planillas";
 import UsoMateriales from "./pages/UsoMateriales";
 import Trazabilidad from "./pages/Trazabilidad";
 import RecepcionMateriales from "./pages/RecepcionMateriales";
+import ProduccionDiaria from "./pages/ProduccionDiaria";
 
 import "./App.css";
 import "./styles/ui.css";
@@ -31,6 +32,7 @@ function App() {
             <Route path="/materiales" element={<Materiales />} />
             <Route path="/ordenes" element={<Ordenes />} />
             <Route path="/planillas" element={<Planillas />} />
+            <Route path="/produccion-diaria" element={<ProduccionDiaria />} />
             <Route path="/uso-materiales" element={<UsoMateriales />} />
             <Route path="/trazabilidad" element={<Trazabilidad />} />
           </Routes>

@@ -15,6 +15,7 @@ from routes.uso_materiales_routes import uso_materiales_bp
 from routes.trazabilidad_routes import trazabilidad_bp
 from routes.dashboard_routes import dashboard_bp
 from routes.catalogos_routes import catalogos_bp
+from routes.produccion_diaria_routes import produccion_diaria_bp
 
 app = Flask(__name__)
 CORS(app, origins=os.getenv("CORS_ORIGINS", "http://127.0.0.1:5173").split(","))
@@ -32,6 +33,7 @@ app.register_blueprint(uso_materiales_bp, url_prefix="/api/uso-materiales")
 app.register_blueprint(trazabilidad_bp, url_prefix="/api/trazabilidad")
 app.register_blueprint(dashboard_bp, url_prefix="/api/dashboard")
 app.register_blueprint(catalogos_bp, url_prefix="/api/catalogos")
+app.register_blueprint(produccion_diaria_bp, url_prefix="/api/produccion-diaria")
 
 
 @app.route("/")

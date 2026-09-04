@@ -3,7 +3,7 @@ import "../styles/SortControls.css";
 export default function SortControls({ opciones, campo, setCampo, direccion, setDireccion }) {
   return (
     <div className="ui-sort-controls">
-      <label>
+      <label className="ui-filter-select">
         <span>Ordenar por</span>
         <select value={campo} onChange={(e) => setCampo(e.target.value)}>
           {opciones.map((opcion) => (

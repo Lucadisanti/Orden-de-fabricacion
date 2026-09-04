@@ -5,6 +5,8 @@ import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import SortControls from "../components/SortControls";
+import Pagination from "../components/Pagination";
+import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
@@ -13,9 +15,6 @@ import "../styles/Planillas.css";
 export default function Planillas() {
   const [searchParams] = useSearchParams();
   const seleccionInicial = searchParams.get("seleccion");
-  const nuevaPlanilla = searchParams.get("nueva") === "1";
-  const ordenInicial = searchParams.get("orden") || "";
-  const fechaInicial = searchParams.get("fecha") || "";
   const tallesDisponibles = Array.from({ length: 13 }, (_, i) => i + 35);
 
   const crearTallesIniciales = () => {
@@ -38,7 +37,6 @@ export default function Planillas() {
   const planillaAbiertaRef = useRef(null);
   const listadoRef = useRef(null);
   const seleccionAplicadaRef = useRef(null);
-  const nuevaPlanillaAplicadaRef = useRef(false);
   const talleRefs = useRef([]);
   const guardarTallesRef = useRef(null);
 
@@ -58,6 +56,7 @@ export default function Planillas() {
   const [filaDetalleAbierta, setFilaDetalleAbierta] = useState(null);
   const [resumenesPlanilla, setResumenesPlanilla] = useState({});
   const [cargandoResumen, setCargandoResumen] = useState(null);
+  const [distribucionPlanillas, setDistribucionPlanillas] = useState({});
 
   const [tallesForm, setTallesForm] = useState(crearTallesIniciales());
 
@@ -80,23 +79,6 @@ export default function Planillas() {
   useEffect(() => {
     cargarDatos();
   }, []);
-
-  useEffect(() => {
-    if (!nuevaPlanilla || !ordenInicial || nuevaPlanillaAplicadaRef.current) return;
-    nuevaPlanillaAplicadaRef.current = true;
-    setEditando(false);
-    setIdEditando(null);
-    setPlanillaForm({
-      orden_fabricacion_id_orden: ordenInicial,
-      numero_planilla: "",
-      fecha: fechaInicial,
-      tipo_planilla: "",
-      maquinas_id_maquina: "",
-      estado: "Pendiente",
-    });
-    setMostrarFormulario(true);
-    desplazarAlFormulario();
-  }, [fechaInicial, nuevaPlanilla, ordenInicial]);
 
   useEffect(() => {
     if (!filaDetalleAbierta) return;
@@ -148,15 +130,17 @@ export default function Planillas() {
 
   async function cargarDatos() {
     try {
-      const [planillasRes, ordenesRes, maquinasRes] = await Promise.all([
+      const [planillasRes, ordenesRes, maquinasRes, distribucionRes] = await Promise.all([
         axios.get("/api/planillas/"),
         axios.get("/api/ordenes/"),
         axios.get("/api/maquinas/"),
+        axios.get("/api/produccion-diaria/distribucion-planillas"),
       ]);
 
       setPlanillas(planillasRes.data);
       setOrdenes(ordenesRes.data);
       setMaquinas(maquinasRes.data);
+      setDistribucionPlanillas(Object.fromEntries(distribucionRes.data.map((item) => [item.id_planilla, item])));
       setCargando(false);
     } catch (error) {
       console.error(error);
@@ -188,6 +172,12 @@ export default function Planillas() {
     }
 
     return "";
+  };
+
+  const mostrarInyectora = (planilla) => {
+    const distribucion = distribucionPlanillas[planilla.id_planilla];
+    if (Number(distribucion?.cantidad_inyectoras) > 1) return `${distribucion.cantidad_inyectoras} inyectoras`;
+    return distribucion?.inyectoras || planilla.nombre_maquina || planilla.maquina || "-";
   };
 
   const manejarCambio = (e) => {
@@ -285,13 +275,6 @@ export default function Planillas() {
     });
   };
 
-  const quitarSelectorMaterial = (index) => {
-    setMaterialesForm((actuales) => {
-      const siguientes = actuales.filter((_, posicion) => posicion !== index);
-      return siguientes.length > 0 ? siguientes : [""];
-    });
-  };
-
   const abrirFormularioNuevo = () => {
     setPlanillaSeleccionada(null);
     setFilaDetalleAbierta(null);
@@ -299,14 +282,21 @@ export default function Planillas() {
     setIdEditando(null);
     setPlanillaForm({
       orden_fabricacion_id_orden: "",
-      numero_planilla: "",
+      numero_planilla: "R013/1",
       fecha: "",
-      tipo_planilla: "",
+      tipo_planilla: "Calzado e Inyección",
       maquinas_id_maquina: "",
-      estado: "Pendiente",
+      estado: "En proceso",
     });
     setMostrarFormulario(true);
     desplazarAlFormulario();
+  };
+
+  const quitarSelectorMaterial = (index) => {
+    setMaterialesForm((actuales) => {
+      const siguientes = actuales.filter((_, posicion) => posicion !== index);
+      return siguientes.length > 0 ? siguientes : [""];
+    });
   };
 
   const iniciarEdicion = (planilla) => {
@@ -493,10 +483,11 @@ export default function Planillas() {
 
     setCargandoResumen(planilla.id_planilla);
     try {
-      const [detallesRes, operariosRes, usosRes] = await Promise.all([
+      const [detallesRes, operariosRes, usosRes, desgloseRes] = await Promise.all([
         axios.get(`/api/planillas/${planilla.id_planilla}/detalles`),
         axios.get(`/api/planillas/${planilla.id_planilla}/operarios`),
         axios.get("/api/uso-materiales/"),
+        axios.get(`/api/produccion-diaria/planilla/${planilla.id_planilla}/desglose`),
       ]);
 
       setResumenesPlanilla((actuales) => ({
@@ -507,6 +498,7 @@ export default function Planillas() {
           materiales: usosRes.data.filter((uso) =>
             Number(uso.planilla_produccion_id_planilla || uso.id_planilla) === Number(planilla.id_planilla)
           ),
+          desglose: desgloseRes.data,
         },
       }));
     } catch (resumenError) {
@@ -692,10 +684,14 @@ export default function Planillas() {
 
 
     const planillasFiltradas = planillas.filter((planilla) => {
+    const esR013DeOrden = planilla.numero_planilla?.toUpperCase() === "R013"
+      || planilla.tipo_planilla === "Corte y Aparado";
+    if (esR013DeOrden) return false;
     const texto = `
       ${planilla.numero_planilla || ""}
       ${planilla.numero_orden || planilla.orden || ""}
       ${planilla.tipo_planilla || ""}
+      ${planilla.producto || ""}
       ${planilla.nombre_maquina || planilla.maquina || ""}
       ${planilla.fecha || ""}
       ${planilla.estado || ""}
@@ -708,11 +704,13 @@ export default function Planillas() {
       fecha: planilla.fecha,
       numero: planilla.numero_planilla,
       orden: planilla.numero_orden || planilla.orden,
+      producto: planilla.producto,
       maquina: planilla.maquina || planilla.nombre_maquina,
     })[ordenListado.campo], ordenListado.direccion);
     const planillasOrdenadas = filaDetalleAbierta
       ? [...planillasConOrden].sort((a, b) => Number(String(b.id_planilla) === String(filaDetalleAbierta)) - Number(String(a.id_planilla) === String(filaDetalleAbierta)))
       : planillasConOrden;
+    const paginacionPlanillas = usePagination(planillasOrdenadas);
 
   return (
     <section className="planillas">
@@ -740,12 +738,13 @@ export default function Planillas() {
       <div className="ui-page-header ui-page-header-row">
         <div>
           <h1>Planillas de Producción</h1>
-          <p>Control de planillas asociadas a órdenes de fabricación.</p>
+          <p>Control de planillas R013/1 de calzado e inyección.</p>
         </div>
 
         <button className="ui-btn ui-btn-primary" onClick={abrirFormularioNuevo}>
           + Nueva planilla
         </button>
+
       </div>
 
       {mostrarFormulario && (
@@ -783,7 +782,6 @@ export default function Planillas() {
               required
             >
               <option value="">Seleccione tipo de planilla</option>
-              <option value="Corte y Aparado">R013 · Corte y Aparado</option>
               <option value="Calzado e Inyección">R013/1 · Calzado e Inyección</option>
               {planillaForm.tipo_planilla && !["Corte y Aparado", "Calzado e Inyección"].includes(planillaForm.tipo_planilla) && (
                 <option value={planillaForm.tipo_planilla}>{planillaForm.tipo_planilla} · formato anterior</option>
@@ -808,17 +806,6 @@ export default function Planillas() {
                 <button type="button" className="planilla-alta-maquina" onClick={() => setMostrarAltaMaquina(true)} title="Crear inyectora" aria-label="Crear inyectora">+</button>
               </div>
             )}
-
-            <select
-              name="estado"
-              value={planillaForm.estado}
-              onChange={manejarCambio}
-              required
-            >
-              <option value="Pendiente">Pendiente</option>
-              <option value="En proceso">En proceso</option>
-              <option value="Finalizada">Finalizada</option>
-            </select>
 
             <div className="ui-form-actions">
               <button type="submit" className="ui-btn ui-btn-primary">
@@ -1117,15 +1104,14 @@ export default function Planillas() {
             <input
               className="ui-input"
               type="text"
-              placeholder="Buscar por planilla, orden, tipo, máquina, fecha o estado..."
+              placeholder="Buscar por producto, máquina, fecha o estado..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
             />
           </div>
           <SortControls opciones={[
             { value: "fecha", label: "Fecha" },
-            { value: "numero", label: "Número de planilla" },
-            { value: "orden", label: "Orden de fabricación" },
+            { value: "producto", label: "Producto" },
             { value: "maquina", label: "Máquina" },
           ]} {...ordenListado} />
         </div>
@@ -1133,9 +1119,9 @@ export default function Planillas() {
           <table className="ui-data-table">
             <thead>
               <tr>
-                <th>Nº Planilla</th>
-                <th>Orden</th>
-                <th>Tipo</th>
+                <th>Nº Orden</th>
+                <th>Planilla</th>
+                <th>Producto</th>
                 <th>Máquina</th>
                 <th>Fecha</th>
                 <th>Estado</th>
@@ -1144,7 +1130,7 @@ export default function Planillas() {
             </thead>
 
             <tbody>
-              {planillasOrdenadas.map((planilla) => {
+              {paginacionPlanillas.pageItems.map((planilla) => {
                 const resumen = resumenesPlanilla[planilla.id_planilla];
                 const abierta = filaDetalleAbierta === planilla.id_planilla;
                 const totalDetalle = resumen?.detalles.reduce((total, detalle) => total + Number(detalle.cantidad_pares || 0), 0) || 0;
@@ -1154,10 +1140,10 @@ export default function Planillas() {
                 }, {}) || {});
                 return <Fragment key={planilla.id_planilla}>
                 <tr className={abierta ? "planilla-fila-abierta" : ""} onClick={() => alternarResumenPlanilla(planilla)} style={{ cursor: "pointer" }}>
-                  <td><span className="planilla-flecha">{abierta ? "▲" : "▼"}</span>{planilla.numero_planilla}</td>
-                  <td>{planilla.numero_orden || planilla.orden || "-"}</td>
-                  <td>{planilla.tipo_planilla}</td>
-                  <td>{planilla.nombre_maquina || planilla.maquina || "-"}</td>
+                  <td><span className="planilla-flecha">{abierta ? "▲" : "▼"}</span>{planilla.numero_orden || planilla.orden || "-"}</td>
+                  <td><strong>{planilla.numero_planilla || "-"}</strong></td>
+                  <td>{planilla.producto || "-"}</td>
+                  <td>{mostrarInyectora(planilla)}</td>
                   <td>{formatearFecha(planilla.fecha)}</td>
                   <td>
                     <span
@@ -1170,10 +1156,10 @@ export default function Planillas() {
                   </td>
                   <td>
                     <button
-                      className="ui-btn ui-btn-primary"
+                      className="ui-btn ui-btn-secondary"
                       onClick={(event) => { event.stopPropagation(); gestionarPlanilla(planilla, "produccion"); }}
                     >
-                      Abrir planilla
+                      Editar
                     </button>
 
                     <button
@@ -1196,13 +1182,26 @@ export default function Planillas() {
                         </div>
 
                         <div className="planilla-detalle-meta">
-                          <div><span>Orden</span><strong>{planilla.numero_orden || planilla.orden || "-"}</strong></div>
+                          <div><span>Producto</span><strong>{planilla.producto || "-"}</strong></div>
+                          <div><span>Inyectora</span><strong>{mostrarInyectora(planilla)}</strong></div>
                           <div><span>Fecha</span><strong>{formatearFecha(planilla.fecha)}</strong></div>
-                          <div><span>Máquina</span><strong>{planilla.nombre_maquina || planilla.maquina || "-"}</strong></div>
                           <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(planilla.estado)}`}>{planilla.estado || "Pendiente"}</span></strong></div>
                         </div>
 
-                        <div className="planilla-detalle-grupos">
+                        {resumen.desglose?.length > 0 ? <div className="planilla-desglose-inyectoras">
+                          {resumen.desglose.map((linea, indice) => <div className="planilla-desglose-bloque" key={linea.id_linea}>
+                            <div className="planilla-desglose-header"><div><span>Producción {indice + 1}</span><h4>{linea.maquina}</h4></div><strong>{linea.total_pares} pares</strong></div>
+                            <div className="planilla-jornadas">
+                              {linea.jornadas.map((jornada) => <div className="planilla-jornada" key={jornada.fecha}>
+                                <div className="planilla-jornada-header"><strong>{formatearFecha(jornada.fecha)}</strong><span>{jornada.total_pares} pares</span></div>
+                                <div className="planilla-desglose-meta"><span><strong>Inyección:</strong> {jornada.operarios_inyeccion.join(", ")}</span></div>
+                                <div className="planilla-detalle-chips">{jornada.talles.map((item) => <span key={item.talle}>Talle {item.talle}: <strong>{item.cantidad_pares}</strong></span>)}</div>
+                                <div className="planilla-desglose-operarios"><span><strong>Calzado:</strong> {jornada.operarios_calzado.join(", ")}</span><span><strong>Puntera:</strong> {jornada.operarios_puntera.join(", ")}</span></div>
+                                <div className="planilla-desglose-materiales"><span><strong>Puntera:</strong> {jornada.punteras.map((material) => `${material.material}${material.color ? ` · ${material.color}` : ""} · Remito ${material.remito}`).join(" | ")}</span><span><strong>PU:</strong> {jornada.pus.map((material) => `${material.material}${material.color ? ` · ${material.color}` : ""} · Remito ${material.remito}`).join(" | ")}</span></div>
+                              </div>)}
+                            </div>
+                          </div>)}
+                        </div> : <><div className="planilla-detalle-grupos">
                           <div>
                             <h4>Pares por talle</h4>
                             <div className="planilla-detalle-chips">
@@ -1218,9 +1217,13 @@ export default function Planillas() {
                         </div>
 
                         <div className="planilla-materiales-enlace">
-                          <div><span>Usos de materiales</span><strong>{resumen.materiales.length} {resumen.materiales.length === 1 ? "registro" : "registros"}</strong></div>
+                          <h4>Materiales utilizados</h4>
+                          <div className="planilla-detalle-chips planilla-materiales-chips">
+                            {resumen.materiales.length > 0 ? resumen.materiales.map((uso) => <span key={uso.id_uso}><strong>{uso.material || "Material"}</strong>{uso.color ? ` · ${uso.color}` : ""}{uso.numero_remito ? ` · Remito ${uso.numero_remito}` : ""}</span>) : <small>Sin materiales cargados.</small>}
+                          </div>
                           <Link className="ui-btn ui-btn-secondary" to={`/uso-materiales?orden=${encodeURIComponent(planilla.numero_orden || planilla.orden || "")}&planilla=${encodeURIComponent(planilla.numero_planilla || "")}`}>Ver usos →</Link>
                         </div>
+                        </>}
                       </>}
                     </div>
                   </td>
@@ -1230,6 +1233,7 @@ export default function Planillas() {
             </tbody>
           </table>
         </div>
+        <Pagination {...paginacionPlanillas} />
         </>
       )}
     </section>

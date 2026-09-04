@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
+import Pagination from "../components/Pagination";
+import usePagination from "../hooks/usePagination";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Materiales.css";
 
@@ -158,6 +160,7 @@ export default function Materiales() {
     .toLowerCase()
     .includes(busqueda.toLowerCase())
   );
+  const paginacionMateriales = usePagination(materialesFiltrados);
 
   return (
     <section className="materiales">
@@ -243,7 +246,7 @@ export default function Materiales() {
             </thead>
 
             <tbody>
-              {materialesFiltrados.map((material) => (
+              {paginacionMateriales.pageItems.map((material) => (
                 <tr key={material.id_material}>
                   <td>{material.material}</td>
                   <td>
@@ -259,6 +262,7 @@ export default function Materiales() {
             </tbody>
           </table>
         </div>
+        <Pagination {...paginacionMateriales} />
         </>
       )}
     </section>

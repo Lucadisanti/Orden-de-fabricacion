@@ -1,0 +1,40 @@
+.produccion-diaria-form { display: flex; flex-direction: column; gap: 16px; }
+.produccion-cabecera { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(180px, 1fr)); gap: 14px; align-items: start; }
+.produccion-cabecera h2, .produccion-cabecera p, .produccion-bloque h2 { margin: 0; }
+.produccion-cabecera p { margin-top: 4px; color: var(--text-muted); }
+.produccion-diaria label { display: flex; flex-direction: column; gap: 6px; color: var(--text-muted); font-size: 13px; font-weight: 700; }
+.produccion-operarios { display: flex; flex-direction: column; gap: 6px; align-self: stretch; }
+.produccion-operarios > span { color: var(--text-muted); font-size: 13px; font-weight: 700; }
+.produccion-operarios > div { display: grid; grid-template-columns: minmax(0, 1fr) 38px; gap: 6px; }
+.produccion-operarios > div:not(:has(button)) { grid-template-columns: 1fr; }
+.produccion-operarios > div button { border: 1px solid #fecaca; border-radius: 8px; background: #fff; color: #b91c1c; font-size: 20px; cursor: pointer; }
+.produccion-agregar-operario { align-self: flex-start; padding: 2px 0; border: 0; background: transparent; color: var(--primary); font-size: 12px; font-weight: 800; cursor: pointer; }
+.produccion-bloque { display: flex; flex-direction: column; gap: 14px; }
+.produccion-bloque-header, .produccion-linea-header, .produccion-acciones { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.produccion-bloque-header span { color: var(--primary); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.produccion-inyectora-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 12px; border-radius: 10px; background: var(--primary-soft, #eff6ff); }
+.produccion-linea { padding: 14px; border: 1px solid var(--border); border-radius: 12px; }
+.produccion-linea-header { margin-bottom: 12px; }
+.produccion-linea-header h3 { margin: 0; }
+.produccion-linea-datos { display: grid; grid-template-columns: 1fr 1.4fr 1.4fr; gap: 12px; }
+.produccion-talles { margin-top: 13px; }
+.produccion-talles > span { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 800; }
+.produccion-talles > div { display: grid; grid-template-columns: repeat(13, minmax(58px, 1fr)); gap: 6px; }
+.produccion-talles label { padding: 6px; border: 1px solid var(--border); border-radius: 8px; text-align: center; }
+.produccion-talles label small { min-height: 14px; color: var(--text-muted); font-size: 10px; font-weight: 600; }
+.produccion-talles label.talle-sin-pendiente { opacity: .5; background: var(--bg-page, #f5f8fc); }
+.produccion-talles input { min-width: 0; padding: 7px 4px; text-align: center; }
+.produccion-acciones { position: sticky; bottom: 10px; z-index: 5; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); box-shadow: var(--shadow-card); }
+.produccion-historial { margin-top: 28px; }
+.produccion-historial-header, .produccion-historial-filtros, .produccion-paginacion, .produccion-paginacion > div, .produccion-paginacion label { display: flex; align-items: flex-end; gap: 12px; }
+.produccion-historial-header { justify-content: space-between; margin-bottom: 12px; }
+.produccion-historial-header h2 { margin: 0; }
+.produccion-historial-filtros .ui-filter-select select { min-width: 168px; }
+.produccion-paginacion { justify-content: space-between; margin-top: 14px; }
+.produccion-paginacion > div { align-items: center; }
+.produccion-paginacion span { color: var(--text-muted); font-weight: 700; }
+.produccion-paginacion .ui-btn { min-width: 112px; }
+.produccion-grupo td { padding: 9px 18px !important; background: var(--primary-soft, #eaf2ff) !important; color: var(--primary); font-weight: 800; }
+.produccion-sin-registros { padding: 28px !important; text-align: center; color: var(--text-muted); }
+@media (max-width: 1100px) { .produccion-cabecera { grid-template-columns: repeat(2, 1fr); } .produccion-talles > div { grid-template-columns: repeat(7, 1fr); } }
+@media (max-width: 760px) { .produccion-cabecera, .produccion-inyectora-grid, .produccion-linea-datos { grid-template-columns: 1fr; } .produccion-talles > div { grid-template-columns: repeat(4, 1fr); } .produccion-acciones, .produccion-historial-header, .produccion-historial-filtros, .produccion-paginacion { align-items: stretch; flex-direction: column; } .produccion-paginacion > div { justify-content: space-between; } }

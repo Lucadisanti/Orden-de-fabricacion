@@ -4,6 +4,8 @@ import CatalogModal from "../components/CatalogModal";
 import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import SortControls from "../components/SortControls";
+import Pagination from "../components/Pagination";
+import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import Toast from "../components/Toast";
 import { obtenerMensajeError } from "../utils/errorMessages";
@@ -352,6 +354,7 @@ export default function RecepcionMateriales() {
   const recepcionesOrdenadas = filaAbierta
     ? [...recepcionesConOrden].sort((a, b) => Number(String(b.remitos_id_remito) === String(filaAbierta)) - Number(String(a.remitos_id_remito) === String(filaAbierta)))
     : recepcionesConOrden;
+  const paginacionRecepciones = usePagination(recepcionesOrdenadas);
 
   return (
     <section className="recepcion-materiales">
@@ -572,7 +575,7 @@ export default function RecepcionMateriales() {
             </thead>
 
             <tbody>
-              {recepcionesOrdenadas.map((recepcion) => {
+              {paginacionRecepciones.pageItems.map((recepcion) => {
                 const totalRecibido = recepcion.materiales.reduce((total, lote) => total + Number(lote.cantidad_recibida || 0), 0);
                 const esMultiple = recepcion.materiales.length > 1;
                 return (
@@ -659,6 +662,7 @@ export default function RecepcionMateriales() {
             </tbody>
           </table>
         </div>
+        <Pagination {...paginacionRecepciones} />
         </>
       )}
     </section>

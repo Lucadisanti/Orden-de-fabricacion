@@ -3,6 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
+import Pagination from "../components/Pagination";
+import usePagination from "../hooks/usePagination";
 import { obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/UsoMateriales.css";
@@ -209,6 +211,7 @@ export default function UsoMateriales() {
     grupos[clave].usos.push(uso);
     return grupos;
   }, {}));
+  const paginacionUsos = usePagination(gruposUsos);
 
   return (
     <section className="uso-materiales">
@@ -339,7 +342,7 @@ export default function UsoMateriales() {
             </thead>
 
           <tbody>
-              {gruposUsos.map((grupo) => (
+              {paginacionUsos.pageItems.map((grupo) => (
                 <Fragment key={grupo.clave}>
                   <tr className="uso-grupo-header">
                     <td colSpan="6"><strong>Orden {grupo.orden}</strong><span>Planilla {grupo.planilla} · {grupo.usos.length} {grupo.usos.length === 1 ? "registro" : "registros"}</span></td>
@@ -409,6 +412,7 @@ export default function UsoMateriales() {
             </tbody>
           </table>
         </div>
+        <Pagination {...paginacionUsos} />
         </>
       )}
     </section>

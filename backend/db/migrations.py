@@ -177,6 +177,110 @@ def migrate_schema(connection=None):
         if not lock_acquired:
             raise RuntimeError("No se pudo obtener el bloqueo para actualizar la base de datos.")
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS produccion_diaria (
+              id_produccion_diaria INT AUTO_INCREMENT PRIMARY KEY,
+              fecha DATE NOT NULL,
+              operario_calzado VARCHAR(80) NOT NULL,
+              operario_puntera VARCHAR(80) NOT NULL,
+              creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              KEY idx_produccion_diaria_fecha (fecha)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS produccion_diaria_bloque (
+              id_bloque INT AUTO_INCREMENT PRIMARY KEY,
+              produccion_diaria_id INT NOT NULL,
+              maquinas_id_maquina INT NOT NULL,
+              operario_inyeccion VARCHAR(80) NOT NULL,
+              KEY idx_pdb_diaria (produccion_diaria_id),
+              KEY idx_pdb_maquina (maquinas_id_maquina),
+              CONSTRAINT fk_pdb_diaria FOREIGN KEY (produccion_diaria_id)
+                REFERENCES produccion_diaria (id_produccion_diaria) ON DELETE CASCADE,
+              CONSTRAINT fk_pdb_maquina FOREIGN KEY (maquinas_id_maquina)
+                REFERENCES maquinas (id_maquina) ON DELETE RESTRICT
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS produccion_diaria_linea (
+              id_linea INT AUTO_INCREMENT PRIMARY KEY,
+              bloque_id INT NOT NULL,
+              orden_fabricacion_id_orden INT NOT NULL,
+              planilla_produccion_id_planilla INT NOT NULL,
+              lote_puntera_id INT NOT NULL,
+              lote_pu_id INT NOT NULL,
+              KEY idx_pdl_bloque (bloque_id),
+              KEY idx_pdl_orden (orden_fabricacion_id_orden),
+              CONSTRAINT fk_pdl_bloque FOREIGN KEY (bloque_id)
+                REFERENCES produccion_diaria_bloque (id_bloque) ON DELETE CASCADE,
+              CONSTRAINT fk_pdl_orden FOREIGN KEY (orden_fabricacion_id_orden)
+                REFERENCES orden_fabricacion (id_orden) ON DELETE RESTRICT,
+              CONSTRAINT fk_pdl_planilla FOREIGN KEY (planilla_produccion_id_planilla)
+                REFERENCES planilla_produccion (id_planilla) ON DELETE RESTRICT,
+              CONSTRAINT fk_pdl_puntera FOREIGN KEY (lote_puntera_id)
+                REFERENCES lote_materiales (id_lote) ON DELETE RESTRICT,
+              CONSTRAINT fk_pdl_pu FOREIGN KEY (lote_pu_id)
+                REFERENCES lote_materiales (id_lote) ON DELETE RESTRICT
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS detalle_produccion_diaria (
+              id_detalle_produccion INT AUTO_INCREMENT PRIMARY KEY,
+              linea_id INT NOT NULL,
+              talle VARCHAR(10) NOT NULL,
+              cantidad_pares INT NOT NULL,
+              UNIQUE KEY uq_dpd_linea_talle (linea_id, talle),
+              CONSTRAINT fk_dpd_linea FOREIGN KEY (linea_id)
+                REFERENCES produccion_diaria_linea (id_linea) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+        )
+        cursor.execute("ALTER TABLE produccion_diaria MODIFY operario_calzado TEXT NOT NULL")
+        cursor.execute("ALTER TABLE produccion_diaria MODIFY operario_puntera TEXT NOT NULL")
+        cursor.execute("ALTER TABLE produccion_diaria_bloque MODIFY operario_inyeccion TEXT NOT NULL")
+
+        cursor.execute(
+            """
+            SELECT id_planilla, orden_fabricacion_id_orden
+            FROM planilla_produccion
+            WHERE UPPER(numero_planilla) = 'R013/1' OR tipo_planilla = 'Calzado e Inyección'
+            """
+        )
+        planillas_r013_1 = cursor.fetchall()
+        for planilla in planillas_r013_1:
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS talles_pendientes
+                FROM detalle_orden dor
+                LEFT JOIN (
+                  SELECT talle, SUM(cantidad_pares) AS producidos
+                  FROM detalle_planilla
+                  WHERE planilla_produccion_id_planilla = %s
+                  GROUP BY talle
+                ) realizado ON realizado.talle = dor.talle
+                WHERE dor.orden_fabricacion_id_orden = %s
+                  AND COALESCE(realizado.producidos, 0) < dor.cantidad_pares
+                """,
+                (planilla["id_planilla"], planilla["orden_fabricacion_id_orden"]),
+            )
+            estado = "Finalizada" if cursor.fetchone()["talles_pendientes"] == 0 else "En proceso"
+            cursor.execute("UPDATE planilla_produccion SET estado = %s WHERE id_planilla = %s", (estado, planilla["id_planilla"]))
+            cursor.execute(
+                """
+                UPDATE planilla_produccion SET estado = %s
+                WHERE orden_fabricacion_id_orden = %s
+                  AND (UPPER(numero_planilla) = 'R013' OR tipo_planilla = 'Corte y Aparado')
+                """,
+                (estado, planilla["orden_fabricacion_id_orden"]),
+            )
+
         remito_indexes = _index_names(cursor, "remitos")
         if "uq_remito_proveedor" not in remito_indexes:
             cursor.execute(

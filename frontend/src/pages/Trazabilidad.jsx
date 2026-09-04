@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import SortControls from "../components/SortControls";
+import Pagination from "../components/Pagination";
+import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/ui.css";
@@ -33,6 +35,7 @@ export default function Trazabilidad() {
   const [tallesOrden, setTallesOrden] = useState([]);
   const [planillasDetalle, setPlanillasDetalle] = useState([]);
   const [operariosPorPlanilla, setOperariosPorPlanilla] = useState({});
+  const [desglosePorPlanilla, setDesglosePorPlanilla] = useState({});
   const [planillaAbierta, setPlanillaAbierta] = useState(null);
   const [bloqueAbierto, setBloqueAbierto] = useState("planillas");
   const [busquedaOrden, setBusquedaOrden] = useState("");
@@ -69,6 +72,7 @@ export default function Trazabilidad() {
     setTallesOrden([]);
     setPlanillasDetalle([]);
     setOperariosPorPlanilla({});
+    setDesglosePorPlanilla({});
     setCargandoMateriales(true);
 
     try {
@@ -87,21 +91,25 @@ export default function Trazabilidad() {
       setPlanillasDetalle(planillasOrden);
       const idsPlanillas = planillasOrden.map((planilla) => planilla.id_planilla);
 
-      const [tallesRes, operariosRes] = await Promise.all([
+      const [tallesRes, operariosRes, desgloseRes] = await Promise.all([
         Promise.all(idsPlanillas.map((idPlanilla) => axios.get(`${API_URL}/planillas/${idPlanilla}/detalles`))),
         Promise.all(idsPlanillas.map((idPlanilla) => axios.get(`${API_URL}/planillas/${idPlanilla}/operarios`))),
+        Promise.all(idsPlanillas.map((idPlanilla) => axios.get(`${API_URL}/produccion-diaria/planilla/${idPlanilla}/desglose`))),
       ]);
 
       const tallesAgrupados = {};
       const operariosAgrupados = {};
+      const desglosesAgrupados = {};
 
       idsPlanillas.forEach((idPlanilla, index) => {
         tallesAgrupados[idPlanilla] = tallesRes[index].data;
         operariosAgrupados[idPlanilla] = operariosRes[index].data;
+        desglosesAgrupados[idPlanilla] = desgloseRes[index].data;
       });
 
       setTallesPorPlanilla(tallesAgrupados);
       setOperariosPorPlanilla(operariosAgrupados);
+      setDesglosePorPlanilla(desglosesAgrupados);
     } catch (error) {
       console.error(error);
       mostrarToast(
@@ -173,6 +181,14 @@ export default function Trazabilidad() {
     0
   );
 
+  const obtenerTallesVisuales = (planilla) => obtenerGrupoPlanilla(planilla) === "R013"
+    ? tallesOrden
+    : (tallesPorPlanilla[planilla.id_planilla] || []);
+
+  const obtenerTotalVisual = (planilla) => obtenerGrupoPlanilla(planilla) === "R013"
+    ? totalPlanificado
+    : obtenerTotalPlanilla(planilla.id_planilla);
+
   const totalMaterialesUsados = listaPlanillas.reduce(
     (total, planilla) => total + planilla.materiales.length,
     0
@@ -196,6 +212,7 @@ export default function Trazabilidad() {
     producto: orden.producto || orden.nombre_producto,
     articulo: orden.articulo_producto,
   })[ordenListado.campo], ordenListado.direccion);
+  const paginacionOrdenes = usePagination(ordenesOrdenadas);
 
   const descargarPdf = async () => {
     if (!ordenSeleccionada || cargandoMateriales) return;
@@ -255,10 +272,13 @@ export default function Trazabilidad() {
       { alternateRowStyles: {} }
     );
 
-    tituloSeccion("Avance por etapa");
+    tituloSeccion("Referencia por etapa");
     tabla(
       ["Planilla", "Etapa", "Realizados", "Pendientes", "Avance"],
       GRUPOS_PLANILLA.map((grupo) => {
+        if (grupo.codigo === "R013") {
+          return [grupo.codigo, grupo.titulo, `${valor(totalPlanificado)} fijos`, "-", "Planificación"];
+        }
         const procesados = progresoPorGrupo[grupo.codigo] || 0;
         return [grupo.codigo, grupo.titulo, valor(procesados), valor(Math.max(totalPlanificado - procesados, 0)), totalPlanificado ? `${Math.min(Math.round((procesados / totalPlanificado) * 100), 100)}%` : "0%"];
       })
@@ -268,7 +288,7 @@ export default function Trazabilidad() {
     tabla(
       ["Planilla", "Etapa", "Fecha", "Maquina", "Estado", "Total", "Produccion por talle", "Operarios asignados"],
       listaPlanillas.length ? listaPlanillas.map((planilla) => {
-        const talles = tallesPorPlanilla[planilla.id_planilla] || [];
+        const talles = obtenerTallesVisuales(planilla);
         const operarios = operariosPorPlanilla[planilla.id_planilla] || [];
         return [
           valor(planilla.numero_planilla),
@@ -276,7 +296,7 @@ export default function Trazabilidad() {
           formatearFecha(planilla.fecha),
           valor(planilla.nombre_maquina || planilla.maquina || "Sin maquina"),
           mostrarEstado(planilla.estado),
-          `${obtenerTotalPlanilla(planilla.id_planilla)} pares`,
+          `${obtenerTotalVisual(planilla)} pares`,
           talles.length ? talles.map((detalle) => `${detalle.talle}: ${detalle.cantidad_pares}`).join(" | ") : "Sin registros",
           operarios.length ? operarios.map((operario) => `${operario.nombre_operario} (${operario.etapa})`).join(" | ") : "Sin operarios",
         ];
@@ -357,7 +377,7 @@ export default function Trazabilidad() {
               </thead>
 
               <tbody>
-                {ordenesOrdenadas.map((orden) => (
+                {paginacionOrdenes.pageItems.map((orden) => (
                   <tr
                     key={orden.id_orden}
                     className={ordenSeleccionada?.id_orden === orden.id_orden ? "trazabilidad-orden-activa" : ""}
@@ -380,6 +400,7 @@ export default function Trazabilidad() {
                 ))}
               </tbody>
             </table>
+            <Pagination {...paginacionOrdenes} />
             </div>
           </div>
 
@@ -407,6 +428,7 @@ export default function Trazabilidad() {
                         setTallesOrden([]);
                         setPlanillasDetalle([]);
                         setOperariosPorPlanilla({});
+                        setDesglosePorPlanilla({});
                         setPlanillaAbierta(null);
                       }}
                     >
@@ -423,13 +445,9 @@ export default function Trazabilidad() {
                     <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(ordenSeleccionada.estado)}`}>{mostrarEstado(ordenSeleccionada.estado)}</span></strong></div>
                   </div>
 
-                  <div className="trazabilidad-objetivo">
-                    <span>Objetivo de la orden</span>
-                    <strong>{totalPlanificado} pares solicitados</strong>
-                  </div>
-
                   <div className="trazabilidad-etapas">
                     {GRUPOS_PLANILLA.map((grupo) => {
+                      const esCantidadFija = grupo.codigo === "R013";
                       const procesados = progresoPorGrupo[grupo.codigo] || 0;
                       const pendientes = Math.max(totalPlanificado - procesados, 0);
                       const porcentaje = totalPlanificado > 0 ? Math.min((procesados / totalPlanificado) * 100, 100) : 0;
@@ -437,10 +455,12 @@ export default function Trazabilidad() {
                         <div key={grupo.codigo} className="trazabilidad-etapa-card">
                           <div className="trazabilidad-etapa-head">
                             <strong>{grupo.codigo}</strong>
-                            <span>{procesados} realizados · {pendientes} pendientes</span>
+                            <span>{esCantidadFija ? "Cantidad fija de la orden" : `${procesados} realizados · ${pendientes} pendientes`}</span>
                           </div>
                           <p className="trazabilidad-etapa-title">{grupo.titulo}</p>
-                          <div className="trazabilidad-progreso"><span style={{ width: `${porcentaje}%` }}></span></div>
+                          {esCantidadFija
+                            ? <div className="trazabilidad-cantidad-fija">{totalPlanificado} pares solicitados</div>
+                            : <div className="trazabilidad-progreso"><span style={{ width: `${porcentaje}%` }}></span></div>}
                         </div>
                       );
                     })}
@@ -470,12 +490,9 @@ export default function Trazabilidad() {
 
                 {!cargandoMateriales &&
                   listaPlanillas.map((planilla) => {
-                    const tallesPlanilla =
-                      tallesPorPlanilla[planilla.id_planilla] || [];
+                    const tallesPlanilla = obtenerTallesVisuales(planilla);
 
-                    const totalParesPlanilla = obtenerTotalPlanilla(
-                      planilla.id_planilla
-                    );
+                    const totalParesPlanilla = obtenerTotalVisual(planilla);
 
                     const estaAbierta =
                       planillaAbierta === planilla.id_planilla;
@@ -516,12 +533,28 @@ export default function Trazabilidad() {
 
                         {estaAbierta && (
                           <>
-                            <div className="trazabilidad-planilla-meta">
-                              <div><span>Fecha</span><strong>{formatearFecha(planilla.fecha)}</strong></div>
-                              <div><span>Máquina</span><strong>{planilla.maquina || "Sin máquina"}</strong></div>
-                              <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(planilla.estado)}`}>{mostrarEstado(planilla.estado)}</span></strong></div>
-                            </div>
-
+                            {(() => {
+                              const desglose = desglosePorPlanilla[planilla.id_planilla] || [];
+                              const fechas = [...new Set(desglose.flatMap((inyectora) => inyectora.jornadas.map((jornada) => jornada.fecha)))];
+                              return <div className="trazabilidad-planilla-meta">
+                                <div><span>Fecha</span><strong>{fechas.length > 1 ? `${fechas.length} jornadas` : formatearFecha(fechas[0] || planilla.fecha)}</strong></div>
+                                <div><span>Inyectora</span><strong>{desglose.length > 1 ? `${desglose.length} inyectoras` : desglose[0]?.maquina || planilla.maquina || "Sin inyectora"}</strong></div>
+                                <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(planilla.estado)}`}>{mostrarEstado(planilla.estado)}</span></strong></div>
+                              </div>;
+                            })()}
+                            {desglosePorPlanilla[planilla.id_planilla]?.length > 0 ? (
+                              <div className="trazabilidad-desglose-inyectoras">
+                                {desglosePorPlanilla[planilla.id_planilla].map((inyectora) => <div className="trazabilidad-inyectora" key={inyectora.maquina}>
+                                  <div className="trazabilidad-inyectora-header"><h4>{inyectora.maquina}</h4><strong>{inyectora.total_pares} pares</strong></div>
+                                  {inyectora.jornadas.map((jornada) => <div className="trazabilidad-jornada" key={jornada.fecha}>
+                                    <div className="trazabilidad-jornada-header"><strong>{formatearFecha(jornada.fecha)}</strong><span>{jornada.total_pares} pares</span></div>
+                                    <div className="talles-trazabilidad">{jornada.talles.map((detalle) => <span key={detalle.talle}>Talle {detalle.talle}: <strong>{detalle.cantidad_pares}</strong></span>)}</div>
+                                    <div className="trazabilidad-jornada-operarios"><span><strong>Calzado:</strong> {jornada.operarios_calzado.join(", ")}</span><span><strong>Puntera:</strong> {jornada.operarios_puntera.join(", ")}</span><span><strong>Inyección:</strong> {jornada.operarios_inyeccion.join(", ")}</span></div>
+                                    <div className="trazabilidad-jornada-materiales"><span><strong>Puntera:</strong> {jornada.punteras.map((material) => `${material.material}${material.color ? ` · ${material.color}` : ""} · Remito ${material.remito}`).join(" | ")}</span><span><strong>PU:</strong> {jornada.pus.map((material) => `${material.material}${material.color ? ` · ${material.color}` : ""} · Remito ${material.remito}`).join(" | ")}</span></div>
+                                  </div>)}
+                                </div>)}
+                              </div>
+                            ) : <>
                             <h4>Pares por talle</h4>
 
                             {tallesPlanilla.length === 0 ? (
@@ -581,6 +614,7 @@ export default function Trazabilidad() {
                               </table>
                               </div>
                             )}
+                            </>}
                           </>
                         )}
                       </div>

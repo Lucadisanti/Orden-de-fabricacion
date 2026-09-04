@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
+import Pagination from "../components/Pagination";
+import usePagination from "../hooks/usePagination";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Proveedores.css";
 
@@ -180,6 +182,7 @@ export default function Proveedores() {
 
     return texto.includes(busqueda.toLowerCase());
   });
+  const paginacionProveedores = usePagination(proveedoresFiltrados);
 
   return (
     <section className="proveedores">
@@ -276,7 +279,7 @@ export default function Proveedores() {
             </thead>
 
             <tbody>
-              {proveedoresFiltrados.map((proveedor) => (
+              {paginacionProveedores.pageItems.map((proveedor) => (
                 <tr key={proveedor.id_proveedor}>
                   <td>{proveedor.nombre_proveedor}</td>
                   <td>{proveedor.cuit || "-"}</td>
@@ -295,6 +298,7 @@ export default function Proveedores() {
             </tbody>
           </table>
         </div>
+        <Pagination {...paginacionProveedores} />
         </>
       )}
     </section>

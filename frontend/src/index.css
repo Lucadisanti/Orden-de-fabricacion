@@ -7,6 +7,7 @@
   --text-muted: #64748b;
   --border: #e5e7eb;
   --primary: #2563eb;
+  --primary-soft: #eff6ff;
   --primary-hover: #1d4ed8;
   --danger-bg: #fee2e2;
   --danger-text: #b91c1c;
@@ -33,6 +34,7 @@
   --text-muted: #9fb0c6;
   --border: #2a3950;
   --primary: #60a5fa;
+  --primary-soft: #172b49;
   --primary-hover: #93c5fd;
   --danger-bg: #451a24;
   --danger-text: #fda4af;
@@ -427,6 +429,38 @@ body,
 :root[data-theme="noche"] .talles-orden-grid input {
   border-color: #405572;
   background: #0b1628;
+}
+
+:root[data-theme="noche"] .planilla-desglose-bloque,
+:root[data-theme="noche"] .trazabilidad-inyectora {
+  border-color: #31547d;
+  background: #14233a;
+  color: var(--text-main);
+}
+
+:root[data-theme="noche"] .planilla-jornada,
+:root[data-theme="noche"] .trazabilidad-jornada {
+  border-color: #2c405b;
+  background: #0d182a;
+  color: var(--text-main);
+}
+
+:root[data-theme="noche"] .planilla-desglose-header > strong,
+:root[data-theme="noche"] .planilla-jornada-header > span,
+:root[data-theme="noche"] .trazabilidad-inyectora-header > strong,
+:root[data-theme="noche"] .trazabilidad-jornada-header > span {
+  border: 1px solid #315f9b;
+  background: #172f50;
+  color: #93c5fd;
+}
+
+:root[data-theme="noche"] .planilla-desglose-meta,
+:root[data-theme="noche"] .planilla-desglose-operarios,
+:root[data-theme="noche"] .planilla-desglose-materiales,
+:root[data-theme="noche"] .trazabilidad-jornada-operarios,
+:root[data-theme="noche"] .trazabilidad-jornada-materiales {
+  color: #aabbd0;
+  border-color: #2c405b;
 }
 
 #root {

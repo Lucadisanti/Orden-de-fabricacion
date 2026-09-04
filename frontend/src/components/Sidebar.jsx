@@ -8,6 +8,7 @@ const enlaces = [
   ["/recepcion-materiales", "Recepción Materiales"],
   ["/ordenes", "Órdenes"],
   ["/planillas", "Planillas"],
+  ["/produccion-diaria", "Producción diaria"],
   ["/uso-materiales", "Uso Materiales"],
   ["/trazabilidad", "Trazabilidad"],
 ];

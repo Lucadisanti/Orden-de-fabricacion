@@ -177,6 +177,38 @@ def migrate_schema(connection=None):
         if not lock_acquired:
             raise RuntimeError("No se pudo obtener el bloqueo para actualizar la base de datos.")
 
+        # Un producto conserva modelo y color; puntera y adicionales forman variantes
+        # que se eligen dentro de cada orden.
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS producto_variante (
+              id_variante INT AUTO_INCREMENT PRIMARY KEY,
+              producto_id_producto INT NOT NULL,
+              punteras_id_puntera INT NOT NULL,
+              articulo_producto VARCHAR(45) NOT NULL,
+              adicionales_firma VARCHAR(255) NOT NULL DEFAULT '',
+              activo TINYINT(1) NOT NULL DEFAULT 1,
+              UNIQUE KEY uq_variante_articulo (articulo_producto),
+              UNIQUE KEY uq_variante_combinacion (producto_id_producto, punteras_id_puntera, adicionales_firma),
+              CONSTRAINT fk_variante_producto FOREIGN KEY (producto_id_producto) REFERENCES producto(id_producto) ON DELETE CASCADE,
+              CONSTRAINT fk_variante_puntera FOREIGN KEY (punteras_id_puntera) REFERENCES punteras(id_puntera) ON DELETE RESTRICT
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS producto_variante_adicional (
+              variante_id_variante INT NOT NULL,
+              adicionales_id_adicional INT NOT NULL,
+              orden INT NOT NULL,
+              PRIMARY KEY (variante_id_variante, adicionales_id_adicional),
+              UNIQUE KEY uq_variante_adicional_orden (variante_id_variante, orden),
+              CONSTRAINT fk_pva_variante FOREIGN KEY (variante_id_variante) REFERENCES producto_variante(id_variante) ON DELETE CASCADE,
+              CONSTRAINT fk_pva_adicional FOREIGN KEY (adicionales_id_adicional) REFERENCES adicionales(id_adicional) ON DELETE RESTRICT
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+        )
+
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS produccion_diaria (
@@ -242,6 +274,21 @@ def migrate_schema(connection=None):
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
         )
+        if not _column_definition(cursor, "produccion_diaria_linea", "producto_variante_id_variante"):
+            cursor.execute("ALTER TABLE produccion_diaria_linea ADD producto_variante_id_variante INT NULL AFTER orden_fabricacion_id_orden")
+            cursor.execute("ALTER TABLE produccion_diaria_linea ADD KEY idx_pdl_variante (producto_variante_id_variante)")
+            cursor.execute("ALTER TABLE produccion_diaria_linea ADD CONSTRAINT fk_pdl_variante FOREIGN KEY (producto_variante_id_variante) REFERENCES producto_variante(id_variante) ON DELETE RESTRICT")
+        cursor.execute("""
+          CREATE TABLE IF NOT EXISTS produccion_diaria_linea_material (
+            id_linea_material INT AUTO_INCREMENT PRIMARY KEY,
+            linea_id INT NOT NULL,
+            lote_materiales_id_lote INT NOT NULL,
+            rol VARCHAR(30) NOT NULL DEFAULT 'Adicional',
+            KEY idx_pdlm_linea (linea_id),
+            CONSTRAINT fk_pdlm_linea FOREIGN KEY (linea_id) REFERENCES produccion_diaria_linea(id_linea) ON DELETE CASCADE,
+            CONSTRAINT fk_pdlm_lote FOREIGN KEY (lote_materiales_id_lote) REFERENCES lote_materiales(id_lote) ON DELETE RESTRICT
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
         cursor.execute("ALTER TABLE produccion_diaria MODIFY operario_calzado TEXT NOT NULL")
         cursor.execute("ALTER TABLE produccion_diaria MODIFY operario_puntera TEXT NOT NULL")
         cursor.execute("ALTER TABLE produccion_diaria_bloque MODIFY operario_inyeccion TEXT NOT NULL")

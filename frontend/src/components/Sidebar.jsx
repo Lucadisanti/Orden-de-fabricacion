@@ -6,8 +6,8 @@ import "../styles/Sidebar.css";
 const enlaces = [
   ["/", "Inicio"],
   ["/recepcion-materiales", "Recepción Materiales"],
-  ["/ordenes", "Órdenes"],
-  ["/planillas", "Planillas"],
+  ["/ordenes", "Órdenes R013"],
+  ["/planillas", "Planillas R013/1"],
   ["/produccion-diaria", "Producción diaria"],
   ["/uso-materiales", "Uso Materiales"],
   ["/trazabilidad", "Trazabilidad"],

@@ -8,7 +8,7 @@ import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import Toast from "../components/Toast";
-import { obtenerMensajeError } from "../utils/errorMessages";
+import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/RecepcionMateriales.css";
 
@@ -145,21 +145,6 @@ export default function RecepcionMateriales() {
       ...form,
       [e.target.name]: e.target.value,
     });
-  };
-
-  const avanzarConEnter = (e) => {
-    if (e.key !== "Enter") return;
-
-    const campos = Array.from(
-      e.currentTarget.querySelectorAll("input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])"),
-    );
-    const posicion = campos.indexOf(e.target);
-
-    if (posicion === -1) return;
-
-    e.preventDefault();
-    if (posicion < campos.length - 1) campos[posicion + 1].focus();
-    else e.currentTarget.querySelector('button[type="submit"]')?.focus();
   };
 
   const actualizarLinea = (indice, campo, valor) => {
@@ -316,8 +301,30 @@ export default function RecepcionMateriales() {
           mostrarToast("success", "Recepción eliminada", "El remito y sus materiales se eliminaron correctamente.");
         } catch (error) {
           console.error(error);
-          mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "recepción"));
-          cargarDatos();
+          if (esRegistroEnUso(error)) {
+            setConfirmacion({
+              title: "Recepción utilizada en producción",
+              message: `El remito ${lote.numero_remito || "seleccionado"} está aplicado en planillas o producciones. Si continuás, se eliminarán sus materiales y se perderá la trazabilidad relacionada.`,
+              confirmText: "Eliminar de todos modos",
+              danger: true,
+              onConfirm: async () => {
+                setConfirmacion(null);
+                try {
+                  await axios.delete(`/api/remitos/${lote.remitos_id_remito}?forzar=1`);
+                  setLotes((actuales) => actuales.filter((item) => String(item.remitos_id_remito) !== String(lote.remitos_id_remito)));
+                  setFilaAbierta(null);
+                  mostrarToast("success", "Recepción eliminada", "También se eliminaron los registros de trazabilidad relacionados.");
+                } catch (errorForzado) {
+                  console.error(errorForzado);
+                  mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(errorForzado, "recepción"));
+                  cargarDatos();
+                }
+              },
+            });
+          } else {
+            mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "recepción"));
+            cargarDatos();
+          }
         }
       },
     });
@@ -404,7 +411,7 @@ export default function RecepcionMateriales() {
       <div ref={formularioRef} className="ui-form-card">
         <h2>{editando ? "Editar recepción" : "Nueva recepción"}</h2>
 
-        <form onSubmit={guardarRecepcion} onKeyDown={avanzarConEnter} className="form-recepcion">
+        <form onSubmit={guardarRecepcion} className="form-recepcion">
           <div className="form-grid">
             <label className="recepcion-campo">
               <span>Número de remito</span>
@@ -447,7 +454,6 @@ export default function RecepcionMateriales() {
                 <h3>Materiales del remito</h3>
                 <p>Podés cargar uno o varios materiales en la misma recepción.</p>
               </div>
-              <button type="button" className="ui-btn ui-btn-secondary" onClick={agregarLinea}>+ Agregar material</button>
             </div>
 
             {lineas.map((linea, indice) => (
@@ -508,6 +514,10 @@ export default function RecepcionMateriales() {
                 </label>
               </div>
             ))}
+
+            <div className="recepcion-agregar-linea-pie">
+              <button type="button" className="ui-btn ui-btn-secondary" onClick={agregarLinea}>+ Agregar material</button>
+            </div>
           </div>
 
           <div className="ui-form-actions">

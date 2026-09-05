@@ -111,6 +111,33 @@ CREATE TABLE producto_adicionales (
     REFERENCES adicionales (id_adicional) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE producto_variante (
+  id_variante INT AUTO_INCREMENT PRIMARY KEY,
+  producto_id_producto INT NOT NULL,
+  punteras_id_puntera INT NOT NULL,
+  articulo_producto VARCHAR(45) NOT NULL,
+  adicionales_firma VARCHAR(255) NOT NULL DEFAULT '',
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uq_variante_articulo (articulo_producto),
+  UNIQUE KEY uq_variante_combinacion (producto_id_producto, punteras_id_puntera, adicionales_firma),
+  CONSTRAINT fk_variante_producto FOREIGN KEY (producto_id_producto)
+    REFERENCES producto (id_producto) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_variante_puntera FOREIGN KEY (punteras_id_puntera)
+    REFERENCES punteras (id_puntera) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE producto_variante_adicional (
+  variante_id_variante INT NOT NULL,
+  adicionales_id_adicional INT NOT NULL,
+  orden INT NOT NULL,
+  PRIMARY KEY (variante_id_variante, adicionales_id_adicional),
+  UNIQUE KEY uq_variante_adicional_orden (variante_id_variante, orden),
+  CONSTRAINT fk_pva_variante FOREIGN KEY (variante_id_variante)
+    REFERENCES producto_variante (id_variante) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_pva_adicional FOREIGN KEY (adicionales_id_adicional)
+    REFERENCES adicionales (id_adicional) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE orden_fabricacion (
   id_orden INT AUTO_INCREMENT PRIMARY KEY,
   producto_id_producto INT NOT NULL,
@@ -220,6 +247,7 @@ CREATE TABLE planilla_produccion (
     REFERENCES orden_fabricacion (id_orden)
     ON UPDATE CASCADE
     ON DELETE RESTRICT,
+
 
   CONSTRAINT fk_planilla_maquinas
     FOREIGN KEY (maquinas_id_maquina)

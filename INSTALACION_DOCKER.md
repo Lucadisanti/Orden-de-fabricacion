@@ -72,7 +72,12 @@ El archivo se guarda dentro de `backups`. Esta carpeta debe copiarse periódicam
 ## Actualizar
 
 1. Cerrar la aplicacion en los navegadores.
-2. Copiar los archivos de la nueva version sobre la carpeta existente, conservando `.env.docker` y `backups`.
+2. Abrir PowerShell dentro de la carpeta del proyecto y descargar la ultima version de la rama Docker:
+
+   ```powershell
+   git pull origin docker-presentacion
+   ```
+
 3. Ejecutar:
 
    ```powershell

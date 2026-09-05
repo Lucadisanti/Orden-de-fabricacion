@@ -1,6 +1,7 @@
 from flask import jsonify, request
 from db.connection import get_connection
 from utils.db_helpers import responder_lista, responder_uno, responder_accion, responder_error_db
+from utils.forced_deletes import eliminar_remito as eliminar_remito_forzado, responder_borrado_forzado
 
 
 def _materiales_validos(data):
@@ -183,6 +184,8 @@ def actualizar_remito(id_remito):
 
 
 def eliminar_remito(id_remito):
+    if request.args.get("forzar") == "1":
+        return responder_borrado_forzado(eliminar_remito_forzado, id_remito, "recepción")
     conn = None
     cursor = None
     try:

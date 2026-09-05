@@ -32,6 +32,34 @@ def _usa_codigo_compuesto(data):
     ))
 
 
+def _guardar_producto_base(data, id_producto=None):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+          SELECT m.codigo_modelo,m.nombre_modelo,c.codigo_color
+          FROM modelos_calzado m INNER JOIN colores c ON c.id_color=%s
+          WHERE m.id_modelo=%s AND m.activo=1
+        """, (data.get("colores_id_color"), data.get("modelos_calzado_id_modelo")))
+        componentes = cursor.fetchone()
+        if not componentes or not componentes.get("codigo_color"):
+            return jsonify({"mensaje": "El modelo o el color no tienen un código válido"}), 400
+        articulo_base = f"BASE-{componentes['codigo_modelo']}{componentes['codigo_color']}"
+        nombre = str(data.get("nombre_producto") or componentes["nombre_modelo"]).strip()
+        if id_producto is None:
+            cursor.execute("INSERT INTO producto (articulo_producto,nombre_producto,colores_id_color,modelos_calzado_id_modelo,punteras_id_puntera) VALUES (%s,%s,%s,%s,NULL)", (articulo_base,nombre,data.get("colores_id_color"),data.get("modelos_calzado_id_modelo")))
+            id_producto = cursor.lastrowid
+        else:
+            cursor.execute("UPDATE producto SET articulo_producto=%s,nombre_producto=%s,colores_id_color=%s,modelos_calzado_id_modelo=%s,punteras_id_puntera=NULL WHERE id_producto=%s", (articulo_base,nombre,data.get("colores_id_color"),data.get("modelos_calzado_id_modelo"),id_producto))
+        conn.commit()
+        return jsonify({"id_producto": id_producto, "mensaje": "Producto base guardado correctamente"}), 201 if data.get("_creando") else 200
+    except Exception as error:
+        conn.rollback()
+        return jsonify({"mensaje": "Ya existe ese producto y color" if "Duplicate entry" in str(error) else str(error)}), 409 if "Duplicate entry" in str(error) else 500
+    finally:
+        cursor.close(); conn.close()
+
+
 def _guardar_producto_compuesto(data, id_producto=None):
     conn = None
     cursor = None
@@ -123,6 +151,9 @@ def obtener_producto(id_producto):
 
 def crear_producto():
     data = request.json or {}
+    if data.get("modelos_calzado_id_modelo") and data.get("colores_id_color") and not data.get("punteras_id_puntera"):
+        data["_creando"] = True
+        return _guardar_producto_base(data)
     if _usa_codigo_compuesto(data):
         data["_creando"] = True
         return _guardar_producto_compuesto(data)
@@ -143,6 +174,8 @@ def crear_producto():
 
 def actualizar_producto(id_producto):
     data = request.json or {}
+    if data.get("modelos_calzado_id_modelo") and data.get("colores_id_color") and not data.get("punteras_id_puntera"):
+        return _guardar_producto_base(data, id_producto)
     if _usa_codigo_compuesto(data):
         return _guardar_producto_compuesto(data, id_producto)
     error = validar_producto(data)

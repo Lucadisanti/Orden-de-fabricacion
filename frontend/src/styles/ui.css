@@ -470,17 +470,25 @@ input[type="number"]::-webkit-outer-spin-button {
 .trazabilidad-progreso span { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
 .trazabilidad-cantidad-fija { padding: 5px 8px; border-radius: 7px; background: var(--primary-soft, #eff6ff); color: var(--primary, #2563eb); font-size: 12px; font-weight: 700; text-align: center; }
 .trazabilidad-planilla-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.trazabilidad-planilla-meta.sin-inyectora { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .trazabilidad-planilla-meta > div { display: flex; flex-direction: column; gap: 3px; padding: 9px 10px; border-radius: 9px; background: #f8fafc; }
 .trazabilidad-planilla-meta > div > span { color: var(--text-muted); font-size: 11px; font-weight: 700; }
 .trazabilidad-operarios { display: flex; flex-wrap: wrap; gap: 8px; margin: 9px 0 16px; }
 .trazabilidad-operarios > span { padding: 7px 10px; border: 1px solid #dbeafe; border-radius: 9px; background: #eff6ff; color: #334155; font-size: 13px; }
 .trazabilidad-planillas > .ui-table-card { max-height: none; overflow: visible; padding: 20px; }
 .trazabilidad-materiales-tabla { width: 100%; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px; }
-.trazabilidad-materiales-tabla .ui-data-table { min-width: 600px; }
+.trazabilidad-materiales-tabla .ui-data-table { width: 100%; min-width: 0; table-layout: fixed; }
+.trazabilidad-materiales-tabla .ui-data-table th,
+.trazabilidad-materiales-tabla .ui-data-table td { padding: 10px 9px; overflow-wrap: anywhere; white-space: normal; }
+.trazabilidad-materiales-tabla .ui-data-table th:first-child,
+.trazabilidad-materiales-tabla .ui-data-table td:first-child { width: 18%; }
 .trazabilidad-desglose-inyectoras { display: flex; flex-direction: column; gap: 12px; }
 .trazabilidad-inyectora { padding: 12px; border: 1px solid #bfdbfe; border-radius: 11px; background: #f8fbff; }
 .trazabilidad-inyectora-header, .trazabilidad-jornada-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .trazabilidad-inyectora-header { margin-bottom: 9px; }
+.trazabilidad-inyectora-header > div { min-width: 0; }
+.trazabilidad-inyectora-header > div > span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.trazabilidad-inyectora-header > div > small { display: block; margin-top: 4px; color: var(--text-muted); }
 .trazabilidad-inyectora-header h4 { margin: 0; font-size: 15px; }
 .trazabilidad-inyectora-header > strong, .trazabilidad-jornada-header > span { padding: 4px 8px; border-radius: 7px; background: var(--primary-soft, #eff6ff); color: var(--primary); font-size: 12px; font-weight: 800; }
 .trazabilidad-jornada { padding: 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg-card); }

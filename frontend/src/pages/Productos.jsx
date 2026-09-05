@@ -6,467 +6,93 @@ import ConfirmModal from "../components/ConfirmModal";
 import CatalogModal from "../components/CatalogModal";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
-import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
+import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Productos.css";
 
 const API_URL = "/api";
+const vacio = () => ({ modelos_calzado_id_modelo: "", nombre_producto: "", colores_id_color: "" });
 
 export default function Productos() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const altaDesdeOrden = searchParams.get("nuevo") === "1" && searchParams.get("volver") === "ordenes";
+  const desdeOrden = searchParams.get("nuevo") === "1" && searchParams.get("volver") === "ordenes";
   const [productos, setProductos] = useState([]);
-  const [colores, setColores] = useState([]);
   const [modelos, setModelos] = useState([]);
-  const [punteras, setPunteras] = useState([]);
-  const [adicionales, setAdicionales] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState("");
-  const [errorCatalogos, setErrorCatalogos] = useState("");
+  const [colores, setColores] = useState([]);
+  const [form, setForm] = useState(vacio);
+  const [mostrar, setMostrar] = useState(false);
+  const [idEditando, setIdEditando] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
   const [catalogoModal, setCatalogoModal] = useState(null);
+  const [cargando, setCargando] = useState(true);
   const formRef = useRef(null);
-  const altaDesdeOrdenAplicadaRef = useRef(false);
 
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [busqueda, setBusqueda] = useState("");
-  const [editando, setEditando] = useState(false);
-  const [idEditando, setIdEditando] = useState(null);
-
-  const [productoForm, setProductoForm] = useState({
-    modelos_calzado_id_modelo: "",
-    punteras_id_puntera: "",
-    adicionales: [""],
-    nombre_producto: "",
-    colores_id_color: "",
-  });
-
-  useEffect(() => {
-    cargarProductos();
-    cargarCatalogos();
-  }, []);
-
-  const desplazarAlFormulario = () => {
-    window.setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
-  };
-
-  const pedirConfirmacion = (config) => setConfirmacion(config);
-  const cerrarConfirmacion = () => setConfirmacion(null);
-
-  const mostrarToast = (type, title, message) => {
-    setToast({ type, title, message });
-  };
-
-  function cargarProductos() {
-    axios
-      .get(`${API_URL}/productos/`)
-      .then((response) => {
-        setProductos(response.data);
-        setCargando(false);
-      })
-      .catch((error) => {
-        console.error(error);
-        setError("No se pudieron cargar los productos.");
-        setCargando(false);
-      });
-  }
-
-  async function cargarCatalogos() {
+  const cargar = async () => {
     try {
-      const [coloresRes, modelosRes, punterasRes, adicionalesRes] = await Promise.all([
-        axios.get(`${API_URL}/colores/`),
-        axios.get(`${API_URL}/catalogos/modelos-calzado`),
-        axios.get(`${API_URL}/catalogos/punteras`),
-        axios.get(`${API_URL}/catalogos/adicionales`),
-      ]);
-      setColores(coloresRes.data);
-      setModelos(modelosRes.data);
-      setPunteras(punterasRes.data);
-      setAdicionales(adicionalesRes.data);
-      setErrorCatalogos("");
-    } catch (error) {
-      console.error(error);
-      setErrorCatalogos("No se pudieron cargar los catálogos. Recargá la página para volver a intentar.");
-    }
-  }
+      const [p, m, c] = await Promise.all([axios.get(`${API_URL}/productos/`), axios.get(`${API_URL}/catalogos/modelos-calzado`), axios.get(`${API_URL}/colores/`)]);
+      setProductos(p.data); setModelos(m.data); setColores(c.data);
+    } catch (error) { console.error(error); setToast({ type: "error", title: "No se pudo cargar", message: "Revisá la conexión con el servidor." }); }
+    finally { setCargando(false); }
+  };
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { cargar(); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (desdeOrden) { setMostrar(true); setTimeout(() => formRef.current?.scrollIntoView(), 50); } }, [desdeOrden]);
 
-  const guardarOpcionCatalogo = async ({ codigo, nombre }) => {
-    const configuraciones = {
-      modelo: { endpoint: "catalogos/modelos-calzado", codigo: "codigo_modelo", nombre: "nombre_modelo", id: "id_modelo", campo: "modelos_calzado_id_modelo" },
-      puntera: { endpoint: "catalogos/punteras", codigo: "codigo_puntera", nombre: "nombre_puntera", id: "id_puntera", campo: "punteras_id_puntera" },
-      adicional: { endpoint: "catalogos/adicionales", codigo: "codigo_adicional", nombre: "nombre_adicional", id: "id_adicional", campo: "adicionales" },
-      color: { endpoint: "colores", codigo: "codigo_color", nombre: "color", id: "id_color", campo: "colores_id_color" },
-    };
-    const config = configuraciones[catalogoModal.tipo];
+  const modelo = modelos.find((x) => String(x.id_modelo) === String(form.modelos_calzado_id_modelo));
+  const color = colores.find((x) => String(x.id_color) === String(form.colores_id_color));
+  const codigoBase = `${modelo?.codigo_modelo || ""}${color?.codigo_color || ""}`;
+  const abrirNuevo = () => { setForm(vacio()); setIdEditando(null); setMostrar(true); setTimeout(() => formRef.current?.scrollIntoView(), 50); };
+  const editar = (producto) => { setForm({ modelos_calzado_id_modelo: producto.modelos_calzado_id_modelo || "", nombre_producto: producto.nombre_producto || "", colores_id_color: producto.colores_id_color || "" }); setIdEditando(producto.id_producto); setMostrar(true); };
+  const cancelar = () => { setMostrar(false); if (desdeOrden) navigate("/ordenes?producto=cancelado"); };
+
+  const guardarCatalogo = async ({ codigo, nombre }) => {
     try {
-      const url = catalogoModal.itemId
-        ? `${API_URL}/${config.endpoint}/${catalogoModal.itemId}`
-        : `${API_URL}/${config.endpoint}${catalogoModal.tipo === "color" ? "/" : ""}`;
-      const respuesta = await axios[catalogoModal.itemId ? "put" : "post"](url, {
-        [config.codigo]: codigo,
-        [config.nombre]: nombre,
-      });
-      await cargarCatalogos();
-      const opcionId = String(catalogoModal.itemId || respuesta.data[config.id]);
-      setProductoForm((actual) => config.campo === "adicionales"
-        ? { ...actual, adicionales: catalogoModal.itemId ? actual.adicionales : [...actual.adicionales.filter(Boolean), opcionId, ""] }
-        : {
-          ...actual,
-          [config.campo]: opcionId,
-          ...(config.campo === "modelos_calzado_id_modelo" ? { nombre_producto: nombre } : {}),
-        });
-      setCatalogoModal(null);
-      mostrarToast("success", catalogoModal.itemId ? "Opción actualizada" : "Opción agregada", `${nombre} quedó seleccionado.`);
-    } catch (error) {
-      console.error(error);
-      mostrarToast("error", "No se pudo agregar", obtenerMensajeError(error, "opción"));
-    }
-  };
-
-  const manejarCambio = (e) => {
-    const siguiente = { ...productoForm, [e.target.name]: e.target.value };
-    if (e.target.name === "modelos_calzado_id_modelo") {
-      const modelo = modelos.find((item) => String(item.id_modelo) === e.target.value);
-      siguiente.nombre_producto = modelo?.nombre_modelo || "";
-    }
-    setProductoForm(siguiente);
-  };
-
-  const manejarAdicional = (index, valor) => {
-    setProductoForm((actual) => {
-      const seleccionados = [...actual.adicionales];
-      seleccionados[index] = valor;
-      if (valor && index === seleccionados.length - 1) seleccionados.push("");
-      return { ...actual, adicionales: seleccionados };
-    });
-  };
-
-  const quitarAdicional = (index) => setProductoForm((actual) => ({
-    ...actual,
-    adicionales: actual.adicionales.filter((_, posicion) => posicion !== index).length
-      ? actual.adicionales.filter((_, posicion) => posicion !== index)
-      : [""],
-  }));
-
-  const abrirFormularioNuevo = () => {
-    setEditando(false);
-    setIdEditando(null);
-    setProductoForm({ modelos_calzado_id_modelo: "", punteras_id_puntera: "", adicionales: [""], nombre_producto: "", colores_id_color: "" });
-    setMostrarFormulario(true);
-    desplazarAlFormulario();
-  };
-
-  useEffect(() => {
-    if (!altaDesdeOrden || altaDesdeOrdenAplicadaRef.current) return;
-    altaDesdeOrdenAplicadaRef.current = true;
-    abrirFormularioNuevo();
-    // La consulta abre el formulario solamente al ingresar desde Órdenes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [altaDesdeOrden]);
-
-  const cancelarFormulario = () => {
-    setMostrarFormulario(false);
-    setEditando(false);
-    setIdEditando(null);
-    if (altaDesdeOrden) navigate("/ordenes?producto=cancelado");
-  };
-
-  const iniciarEdicion = (producto) => {
-    setEditando(true);
-    setIdEditando(producto.id_producto);
-    setProductoForm({
-      modelos_calzado_id_modelo: producto.modelos_calzado_id_modelo || "",
-      punteras_id_puntera: producto.punteras_id_puntera || "",
-      adicionales: producto.adicionales_ids ? [...producto.adicionales_ids.split(","), ""] : [""],
-      nombre_producto: producto.nombre_producto,
-      colores_id_color: producto.colores_id_color || "",
-    });
-    setMostrarFormulario(true);
-    desplazarAlFormulario();
-  };
-
-  const guardarProducto = async (e) => {
-    e.preventDefault();
-
-    const articulo = articuloFinal;
-    const nombre = productoForm.nombre_producto.trim();
-
-    const articuloRepetido = productos.some(
-      (producto) =>
-        producto.articulo_producto.trim().toLowerCase() === articulo.toLowerCase() &&
-        producto.id_producto !== idEditando
-    );
-
-    if (articuloRepetido) {
-      mostrarToast(
-        "warning",
-        "Artículo repetido",
-        "Ya existe un producto con ese artículo. Usá otro código o editá el producto existente."
-      );
-      return;
-    }
-
-    const datos = {
-      articulo_producto: articulo,
-      nombre_producto: nombre,
-      modelos_calzado_id_modelo: Number(productoForm.modelos_calzado_id_modelo),
-      punteras_id_puntera: Number(productoForm.punteras_id_puntera),
-      adicionales: productoForm.adicionales.filter(Boolean).map(Number),
-      colores_id_color: Number(productoForm.colores_id_color),
-    };
-
-    try {
-      if (editando) {
-        await axios.put(`${API_URL}/productos/${idEditando}`, datos);
-        mostrarToast("success", "Producto actualizado", "Los cambios se guardaron correctamente.");
+      if (catalogoModal === "modelo") {
+        const respuesta = await axios.post(`${API_URL}/catalogos/modelos-calzado`, { codigo_modelo: codigo, nombre_modelo: nombre });
+        await cargar();
+        setForm((actual) => ({ ...actual, modelos_calzado_id_modelo: String(respuesta.data.id_modelo), nombre_producto: nombre }));
       } else {
-        const respuesta = await axios.post(`${API_URL}/productos/`, datos);
-        mostrarToast("success", "Producto creado", "El producto se agregó correctamente.");
-        if (altaDesdeOrden) {
-          navigate(`/ordenes?producto=${respuesta.data.id_producto}`);
-          return;
-        }
+        const respuesta = await axios.post(`${API_URL}/colores/`, { codigo_color: codigo, color: nombre });
+        await cargar();
+        setForm((actual) => ({ ...actual, colores_id_color: String(respuesta.data.id_color) }));
       }
-
-      setProductoForm({ modelos_calzado_id_modelo: "", punteras_id_puntera: "", adicionales: [""], nombre_producto: "", colores_id_color: "" });
-      setEditando(false);
-      setIdEditando(null);
-      setMostrarFormulario(false);
-      cargarProductos();
+      setCatalogoModal(null);
+      setToast({ type: "success", title: "Opción agregada", message: `${nombre} quedó seleccionada.` });
     } catch (error) {
-      console.error(error);
-      mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "producto"));
+      setToast({ type: "error", title: "No se pudo agregar", message: obtenerMensajeError(error, "opción") });
     }
   };
 
-  const eliminarProducto = (id_producto) => {
-    pedirConfirmacion({
-      title: "Eliminar producto",
-      message: "Esta acción eliminará el producto seleccionado.",
-      confirmText: "Eliminar",
-      danger: true,
-      onConfirm: async () => {
-        cerrarConfirmacion();
-
-        try {
-      await axios.delete(`${API_URL}/productos/${id_producto}`);
-      setProductos(productos.filter((producto) => producto.id_producto !== id_producto));
-      mostrarToast("success", "Producto eliminado", "El registro se eliminó correctamente.");
-        } catch (error) {
-          console.error(error);
-          if (esRegistroEnUso(error)) {
-            pedirConfirmacion({
-              title: "Producto en uso",
-              message: "Este producto tiene órdenes asociadas. Si lo eliminás, también se eliminarán esas órdenes, sus planillas y el recorrido de trazabilidad.",
-              confirmText: "Eliminar de todos modos",
-              danger: true,
-              onConfirm: async () => {
-                cerrarConfirmacion();
-                try {
-                  await axios.delete(`${API_URL}/productos/${id_producto}?forzar=1`);
-                  setProductos((actuales) => actuales.filter((producto) => producto.id_producto !== id_producto));
-                  mostrarToast("success", "Producto eliminado", "También se eliminaron sus registros relacionados.");
-                } catch (errorForzado) {
-                  mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(errorForzado, "producto"));
-                }
-              },
-            });
-          } else mostrarToast("error", "No se pudo eliminar", obtenerMensajeError(error, "producto"));
-        }
-      },
-    });
+  const guardar = async (event) => {
+    event.preventDefault();
+    const datos = { ...form, modelos_calzado_id_modelo: Number(form.modelos_calzado_id_modelo), colores_id_color: Number(form.colores_id_color), articulo_producto: codigoBase };
+    try {
+      if (idEditando) await axios.put(`${API_URL}/productos/${idEditando}`, datos);
+      else {
+        const respuesta = await axios.post(`${API_URL}/productos/`, datos);
+        if (desdeOrden) { navigate(`/ordenes?producto=${respuesta.data.id_producto}`); return; }
+      }
+      setToast({ type: "success", title: "Producto guardado", message: "Modelo y color fijo quedaron registrados." }); setMostrar(false); setForm(vacio()); setIdEditando(null); cargar();
+    } catch (error) { setToast({ type: "error", title: "No se pudo guardar", message: obtenerMensajeError(error, "producto") }); }
   };
+  const eliminar = (id) => setConfirmacion({ title: "Eliminar producto", message: "Se eliminará el producto si no tiene órdenes asociadas.", confirmText: "Eliminar", danger: true, onConfirm: async () => { setConfirmacion(null); try { await axios.delete(`${API_URL}/productos/${id}`); cargar(); } catch (error) { setToast({ type: "error", title: "No se pudo eliminar", message: obtenerMensajeError(error, "producto") }); } } });
+  const filtrados = productos.filter((p) => `${p.nombre_producto} ${p.color} ${p.articulo_producto}`.toLowerCase().includes(busqueda.toLowerCase()));
+  const paginacion = usePagination(filtrados);
 
-  const productosFiltrados = productos.filter((producto) => {
-  const texto = `
-    ${producto.articulo_producto || ""}
-    ${producto.nombre_producto || ""}
-    ${producto.color || ""}
-  `.toLowerCase();
-
-  return texto.includes(busqueda.toLowerCase());
-  });
-  const paginacionProductos = usePagination(productosFiltrados);
-
-  const modeloSeleccionado = modelos.find((item) => String(item.id_modelo) === String(productoForm.modelos_calzado_id_modelo));
-  const punteraSeleccionada = punteras.find((item) => String(item.id_puntera) === String(productoForm.punteras_id_puntera));
-  const colorSeleccionado = colores.find((item) => String(item.id_color) === String(productoForm.colores_id_color));
-  const codigosAdicionales = productoForm.adicionales.filter(Boolean).map((id) =>
-    adicionales.find((item) => String(item.id_adicional) === String(id))?.codigo_adicional || ""
-  );
-  const articuloFinal = `${modeloSeleccionado?.codigo_modelo || ""}${punteraSeleccionada?.codigo_puntera || ""}${codigosAdicionales.join("")}${colorSeleccionado?.codigo_color || ""}`;
-
-  return (
-    <section className="productos">
-      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
-
-      <ConfirmModal
-        open={Boolean(confirmacion)}
-        title={confirmacion?.title}
-        message={confirmacion?.message}
-        confirmText={confirmacion?.confirmText}
-        danger={confirmacion?.danger}
-        onCancel={cerrarConfirmacion}
-        onConfirm={confirmacion?.onConfirm}
-      />
-
-      <CatalogModal key={`${catalogoModal?.tipo || "cerrado"}-${catalogoModal?.itemId || "nuevo"}`} open={Boolean(catalogoModal)} title={catalogoModal?.title}
-        codeLength={catalogoModal?.codeLength || 2} initialCode={catalogoModal?.codigo} initialName={catalogoModal?.nombre}
-        onConfirm={guardarOpcionCatalogo}
-        onCancel={() => setCatalogoModal(null)} />
-
-      <div className="ui-page-header ui-page-header-row">
-        <div>
-          <h1>Productos</h1>
-          <p>Gestión de artículos y modelos de calzado.</p>
-        </div>
-
-        <button className="ui-btn ui-btn-primary" onClick={abrirFormularioNuevo}>
-          + Nuevo producto
-        </button>
-      </div>
-
-      {mostrarFormulario && (
-        <div className="ui-form-card" ref={formRef}>
-          <h2>{editando ? "Editar producto" : "Nuevo producto"}</h2>
-          {errorCatalogos && <p>{errorCatalogos}</p>}
-
-          <form onSubmit={guardarProducto} className="form-producto">
-            <label>Modelo de calzado
-              <div className="catalogo-selector-row">
-              <select name="modelos_calzado_id_modelo" value={productoForm.modelos_calzado_id_modelo} onChange={manejarCambio} required>
-                <option value="">Seleccione modelo</option>
-                {modelos.map((modelo) => <option key={modelo.id_modelo} value={modelo.id_modelo}>
-                  {modelo.codigo_modelo} - {modelo.nombre_modelo}
-                </option>)}
-              </select>
-              <div className="catalogo-acciones">
-                <button type="button" className="catalogo-icon-btn" title="Agregar modelo" aria-label="Agregar modelo" onClick={() => setCatalogoModal({ tipo: "modelo", title: "Agregar modelo de calzado", codeLength: 3 })}>+</button>
-                {modeloSeleccionado && <button type="button" className="catalogo-icon-btn" title="Editar modelo" aria-label="Editar modelo" onClick={() => setCatalogoModal({ tipo: "modelo", title: "Editar modelo de calzado", codeLength: 3, itemId: modeloSeleccionado.id_modelo, codigo: modeloSeleccionado.codigo_modelo, nombre: modeloSeleccionado.nombre_modelo })}>✎</button>}
-              </div>
-              </div>
-            </label>
-
-            <label>Puntera
-              <div className="catalogo-selector-row">
-              <select name="punteras_id_puntera" value={productoForm.punteras_id_puntera} onChange={manejarCambio} required>
-                <option value="">Seleccione puntera</option>
-                {punteras.map((puntera) => <option key={puntera.id_puntera} value={puntera.id_puntera}>
-                  {puntera.codigo_puntera} - {puntera.nombre_puntera}
-                </option>)}
-              </select>
-              <div className="catalogo-acciones">
-                <button type="button" className="catalogo-icon-btn" title="Agregar puntera" aria-label="Agregar puntera" onClick={() => setCatalogoModal({ tipo: "puntera", title: "Agregar puntera", codeLength: 2 })}>+</button>
-                {punteraSeleccionada && <button type="button" className="catalogo-icon-btn" title="Editar puntera" aria-label="Editar puntera" onClick={() => setCatalogoModal({ tipo: "puntera", title: "Editar puntera", codeLength: 2, itemId: punteraSeleccionada.id_puntera, codigo: punteraSeleccionada.codigo_puntera, nombre: punteraSeleccionada.nombre_puntera })}>✎</button>}
-              </div>
-              </div>
-            </label>
-
-            <fieldset className="adicionales-producto">
-              <legend>Adicionales (opcional)</legend>
-              {productoForm.adicionales.map((idSeleccionado, index) => <div className="adicional-producto-fila" key={index}>
-                <select value={idSeleccionado} onChange={(event) => manejarAdicional(index, event.target.value)} aria-label={`Adicional ${index + 1}`}>
-                  <option value="">Sin adicional</option>
-                  {adicionales.map((adicional) => <option key={adicional.id_adicional} value={adicional.id_adicional}
-                    disabled={productoForm.adicionales.some((valor, posicion) => posicion !== index && String(valor) === String(adicional.id_adicional))}>
-                    {adicional.codigo_adicional} - {adicional.nombre_adicional}
-                  </option>)}
-                </select>
-                {idSeleccionado && <div className="catalogo-acciones">
-                  <button type="button" className="catalogo-icon-btn" title="Editar adicional" aria-label="Editar adicional" onClick={() => {
-                    const adicional = adicionales.find((item) => String(item.id_adicional) === String(idSeleccionado));
-                    setCatalogoModal({ tipo: "adicional", title: "Editar adicional", codeLength: 2, itemId: adicional.id_adicional, codigo: adicional.codigo_adicional, nombre: adicional.nombre_adicional });
-                  }}>✎</button>
-                  <button type="button" className="catalogo-icon-btn catalogo-icon-danger" title="Quitar adicional" aria-label="Quitar adicional" onClick={() => quitarAdicional(index)}>×</button>
-                </div>}
-                {!idSeleccionado && <button type="button" className="catalogo-icon-btn" title="Agregar adicional" aria-label="Agregar adicional" onClick={() => setCatalogoModal({ tipo: "adicional", title: "Agregar adicional", codeLength: 2 })}>+</button>}
-              </div>)}
-            </fieldset>
-
-            <label>Color
-              <div className="catalogo-selector-row">
-              <select name="colores_id_color" value={productoForm.colores_id_color} onChange={manejarCambio} required>
-                <option value="">Seleccione color</option>
-                {colores.map((color) => <option key={color.id_color} value={color.id_color} disabled={!color.codigo_color}>
-                  {color.codigo_color ? `${color.codigo_color} - ${color.color}` : `${color.color} - sin código`}
-                </option>)}
-              </select>
-              <div className="catalogo-acciones">
-                <button type="button" className="catalogo-icon-btn" title="Agregar color" aria-label="Agregar color" onClick={() => setCatalogoModal({ tipo: "color", title: "Agregar color", codeLength: 2 })}>+</button>
-                {colorSeleccionado && <button type="button" className="catalogo-icon-btn" title="Editar color" aria-label="Editar color" onClick={() => setCatalogoModal({ tipo: "color", title: "Editar color", codeLength: 2, itemId: colorSeleccionado.id_color, codigo: colorSeleccionado.codigo_color, nombre: colorSeleccionado.color })}>✎</button>}
-              </div>
-              </div>
-            </label>
-
-            <div className="articulo-preview">
-              <span>Artículo final</span>
-              <strong>{articuloFinal || "Seleccioná las opciones"}</strong>
-              <small>Modelo + puntera + adicionales + color</small>
-            </div>
-
-            <div className="ui-form-actions">
-              <button type="submit" className="ui-btn ui-btn-primary">
-                {editando ? "Actualizar" : "Guardar"}
-              </button>
-
-              <button type="button" className="ui-btn ui-btn-secondary" onClick={cancelarFormulario}>
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {cargando && <p>Cargando productos...</p>}
-      {error && <p>{error}</p>}
-
-      {!cargando && !error && (
-        <>
-        <div className="ui-search-bar">
-          <input
-            className="ui-input"
-            type="text"
-            placeholder="Buscar por artículo, producto o color..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </div>
-        <div className="ui-table-card">
-          <table className="ui-data-table">
-            <thead>
-              <tr>
-                <th>Artículo</th>
-                <th>Nombre</th>
-                <th>Color</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {paginacionProductos.pageItems.map((producto) => (
-                <tr key={producto.id_producto}>
-                  <td>{producto.articulo_producto}</td>
-                  <td>{producto.nombre_producto}</td>
-                  <td>{producto.color || "Sin color"}</td>
-                  <td>
-                    <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(producto)}>
-                      Editar
-                    </button>
-                    <button className="ui-btn ui-btn-danger" onClick={() => eliminarProducto(producto.id_producto)}>
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <Pagination {...paginacionProductos} />
-        </>
-      )}
-    </section>
-  );
+  return <section className="productos">
+    {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+    <ConfirmModal open={Boolean(confirmacion)} {...confirmacion} onCancel={() => setConfirmacion(null)} onConfirm={confirmacion?.onConfirm} />
+    <CatalogModal key={catalogoModal || "cerrado"} open={Boolean(catalogoModal)} title={catalogoModal === "modelo" ? "Agregar modelo de calzado" : "Agregar color"} codeLength={catalogoModal === "modelo" ? 3 : 2} onConfirm={guardarCatalogo} onCancel={() => setCatalogoModal(null)} />
+    <div className="ui-page-header ui-page-header-row"><div><h1>Productos</h1><p>Productos base definidos por modelo y color fijo.</p></div><button className="ui-btn ui-btn-primary" onClick={abrirNuevo}>+ Nuevo producto</button></div>
+    {mostrar && <div className="ui-form-card" ref={formRef}><h2>{idEditando ? "Editar producto base" : "Nuevo producto base"}</h2><form className="form-producto" onSubmit={guardar}>
+      <label>Modelo de calzado<div className="catalogo-selector-row"><select required value={form.modelos_calzado_id_modelo} onChange={(e) => { const elegido = modelos.find((x) => String(x.id_modelo) === e.target.value); setForm({ ...form, modelos_calzado_id_modelo: e.target.value, nombre_producto: elegido?.nombre_modelo || "" }); }}><option value="">Seleccione modelo</option>{modelos.map((x) => <option key={x.id_modelo} value={x.id_modelo}>{x.codigo_modelo} - {x.nombre_modelo}</option>)}</select><button type="button" className="catalogo-icon-btn" title="Agregar modelo" aria-label="Agregar modelo" onClick={() => setCatalogoModal("modelo")}>+</button></div></label>
+      <label>Color fijo<div className="catalogo-selector-row"><select required value={form.colores_id_color} onChange={(e) => setForm({ ...form, colores_id_color: e.target.value })}><option value="">Seleccione color</option>{colores.filter((x) => x.codigo_color).map((x) => <option key={x.id_color} value={x.id_color}>{x.codigo_color} - {x.color}</option>)}</select><button type="button" className="catalogo-icon-btn" title="Agregar color" aria-label="Agregar color" onClick={() => setCatalogoModal("color")}>+</button></div></label>
+      <div className="articulo-preview"><span>Código base</span><strong>{codigoBase || "Seleccioná modelo y color"}</strong><small>La puntera y los adicionales completarán el artículo en la orden.</small></div>
+      <div className="ui-form-actions"><button className="ui-btn ui-btn-primary">Guardar</button><button type="button" className="ui-btn ui-btn-secondary" onClick={cancelar}>Cancelar</button></div>
+    </form></div>}
+    {cargando ? <p>Cargando productos...</p> : <><div className="ui-search-bar"><input className="ui-input" placeholder="Buscar producto o color..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} /></div><div className="ui-table-card"><table className="ui-data-table"><thead><tr><th>Producto</th><th>Color fijo</th><th>Código base</th><th>Acciones</th></tr></thead><tbody>{paginacion.pageItems.map((p) => <tr key={p.id_producto}><td>{p.nombre_producto}</td><td>{p.color || "-"}</td><td>{String(p.articulo_producto || "").replace(/^BASE-/, "")}</td><td><button className="ui-btn ui-btn-secondary" onClick={() => editar(p)}>Editar</button> <button className="ui-btn ui-btn-danger" onClick={() => eliminar(p.id_producto)}>Eliminar</button></td></tr>)}</tbody></table></div><Pagination {...paginacion} /></>}
+  </section>;
 }

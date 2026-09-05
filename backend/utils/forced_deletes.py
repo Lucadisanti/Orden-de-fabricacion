@@ -5,6 +5,11 @@ from utils.db_helpers import responder_error_db
 
 
 def _eliminar_planilla(cursor, id_planilla):
+    cursor.execute("SELECT id_linea FROM produccion_diaria_linea WHERE planilla_produccion_id_planilla=%s", (id_planilla,))
+    for linea in cursor.fetchall():
+        cursor.execute("DELETE FROM detalle_produccion_diaria WHERE linea_id=%s", (linea["id_linea"],))
+        cursor.execute("DELETE FROM produccion_diaria_linea_material WHERE linea_id=%s", (linea["id_linea"],))
+        cursor.execute("DELETE FROM produccion_diaria_linea WHERE id_linea=%s", (linea["id_linea"],))
     cursor.execute("DELETE FROM uso_materiales WHERE planilla_produccion_id_planilla = %s", (id_planilla,))
     cursor.execute("DELETE FROM detalle_planilla WHERE planilla_produccion_id_planilla = %s", (id_planilla,))
     cursor.execute("DELETE FROM operarios_planilla WHERE planilla_produccion_id_planilla = %s", (id_planilla,))
@@ -22,8 +27,32 @@ def _eliminar_orden(cursor, id_orden):
 
 
 def _eliminar_lote(cursor, id_lote):
+    cursor.execute("""
+      SELECT DISTINCT pdl.id_linea,pdl.planilla_produccion_id_planilla
+      FROM produccion_diaria_linea pdl
+      LEFT JOIN produccion_diaria_linea_material pdlm ON pdlm.linea_id=pdl.id_linea
+      WHERE pdl.lote_puntera_id=%s OR pdl.lote_pu_id=%s OR pdlm.lote_materiales_id_lote=%s
+    """, (id_lote, id_lote, id_lote))
+    for linea in cursor.fetchall():
+        cursor.execute("SELECT talle,cantidad_pares FROM detalle_produccion_diaria WHERE linea_id=%s", (linea["id_linea"],))
+        for detalle in cursor.fetchall():
+            cursor.execute("""
+              UPDATE detalle_planilla SET cantidad_pares=GREATEST(cantidad_pares-%s,0)
+              WHERE planilla_produccion_id_planilla=%s AND talle=%s
+            """, (detalle["cantidad_pares"], linea["planilla_produccion_id_planilla"], detalle["talle"]))
+        cursor.execute("DELETE FROM detalle_produccion_diaria WHERE linea_id=%s", (linea["id_linea"],))
+        cursor.execute("DELETE FROM produccion_diaria_linea_material WHERE linea_id=%s", (linea["id_linea"],))
+        cursor.execute("DELETE FROM produccion_diaria_linea WHERE id_linea=%s", (linea["id_linea"],))
     cursor.execute("DELETE FROM uso_materiales WHERE lote_materiales_id_lote = %s", (id_lote,))
     cursor.execute("DELETE FROM lote_materiales WHERE id_lote = %s", (id_lote,))
+
+
+def eliminar_remito(cursor, id_registro):
+    cursor.execute("SELECT id_lote FROM lote_materiales WHERE remitos_id_remito=%s", (id_registro,))
+    for lote in cursor.fetchall():
+        _eliminar_lote(cursor, lote["id_lote"])
+    cursor.execute("DELETE FROM remitos WHERE id_remito=%s", (id_registro,))
+    return cursor.rowcount
 
 
 def eliminar_planilla(cursor, id_registro):

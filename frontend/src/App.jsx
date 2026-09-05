@@ -12,11 +12,14 @@ import UsoMateriales from "./pages/UsoMateriales";
 import Trazabilidad from "./pages/Trazabilidad";
 import RecepcionMateriales from "./pages/RecepcionMateriales";
 import ProduccionDiaria from "./pages/ProduccionDiaria";
+import useEnterToNextField from "./hooks/useEnterToNextField";
 
 import "./App.css";
 import "./styles/ui.css";
 
 function App() {
+  useEnterToNextField();
+
   return (
     <BrowserRouter>
       <div className="app-layout">

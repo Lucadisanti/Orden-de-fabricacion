@@ -1,5 +1,5 @@
 .produccion-diaria-form { display: flex; flex-direction: column; gap: 16px; }
-.produccion-cabecera { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(180px, 1fr)); gap: 14px; align-items: start; }
+.produccion-cabecera { display: grid; grid-template-columns: 1.25fr repeat(4, minmax(160px, 1fr)); gap: 14px; align-items: start; }
 .produccion-cabecera h2, .produccion-cabecera p, .produccion-bloque h2 { margin: 0; }
 .produccion-cabecera p { margin-top: 4px; color: var(--text-muted); }
 .produccion-diaria label { display: flex; flex-direction: column; gap: 6px; color: var(--text-muted); font-size: 13px; font-weight: 700; }
@@ -21,18 +21,37 @@
 .produccion-linea-header { margin-bottom: 12px; }
 .produccion-linea-header h3 { margin: 0; }
 .produccion-linea-datos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.produccion-linea-materiales { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: 12px; margin-top: 12px; }
+.produccion-linea-materiales { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: start; gap: 12px; margin-top: 12px; }
 .produccion-linea-materiales > label { min-width: 0; }
-.produccion-linea-materiales .produccion-sector-materiales { grid-column: auto; align-self: end; }
+.produccion-material-selector { display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: 8px; }
+.produccion-material-selector button, .produccion-alta-material { border: 1px solid var(--border); border-radius: 9px; background: var(--bg-card); color: var(--text-main); font-size: 24px; font-weight: 800; cursor: pointer; }
+.produccion-material-selector button:hover, .produccion-alta-material:hover { border-color: var(--primary); color: var(--primary); }
+.produccion-linea-materiales .produccion-sector-materiales { grid-column: auto; align-self: start; padding-top: 19px; }
 .produccion-config-extra { display: grid; grid-template-columns: 1fr 1fr 1.4fr 1.4fr; gap: 12px; align-items: start; margin-top: 12px; }
 .produccion-sector-materiales { grid-column: 4; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
 .produccion-materiales-extra { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.produccion-agregar-material { align-self: flex-end; min-height: 42px; }
-.produccion-material-extra { display: grid; grid-template-columns: minmax(240px, 1fr) 40px; gap: 8px; width: 100%; }
+.produccion-agregar-material { order: -1; align-self: flex-end; min-height: 42px; }
+.produccion-material-extra { display: grid; grid-template-columns: minmax(240px, 1fr) 44px 40px; gap: 8px; width: 100%; }
 .produccion-material-extra button { border: 1px solid #fecaca; border-radius: 8px; background: #fff; color: #b91c1c; font-size: 20px; cursor: pointer; }
 .produccion-articulo { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 9px 12px; border-radius: 9px; background: var(--primary-soft, #eff6ff); }
 .produccion-articulo span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
 .produccion-articulo strong { color: var(--primary); font-size: 17px; }
+.produccion-inspeccion { margin: 12px 0 0; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-page, #f8fafc); }
+.produccion-inspeccion legend { padding: 0 5px; color: var(--text-main); font-size: 14px; font-weight: 800; }
+.produccion-inspeccion-opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.produccion-inspeccion .inspeccion-opcion { display: flex; flex-direction: row; align-items: center; gap: 7px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg-card); color: var(--text-main); cursor: pointer; }
+.produccion-inspeccion .inspeccion-opcion:has(input:checked) { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.produccion-inspeccion .inspeccion-opcion input { width: auto; margin: 0; }
+.produccion-observacion { margin-top: 10px; }
+.produccion-observacion textarea { resize: vertical; min-height: 64px; }
+.inspeccion-badge { display: inline-block; padding: 5px 9px; border-radius: 999px; background: #e5e7eb; color: #475569; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.inspeccion-badge.inspeccion-conforme { background: #dcfce7; color: #047857; }
+.inspeccion-badge.inspeccion-no-conforme { background: #fee2e2; color: #b91c1c; }
+.inspeccion-badge.inspeccion-pendiente { background: #fef3c7; color: #92400e; }
+:root[data-theme="noche"] .inspeccion-badge.inspeccion-conforme { border: 1px solid #1f9d68; background: #103c2d; color: #6ee7b7; }
+:root[data-theme="noche"] .inspeccion-badge.inspeccion-no-conforme { border: 1px solid #dc4c5a; background: #451a22; color: #fda4af; }
+:root[data-theme="noche"] .inspeccion-badge.inspeccion-pendiente { border: 1px solid #c58a24; background: #422d12; color: #fcd68a; }
+.produccion-inspeccion-observacion { grid-column: span 2; color: #991b1b; }
 .produccion-talles { margin-top: 13px; }
 .produccion-talles > span { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 800; }
 .produccion-talles > div { display: grid; grid-template-columns: repeat(13, minmax(58px, 1fr)); gap: 6px; }
@@ -62,8 +81,13 @@
 .produccion-detalle-cabecera span, .produccion-detalle-cabecera strong { display: block; }
 .produccion-detalle-cabecera span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
 .produccion-detalle-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px 16px; }
+.produccion-detalle-etapas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.produccion-detalle-etapa { display: flex; flex-direction: column; gap: 9px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-page, #f8fafc); }
+.produccion-detalle-etapa-doble { display: grid; grid-template-rows: auto 1fr; gap: 8px; min-width: 0; }
+.produccion-detalle-etapa-doble .produccion-subetapa { min-height: 0; }
+.produccion-detalle-otros { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 10px 12px; border-radius: 9px; background: var(--primary-soft, #eff6ff); }
 .produccion-detalle-talles { display: flex; flex-wrap: wrap; gap: 7px; padding-top: 10px; border-top: 1px solid var(--border); }
 .produccion-detalle-talles span { padding: 6px 9px; border-radius: 8px; background: var(--primary-soft, #eff6ff); }
 .produccion-detalle-cargando { padding: 15px; color: var(--text-muted); }
 @media (max-width: 1100px) { .produccion-cabecera { grid-template-columns: repeat(2, 1fr); } .produccion-talles > div { grid-template-columns: repeat(7, 1fr); } }
-@media (max-width: 760px) { .produccion-cabecera, .produccion-inyectora-grid, .produccion-linea-datos, .produccion-linea-materiales, .produccion-material-extra, .produccion-config-extra, .produccion-detalle-cabecera, .produccion-detalle-grid { grid-template-columns: 1fr; } .produccion-sector-materiales { grid-column: 1; } .produccion-talles > div { grid-template-columns: repeat(4, 1fr); } .produccion-acciones, .produccion-historial-header, .produccion-historial-filtros, .produccion-paginacion { align-items: stretch; flex-direction: column; } .produccion-paginacion > div { justify-content: space-between; } }
+@media (max-width: 760px) { .produccion-cabecera, .produccion-inyectora-grid, .produccion-linea-datos, .produccion-linea-materiales, .produccion-material-extra, .produccion-config-extra, .produccion-detalle-cabecera, .produccion-detalle-grid, .produccion-detalle-etapas { grid-template-columns: 1fr; } .produccion-sector-materiales { grid-column: 1; } .produccion-talles > div { grid-template-columns: repeat(4, 1fr); } .produccion-acciones, .produccion-historial-header, .produccion-historial-filtros, .produccion-paginacion { align-items: stretch; flex-direction: column; } .produccion-paginacion > div { justify-content: space-between; } }

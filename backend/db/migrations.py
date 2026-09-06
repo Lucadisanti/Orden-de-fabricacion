@@ -128,6 +128,45 @@ REPORTING_PROCEDURES = {
           ORDER BY pp.numero_planilla, mat.material, lm.codigo_lote;
         END
     """,
+    "sp_crear_planilla": """
+        CREATE PROCEDURE sp_crear_planilla(
+          IN p_orden_fabricacion_id_orden INT,
+          IN p_numero_planilla VARCHAR(45),
+          IN p_fecha DATE,
+          IN p_tipo_planilla VARCHAR(100),
+          IN p_maquinas_id_maquina INT,
+          IN p_estado VARCHAR(45)
+        )
+        BEGIN
+          INSERT INTO planilla_produccion
+            (orden_fabricacion_id_orden, numero_planilla, fecha, tipo_planilla, maquinas_id_maquina, estado)
+          VALUES
+            (p_orden_fabricacion_id_orden, p_numero_planilla, p_fecha, p_tipo_planilla, p_maquinas_id_maquina, COALESCE(p_estado, 'pendiente'));
+          SELECT LAST_INSERT_ID() AS id_planilla, 'Planilla creada correctamente' AS mensaje;
+        END
+    """,
+    "sp_actualizar_planilla": """
+        CREATE PROCEDURE sp_actualizar_planilla(
+          IN p_id_planilla INT,
+          IN p_orden_fabricacion_id_orden INT,
+          IN p_numero_planilla VARCHAR(45),
+          IN p_fecha DATE,
+          IN p_tipo_planilla VARCHAR(100),
+          IN p_maquinas_id_maquina INT,
+          IN p_estado VARCHAR(45)
+        )
+        BEGIN
+          UPDATE planilla_produccion
+          SET orden_fabricacion_id_orden = p_orden_fabricacion_id_orden,
+              numero_planilla = p_numero_planilla,
+              fecha = p_fecha,
+              tipo_planilla = p_tipo_planilla,
+              maquinas_id_maquina = p_maquinas_id_maquina,
+              estado = COALESCE(p_estado, 'pendiente')
+          WHERE id_planilla = p_id_planilla;
+          SELECT ROW_COUNT() AS filas_afectadas, 'Planilla actualizada correctamente' AS mensaje;
+        END
+    """,
 }
 
 
@@ -216,6 +255,7 @@ def migrate_schema(connection=None):
               fecha DATE NOT NULL,
               operario_calzado VARCHAR(80) NOT NULL,
               operario_puntera VARCHAR(80) NOT NULL,
+              operario_inspeccion_final VARCHAR(80) NOT NULL,
               creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
               KEY idx_produccion_diaria_fecha (fecha)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -246,6 +286,8 @@ def migrate_schema(connection=None):
               planilla_produccion_id_planilla INT NOT NULL,
               lote_puntera_id INT NOT NULL,
               lote_pu_id INT NOT NULL,
+              estado_inspeccion VARCHAR(30) NOT NULL DEFAULT 'Pendiente',
+              observacion_inspeccion TEXT NULL,
               KEY idx_pdl_bloque (bloque_id),
               KEY idx_pdl_orden (orden_fabricacion_id_orden),
               CONSTRAINT fk_pdl_bloque FOREIGN KEY (bloque_id)
@@ -278,6 +320,10 @@ def migrate_schema(connection=None):
             cursor.execute("ALTER TABLE produccion_diaria_linea ADD producto_variante_id_variante INT NULL AFTER orden_fabricacion_id_orden")
             cursor.execute("ALTER TABLE produccion_diaria_linea ADD KEY idx_pdl_variante (producto_variante_id_variante)")
             cursor.execute("ALTER TABLE produccion_diaria_linea ADD CONSTRAINT fk_pdl_variante FOREIGN KEY (producto_variante_id_variante) REFERENCES producto_variante(id_variante) ON DELETE RESTRICT")
+        if not _column_definition(cursor, "produccion_diaria_linea", "estado_inspeccion"):
+            cursor.execute("ALTER TABLE produccion_diaria_linea ADD estado_inspeccion VARCHAR(30) NOT NULL DEFAULT 'Pendiente' AFTER lote_pu_id")
+        if not _column_definition(cursor, "produccion_diaria_linea", "observacion_inspeccion"):
+            cursor.execute("ALTER TABLE produccion_diaria_linea ADD observacion_inspeccion TEXT NULL AFTER estado_inspeccion")
         cursor.execute("""
           CREATE TABLE IF NOT EXISTS produccion_diaria_linea_material (
             id_linea_material INT AUTO_INCREMENT PRIMARY KEY,
@@ -291,13 +337,27 @@ def migrate_schema(connection=None):
         """)
         cursor.execute("ALTER TABLE produccion_diaria MODIFY operario_calzado TEXT NOT NULL")
         cursor.execute("ALTER TABLE produccion_diaria MODIFY operario_puntera TEXT NOT NULL")
+        if not _column_definition(cursor, "produccion_diaria", "operario_inspeccion_final"):
+            cursor.execute("ALTER TABLE produccion_diaria ADD operario_inspeccion_final TEXT NULL AFTER operario_puntera")
+            cursor.execute("UPDATE produccion_diaria SET operario_inspeccion_final = '' WHERE operario_inspeccion_final IS NULL")
+            cursor.execute("ALTER TABLE produccion_diaria MODIFY operario_inspeccion_final TEXT NOT NULL")
         cursor.execute("ALTER TABLE produccion_diaria_bloque MODIFY operario_inyeccion TEXT NOT NULL")
+
+        cursor.execute("ALTER TABLE planilla_produccion MODIFY tipo_planilla VARCHAR(100) NOT NULL")
+        cursor.execute(
+            """
+            UPDATE planilla_produccion
+            SET tipo_planilla = 'Planilla de Calzado, Inyección e Inspección final'
+            WHERE UPPER(numero_planilla) = 'R013/1'
+              AND tipo_planilla IN ('Calzado e Inyección', 'Calzado, Puntera e Inyección', 'Calzado, Inyección e Inspección final')
+            """
+        )
 
         cursor.execute(
             """
             SELECT id_planilla, orden_fabricacion_id_orden
             FROM planilla_produccion
-            WHERE UPPER(numero_planilla) = 'R013/1' OR tipo_planilla = 'Calzado e Inyección'
+            WHERE UPPER(numero_planilla) = 'R013/1' OR tipo_planilla IN ('Calzado e Inyección', 'Planilla de Calzado, Inyección e Inspección final')
             """
         )
         planillas_r013_1 = cursor.fetchall()

@@ -673,7 +673,7 @@ CREATE PROCEDURE sp_crear_planilla(
   IN p_orden_fabricacion_id_orden INT,
   IN p_numero_planilla VARCHAR(45),
   IN p_fecha DATE,
-  IN p_tipo_planilla VARCHAR(45),
+  IN p_tipo_planilla VARCHAR(100),
   IN p_maquinas_id_maquina INT,
   IN p_estado VARCHAR(45)
 )
@@ -703,7 +703,7 @@ CREATE PROCEDURE sp_actualizar_planilla(
   IN p_orden_fabricacion_id_orden INT,
   IN p_numero_planilla VARCHAR(45),
   IN p_fecha DATE,
-  IN p_tipo_planilla VARCHAR(45),
+  IN p_tipo_planilla VARCHAR(100),
   IN p_maquinas_id_maquina INT,
   IN p_estado VARCHAR(45)
 )

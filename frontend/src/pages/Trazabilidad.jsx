@@ -12,7 +12,7 @@ import "../styles/ui.css";
 const API_URL = "/api";
 const GRUPOS_PLANILLA = [
   { codigo: "R013", titulo: "Corte y Aparado" },
-  { codigo: "R013/1", titulo: "Calzado, Puntera e Inyección" },
+  { codigo: "R013/1", titulo: "Planilla de Calzado, Inyección e Inspección final" },
 ];
 
 const obtenerGrupoPlanilla = (planilla) => {
@@ -363,19 +363,20 @@ export default function Trazabilidad() {
     const produccionesArticulo = listaPlanillas
       .filter((planilla) => obtenerGrupoPlanilla(planilla) === "R013/1")
       .flatMap((planilla) => obtenerDesgloseFiltrado(planilla.id_planilla));
-    tituloSeccion(`R013/1 - Producciones del articulo ${valor(ordenSeleccionada.articulo_producto)}`);
+    tituloSeccion(`R013/1 - Planilla de Calzado, Inyeccion e Inspeccion final - Articulo ${valor(ordenSeleccionada.articulo_producto)}`);
     tabla(
-      ["Fecha", "Inyectora", "Puntera", "Adicional", "Operarios", "Pares por talle", "Total"],
+      ["Fecha", "Inyectora", "Puntera", "Adicional", "Inspeccion", "Operarios", "Pares por talle", "Total"],
       produccionesArticulo.length ? produccionesArticulo.flatMap((produccion) => produccion.jornadas.map((jornada) => [
         formatearFecha(jornada.fecha),
         valor(produccion.maquina),
         valor(produccion.tipo_puntera),
         valor(produccion.adicionales || "Sin adicional"),
-        `Calzado: ${jornada.operarios_calzado.join(", ") || "-"}\nPuntera: ${jornada.operarios_puntera.join(", ") || "-"}\nInyeccion: ${jornada.operarios_inyeccion.join(", ") || "-"}`,
+        `${valor(produccion.estado_inspeccion || "Pendiente")}${produccion.observacion_inspeccion ? `\n${produccion.observacion_inspeccion}` : ""}`,
+        `Calzado: ${jornada.operarios_calzado.join(", ") || "-"}\nPuntera: ${jornada.operarios_puntera.join(", ") || "-"}\nInyeccion: ${jornada.operarios_inyeccion.join(", ") || "-"}\nInspeccion final: ${jornada.operarios_inspeccion_final?.join(", ") || "-"}`,
         jornada.talles.map((detalle) => `${detalle.talle}: ${detalle.cantidad_pares}`).join(" | ") || "Sin talles",
         `${jornada.total_pares} pares`,
-      ])) : [["Sin producciones registradas", "-", "-", "-", "-", "-", "-"]],
-      { columnStyles: { 1: { cellWidth: 34 }, 4: { cellWidth: 55 }, 5: { cellWidth: 58 } } }
+      ])) : [["Sin producciones registradas", "-", "-", "-", "-", "-", "-", "-"]],
+      { columnStyles: { 1: { cellWidth: 29 }, 4: { cellWidth: 30 }, 5: { cellWidth: 48 }, 6: { cellWidth: 48 } } }
     );
 
     tituloSeccion("Materiales utilizados");
@@ -626,11 +627,17 @@ export default function Trazabilidad() {
                             {obtenerDesgloseFiltrado(planilla.id_planilla).length > 0 ? (
                               <div className="trazabilidad-desglose-inyectoras">
                                 {obtenerDesgloseFiltrado(planilla.id_planilla).map((inyectora) => <div className="trazabilidad-inyectora" key={inyectora.id_linea}>
-                                  <div className="trazabilidad-inyectora-header"><div><span>{inyectora.maquina}</span><h4>{inyectora.articulo || "Artículo anterior"}</h4><small><strong>Puntera:</strong> {inyectora.tipo_puntera || "Sin especificar"} · <strong>Adicional:</strong> {inyectora.adicionales || "No"}</small></div><strong>{inyectora.total_pares} pares</strong></div>
+                                  <div className="trazabilidad-inyectora-header">
+                                    <div><span>{inyectora.maquina}</span><h4>{inyectora.articulo || "Artículo anterior"}</h4><small><strong>Puntera:</strong> {inyectora.tipo_puntera || "Sin especificar"} · <strong>Adicional:</strong> {inyectora.adicionales || "No"}</small><small><strong>{inyectora.total_pares} pares</strong></small></div>
+                                    <div className="trazabilidad-inspeccion-veredicto">
+                                      <strong className={`trazabilidad-inspeccion-estado ${inyectora.estado_inspeccion === "Conforme" ? "conforme" : inyectora.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{inyectora.estado_inspeccion || "Pendiente"}</strong>
+                                      {inyectora.estado_inspeccion === "No conforme" && inyectora.observacion_inspeccion && <p>{inyectora.observacion_inspeccion}</p>}
+                                    </div>
+                                  </div>
                                   {inyectora.jornadas.map((jornada) => <div className="trazabilidad-jornada" key={jornada.fecha}>
                                     <div className="trazabilidad-jornada-header"><strong>{formatearFecha(jornada.fecha)}</strong><span>{jornada.total_pares} pares</span></div>
                                     <div className="talles-trazabilidad">{jornada.talles.map((detalle) => <span key={detalle.talle}>Talle {detalle.talle}: <strong>{detalle.cantidad_pares}</strong></span>)}</div>
-                                    <div className="trazabilidad-jornada-operarios"><span><strong>Calzado:</strong> {jornada.operarios_calzado.join(", ")}</span><span><strong>Puntera:</strong> {jornada.operarios_puntera.join(", ")}</span><span><strong>Inyección:</strong> {jornada.operarios_inyeccion.join(", ")}</span></div>
+                                    <div className="trazabilidad-jornada-operarios"><span><strong>Calzado:</strong> {jornada.operarios_calzado.join(", ")}</span><span><strong>Puntera:</strong> {jornada.operarios_puntera.join(", ")}</span><span><strong>Inyección:</strong> {jornada.operarios_inyeccion.join(", ")}</span><span><strong>Inspección final:</strong> {jornada.operarios_inspeccion_final?.join(", ") || "-"}</span></div>
                                     <div className="trazabilidad-jornada-materiales"><span><strong>Puntera:</strong> {jornada.punteras.map((material) => `${material.material}${material.color ? ` · ${material.color}` : ""} · Remito ${material.remito}${material.proveedor ? ` · ${material.proveedor}` : ""}`).join(" | ")}</span><span><strong>PU:</strong> {jornada.pus.map((material) => `${material.material}${material.color ? ` · ${material.color}` : ""} · Remito ${material.remito}${material.proveedor ? ` · ${material.proveedor}` : ""}`).join(" | ")}</span>{inyectora.materiales_extra?.map((material, indiceMaterial) => <span key={`${material.numero_remito}-${indiceMaterial}`}><strong>Otro material:</strong> {material.material}{material.color ? ` · ${material.color}` : ""} · Remito {material.numero_remito}{material.nombre_proveedor ? ` · ${material.nombre_proveedor}` : ""}</span>)}</div>
                                   </div>)}
                                 </div>)}

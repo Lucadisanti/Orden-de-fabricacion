@@ -69,7 +69,7 @@ export default function Planillas() {
   const [correccionesRealizados, setCorreccionesRealizados] = useState({});
   const [varianteForm, setVarianteForm] = useState({ maquinas_id_maquina: "", operarios_calzado: [""], operarios_puntera: [""], operarios_inyeccion: [""], operarios_inspeccion_final: [""], estado_inspeccion: "Pendiente", observacion_inspeccion: "", punteras_id_puntera: "", adicionales_id_adicional: "", lote_puntera_id: "", lote_pu_id: "", busqueda_puntera: "", busqueda_pu: "", materiales_extra: [] });
   const [variantesPendientes, setVariantesPendientes] = useState([]);
-  const [produccionActivaAbierta, setProduccionActivaAbierta] = useState(true);
+  const [produccionActivaAbierta, setProduccionActivaAbierta] = useState(false);
   const [numeroProduccionActiva, setNumeroProduccionActiva] = useState(1);
 
   const [operarioForm, setOperarioForm] = useState({
@@ -478,7 +478,7 @@ export default function Planillas() {
     setIdEditando(null);
     setVariantesPendientes([]);
     setNumeroProduccionActiva(1);
-    setProduccionActivaAbierta(true);
+    setProduccionActivaAbierta(false);
     setVarianteForm({ maquinas_id_maquina: "", operarios_calzado: [""], operarios_puntera: [""], operarios_inyeccion: [""], operarios_inspeccion_final: [""], estado_inspeccion: "Pendiente", observacion_inspeccion: "", punteras_id_puntera: "", adicionales_id_adicional: "", lote_puntera_id: "", lote_pu_id: "", busqueda_puntera: "", busqueda_pu: "", materiales_extra: [] });
     setTallesForm(crearTallesIniciales());
     setCorrigiendoRealizados(false);

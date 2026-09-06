@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import PromptModal from "../components/PromptModal";
@@ -12,10 +13,12 @@ import "../styles/ProduccionDiaria.css";
 const TALLES = Array.from({ length: 13 }, (_, index) => index + 35);
 const tallesVacios = () => Object.fromEntries(TALLES.map((talle) => [talle, ""]));
 const nuevoMaterialExtra = () => ({ busqueda: "", lote_id: "" });
-const nuevaLinea = () => ({ orden_fabricacion_id_orden: "", busqueda_orden: "", punteras_id_puntera: "", adicionales_id_adicional: "", busqueda_puntera: "", busqueda_pu: "", lote_puntera_id: "", lote_pu_id: "", materiales_extra: [], talles: tallesVacios() });
+const nuevaLinea = () => ({ orden_fabricacion_id_orden: "", busqueda_orden: "", punteras_id_puntera: "", adicionales_id_adicional: "", busqueda_puntera: "", busqueda_pu: "", lote_puntera_id: "", lote_pu_id: "", materiales_extra: [], estado_inspeccion: "Pendiente", observacion_inspeccion: "", talles: tallesVacios() });
 const nuevoBloque = () => ({ maquinas_id_maquina: "", operarios_inyeccion: [""], lineas: [nuevaLinea()] });
 
 export default function ProduccionDiaria() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [ordenes, setOrdenes] = useState([]);
   const [maquinas, setMaquinas] = useState([]);
   const [lotes, setLotes] = useState([]);
@@ -33,7 +36,7 @@ export default function ProduccionDiaria() {
   const [detallesHistorial, setDetallesHistorial] = useState({});
   const [altaMaquinaBloque, setAltaMaquinaBloque] = useState(null);
   const [altaCatalogo, setAltaCatalogo] = useState(null);
-  const [form, setForm] = useState({ fecha: new Date().toISOString().slice(0, 10), operarios_calzado: [""], operarios_puntera: [""] });
+  const [form, setForm] = useState({ fecha: new Date().toISOString().slice(0, 10), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
   const [bloques, setBloques] = useState([nuevoBloque()]);
   const historialOrdenado = useMemo(() => [...historial].sort((a, b) => {
     if (grupoHistorial) {
@@ -124,7 +127,38 @@ export default function ProduccionDiaria() {
   const actualizarOperarioInyeccion = (indiceBloque, indiceOperario, valor) => setBloques((actuales) => actuales.map((bloque, posicion) => posicion === indiceBloque ? { ...bloque, operarios_inyeccion: bloque.operarios_inyeccion.map((nombre, indice) => indice === indiceOperario ? valor : nombre) } : bloque));
   const agregarOperarioInyeccion = (indiceBloque) => setBloques((actuales) => actuales.map((bloque, posicion) => posicion === indiceBloque ? { ...bloque, operarios_inyeccion: [...bloque.operarios_inyeccion, ""] } : bloque));
   const quitarOperarioInyeccion = (indiceBloque, indiceOperario) => setBloques((actuales) => actuales.map((bloque, posicion) => posicion === indiceBloque ? { ...bloque, operarios_inyeccion: bloque.operarios_inyeccion.filter((_, indice) => indice !== indiceOperario) } : bloque));
-  const etiquetaLote = (lote) => `${lote.material || "Material"}${lote.color ? ` (${lote.color})` : ""} · Remito ${lote.numero_remito || "-"}`;
+  const etiquetaLote = (lote) => `${lote.material || "Material"}${lote.color ? ` (${lote.color})` : ""} · Remito ${lote.numero_remito || "-"} · ${lote.nombre_proveedor || lote.proveedor || "Sin proveedor"}`;
+  useEffect(() => {
+    if (!searchParams.get("materialCreado") && !searchParams.get("materialCancelado")) return;
+    const guardado = sessionStorage.getItem("borrador-material-produccion");
+    if (!guardado) return;
+    const borrador = JSON.parse(guardado);
+    const resultado = sessionStorage.getItem("alta-material-resultado");
+    const lote = resultado ? JSON.parse(resultado).lotes?.[0] : null;
+    const bloquesRestaurados = structuredClone(borrador.bloques);
+    if (lote) {
+      const { bloque, linea, tipo, extra } = borrador.destino;
+      const lineaDestino = bloquesRestaurados[bloque].lineas[linea];
+      const id = String(lote.id_lote || lote.id_lote_materiales);
+      const etiqueta = etiquetaLote(lote);
+      if (tipo === "puntera") Object.assign(lineaDestino, { lote_puntera_id: id, busqueda_puntera: etiqueta });
+      else if (tipo === "pu") Object.assign(lineaDestino, { lote_pu_id: id, busqueda_pu: etiqueta });
+      else lineaDestino.materiales_extra[extra] = { lote_id: id, busqueda: etiqueta };
+    }
+    // La vuelta de la recepción repone el borrador completo en una sola pasada.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm({ ...borrador.form, operarios_inspeccion_final: borrador.form.operarios_inspeccion_final || [""] });
+    setBloques(bloquesRestaurados);
+    setFormularioAbierto(true);
+    sessionStorage.removeItem("borrador-material-produccion");
+    sessionStorage.removeItem("alta-material-resultado");
+    navigate("/produccion-diaria", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, lotes]);
+  const cargarMaterialNuevo = (destino) => {
+    sessionStorage.setItem("borrador-material-produccion", JSON.stringify({ form, bloques, destino }));
+    navigate("/recepcion-materiales?nuevo=1&volver=produccion-diaria");
+  };
   const actualizarBusquedaMaterial = (indiceBloque, indiceLinea, tipo, busqueda) => {
     const lote = lotes.find((item) => etiquetaLote(item) === busqueda);
     const campoBusqueda = tipo === "puntera" ? "busqueda_puntera" : "busqueda_pu";
@@ -226,6 +260,8 @@ export default function ProduccionDiaria() {
           punteras_id_puntera: Number(linea.punteras_id_puntera),
           adicionales: linea.adicionales_id_adicional ? [Number(linea.adicionales_id_adicional)] : [],
           materiales_extra: linea.materiales_extra.map((material) => ({ lote_id: Number(material.lote_id) })),
+          estado_inspeccion: linea.estado_inspeccion,
+          observacion_inspeccion: linea.estado_inspeccion === "No conforme" ? linea.observacion_inspeccion.trim() : "",
           talles: TALLES.map((talle) => ({ talle: String(talle), cantidad_pares: Number(linea.talles[talle] || 0) })).filter((item) => item.cantidad_pares > 0),
         })),
       })),
@@ -251,10 +287,11 @@ export default function ProduccionDiaria() {
     {cargando ? <p>Cargando datos…</p> : <>
       {formularioAbierto && <form className="produccion-diaria-form" onSubmit={guardar}>
         <div className="ui-form-card produccion-cabecera">
-          <div><h2>Datos de la jornada</h2><p>Los operarios de calzado y puntera se aplican a todos los bloques.</p></div>
+          <div><h2>Datos de la jornada</h2><p>Los operarios de calzado, puntera e inspección final se aplican a todos los bloques.</p></div>
           <label>Fecha<input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required /></label>
           <div className="produccion-operarios"><span>Operarios de calzado</span>{form.operarios_calzado.map((nombre, indice) => <div key={indice}><input value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_calzado", indice, e.target.value)} required />{form.operarios_calzado.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_calzado", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_calzado")}>+ Agregar operario</button></div>
           <div className="produccion-operarios"><span>Operarios de puntera</span>{form.operarios_puntera.map((nombre, indice) => <div key={indice}><input value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_puntera", indice, e.target.value)} required />{form.operarios_puntera.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_puntera", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_puntera")}>+ Agregar operario</button></div>
+          <div className="produccion-operarios"><span>Operarios de inspección final</span>{form.operarios_inspeccion_final.map((nombre, indice) => <div key={indice}><input value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_inspeccion_final", indice, e.target.value)} required />{form.operarios_inspeccion_final.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_inspeccion_final", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_inspeccion_final")}>+ Agregar operario</button></div>
         </div>
 
         {bloques.map((bloque, indiceBloque) => <div className="ui-form-card produccion-bloque" key={indiceBloque}>
@@ -272,15 +309,16 @@ export default function ProduccionDiaria() {
               <label>Adicional (opcional)<div className="produccion-selector-con-alta"><select value={linea.adicionales_id_adicional} onChange={(e) => actualizarLinea(indiceBloque, indiceLinea, "adicionales_id_adicional", e.target.value)}><option value="">Sin adicional</option>{adicionales.map((adicional) => <option key={adicional.id_adicional} value={adicional.id_adicional}>{adicional.codigo_adicional} - {adicional.nombre_adicional}</option>)}</select><button type="button" onClick={() => setAltaCatalogo({ tipo: "adicional", bloque: indiceBloque, linea: indiceLinea })} title="Crear adicional" aria-label="Crear adicional">+</button></div></label>
             </div>
             <div className="produccion-linea-materiales">
-              <label>Material/remito de puntera<input type="search" list="materiales-recibidos-produccion" value={linea.busqueda_puntera} onChange={(e) => actualizarBusquedaMaterial(indiceBloque, indiceLinea, "puntera", e.target.value)} placeholder="Buscar por material o remito" required pattern={linea.lote_puntera_id ? undefined : "(?!)"} /></label>
-              <label>PU utilizado<input type="search" list="materiales-recibidos-produccion" value={linea.busqueda_pu} onChange={(e) => actualizarBusquedaMaterial(indiceBloque, indiceLinea, "pu", e.target.value)} placeholder="Buscar por material o remito" required pattern={linea.lote_pu_id ? undefined : "(?!)"} /></label>
-              <div className="produccion-sector-materiales">{linea.materiales_extra.length > 0 && <div className="produccion-materiales-extra">{linea.materiales_extra.map((material, indiceMaterial) => <div className="produccion-material-extra" key={indiceMaterial}><input type="search" list="materiales-recibidos-produccion" value={material.busqueda} onChange={(e) => actualizarMaterialExtra(indiceBloque, indiceLinea, indiceMaterial, "busqueda", e.target.value)} placeholder="Buscar material o remito" required pattern={material.lote_id ? undefined : "(?!)"}/><button type="button" onClick={() => actualizarLinea(indiceBloque, indiceLinea, "materiales_extra", linea.materiales_extra.filter((_, i) => i !== indiceMaterial))} aria-label="Quitar material">×</button></div>)}</div>}<button type="button" className="ui-btn ui-btn-secondary produccion-agregar-material" onClick={() => actualizarLinea(indiceBloque, indiceLinea, "materiales_extra", [...linea.materiales_extra, nuevoMaterialExtra()])}>+ Agregar material</button></div>
+              <label>Material/remito de puntera<div className="produccion-material-selector"><input type="search" list="materiales-recibidos-produccion" value={linea.busqueda_puntera} onChange={(e) => actualizarBusquedaMaterial(indiceBloque, indiceLinea, "puntera", e.target.value)} placeholder="Material, remito o proveedor" required pattern={linea.lote_puntera_id ? undefined : "(?!)"} /><button type="button" onClick={() => cargarMaterialNuevo({ bloque: indiceBloque, linea: indiceLinea, tipo: "puntera" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label>
+              <label>PU utilizado<div className="produccion-material-selector"><input type="search" list="materiales-recibidos-produccion" value={linea.busqueda_pu} onChange={(e) => actualizarBusquedaMaterial(indiceBloque, indiceLinea, "pu", e.target.value)} placeholder="Material, remito o proveedor" required pattern={linea.lote_pu_id ? undefined : "(?!)"} /><button type="button" onClick={() => cargarMaterialNuevo({ bloque: indiceBloque, linea: indiceLinea, tipo: "pu" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label>
+              <div className="produccion-sector-materiales">{linea.materiales_extra.length > 0 && <div className="produccion-materiales-extra">{linea.materiales_extra.map((material, indiceMaterial) => <div className="produccion-material-extra" key={indiceMaterial}><input type="search" list="materiales-recibidos-produccion" value={material.busqueda} onChange={(e) => actualizarMaterialExtra(indiceBloque, indiceLinea, indiceMaterial, "busqueda", e.target.value)} placeholder="Material, remito o proveedor" required pattern={material.lote_id ? undefined : "(?!)"}/><button type="button" className="produccion-alta-material" onClick={() => cargarMaterialNuevo({ bloque: indiceBloque, linea: indiceLinea, tipo: "extra", extra: indiceMaterial })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button><button type="button" onClick={() => actualizarLinea(indiceBloque, indiceLinea, "materiales_extra", linea.materiales_extra.filter((_, i) => i !== indiceMaterial))} aria-label="Quitar material">×</button></div>)}</div>}<button type="button" className="ui-btn ui-btn-secondary produccion-agregar-material" onClick={() => actualizarLinea(indiceBloque, indiceLinea, "materiales_extra", [...linea.materiales_extra, nuevoMaterialExtra()])}>+ Agregar material</button></div>
             </div>
             <div className="produccion-articulo"><span>Artículo resultante</span><strong>{`${ordenes.find((o) => String(o.id_orden) === String(linea.orden_fabricacion_id_orden))?.codigo_modelo || ""}${punteras.find((p) => String(p.id_puntera) === String(linea.punteras_id_puntera))?.codigo_puntera || ""}${adicionales.find((a) => String(a.id_adicional) === String(linea.adicionales_id_adicional))?.codigo_adicional || ""}${ordenes.find((o) => String(o.id_orden) === String(linea.orden_fabricacion_id_orden))?.codigo_color || ""}` || "Completá la configuración"}</strong></div>
             <div className="produccion-talles"><span>Cantidad producida por talle</span><div>{TALLES.map((talle) => {
               const disponible = disponibleParaTalle(indiceBloque, indiceLinea, talle);
               return <label key={talle} className={disponible === 0 ? "talle-sin-pendiente" : ""}>T{talle}<small>{linea.orden_fabricacion_id_orden ? `${disponible} disp.` : "-"}</small><input type="number" min="0" max={disponible} disabled={!linea.orden_fabricacion_id_orden || disponible === 0} value={linea.talles[talle]} onChange={(e) => actualizarTalle(indiceBloque, indiceLinea, talle, e.target.value)} onKeyDown={manejarEnterTalle} placeholder="0" /></label>;
             })}</div></div>
+            <fieldset className="produccion-inspeccion"><legend>Inspección final</legend><div className="produccion-inspeccion-opciones">{["Pendiente", "Conforme", "No conforme"].map((estado) => <label key={estado} className="inspeccion-opcion"><input type="radio" name={`inspeccion-${indiceBloque}-${indiceLinea}`} value={estado} checked={linea.estado_inspeccion === estado} onChange={(e) => actualizarLinea(indiceBloque, indiceLinea, "estado_inspeccion", e.target.value)} /><span>{estado === "Pendiente" ? "Pendiente de inspección" : estado}</span></label>)}</div>{linea.estado_inspeccion === "No conforme" && <label className="produccion-observacion">Observación de la no conformidad<textarea value={linea.observacion_inspeccion} onChange={(e) => actualizarLinea(indiceBloque, indiceLinea, "observacion_inspeccion", e.target.value)} placeholder="Describí el defecto o motivo del rechazo" required rows="2" /></label>}</fieldset>
           </div>)}
           <button type="button" className="ui-btn ui-btn-secondary" onClick={() => agregarLinea(indiceBloque)}>+ Agregar orden</button>
         </div>)}
@@ -296,13 +334,14 @@ export default function ProduccionDiaria() {
           <button type="button" className="ui-btn ui-sort-direction" onClick={() => setDireccionHistorial((actual) => actual === "asc" ? "desc" : "asc")}>{direccionHistorial === "asc" ? "↑ Ascendente" : "↓ Descendente"}</button>
           <label className="ui-filter-select"><span>Agrupar por</span><select value={grupoHistorial} onChange={(evento) => setGrupoHistorial(evento.target.value)}><option value="">Sin agrupar</option><option value="inyectora">Inyectora</option><option value="producto">Producto</option></select></label>
         </div></div>
-        <div className="ui-table-card"><table className="ui-data-table"><thead><tr><th>Orden</th><th>Artículo</th><th>Producto</th><th>Inyectora</th><th>Fecha</th><th>Total de pares</th></tr></thead><tbody>{historialVisible.length ? historialVisible.map((item, indice) => {
+        <div className="ui-table-card"><table className="ui-data-table"><thead><tr><th>Orden</th><th>Artículo</th><th>Producto</th><th>Inyectora</th><th>Fecha</th><th>Inspección</th><th>Total de pares</th></tr></thead><tbody>{historialVisible.length ? historialVisible.map((item, indice) => {
           const grupoActual = grupoHistorial ? item[grupoHistorial] : null;
           const grupoAnterior = indice > 0 && grupoHistorial ? historialVisible[indice - 1][grupoHistorial] : null;
           const detalle = detallesHistorial[item.id_linea];
           const abierto = lineaDetalleAbierta === item.id_linea;
-          return <Fragment key={item.id_linea}>{grupoActual !== grupoAnterior && <tr className="produccion-grupo"><td colSpan="6">{grupoActual}</td></tr>}<tr className={abierto ? "produccion-historial-fila abierta" : "produccion-historial-fila"} onClick={() => alternarDetalleHistorial(item.id_linea)}><td><span className="produccion-flecha">{abierto ? "▲" : "▼"}</span><strong>{item.numero_orden}</strong></td><td>{item.articulo}</td><td>{item.producto}</td><td>{item.inyectora}</td><td>{formatearFecha(item.fecha)}</td><td><strong>{item.total_pares} pares</strong></td></tr>{abierto && <tr className="produccion-historial-detalle-fila"><td colSpan="6">{detalle ? <div className="produccion-historial-detalle"><div className="produccion-detalle-cabecera"><div><span>Artículo</span><strong>{detalle.articulo}</strong></div><div><span>Tipo de puntera</span><strong>{detalle.nombre_puntera || "Sin especificar"}</strong></div><div><span>Adicional</span><strong>{detalle.adicionales || "Sin adicional"}</strong></div></div><div className="produccion-detalle-grid"><span><strong>Calzado:</strong> {detalle.operario_calzado}</span><span><strong>Puntera:</strong> {detalle.operario_puntera}</span><span><strong>Inyección:</strong> {detalle.operario_inyeccion}</span><span><strong>Material de puntera:</strong> {detalle.material_puntera}{detalle.color_puntera ? ` · ${detalle.color_puntera}` : ""} · Remito {detalle.remito_puntera}</span><span><strong>PU:</strong> {detalle.material_pu}{detalle.color_pu ? ` · ${detalle.color_pu}` : ""} · Remito {detalle.remito_pu}</span>{detalle.otros_materiales?.map((material, indiceMaterial) => <span key={`${material.numero_remito}-${indiceMaterial}`}><strong>Otro material:</strong> {material.material}{material.color ? ` · ${material.color}` : ""} · Remito {material.numero_remito}</span>)}</div><div className="produccion-detalle-talles">{detalle.talles.map((talle) => <span key={talle.talle}>T{talle.talle}: <strong>{talle.cantidad_pares}</strong></span>)}</div></div> : <div className="produccion-detalle-cargando">Cargando detalle…</div>}</td></tr>}</Fragment>;
-        }) : <tr><td colSpan="6" className="produccion-sin-registros">No hay producciones registradas.</td></tr>}</tbody></table></div>
+          const estadoInspeccion = item.estado_inspeccion || "Pendiente";
+          return <Fragment key={item.id_linea}>{grupoActual !== grupoAnterior && <tr className="produccion-grupo"><td colSpan="7">{grupoActual}</td></tr>}<tr className={abierto ? "produccion-historial-fila abierta" : "produccion-historial-fila"} onClick={() => alternarDetalleHistorial(item.id_linea)}><td><span className="produccion-flecha">{abierto ? "▲" : "▼"}</span><strong>{item.numero_orden}</strong></td><td>{item.articulo}</td><td>{item.producto}</td><td>{item.inyectora}</td><td>{formatearFecha(item.fecha)}</td><td><span className={`inspeccion-badge inspeccion-${estadoInspeccion.toLowerCase().replace(" ", "-")}`}>{estadoInspeccion}</span></td><td><strong>{item.total_pares} pares</strong></td></tr>{abierto && <tr className="produccion-historial-detalle-fila"><td colSpan="7">{detalle ? <div className="produccion-historial-detalle"><div className="produccion-detalle-cabecera"><div><span>Artículo</span><strong>{detalle.articulo}</strong></div><div><span>Tipo de puntera</span><strong>{detalle.nombre_puntera || "Sin especificar"}</strong></div><div><span>Adicional</span><strong>{detalle.adicionales || "Sin adicional"}</strong></div></div><div className="produccion-detalle-etapas"><div className="produccion-detalle-etapa-doble"><div className="produccion-detalle-etapa produccion-subetapa"><span><strong>Calzado:</strong> {detalle.operario_calzado}</span></div><div className="produccion-detalle-etapa produccion-subetapa"><span><strong>Inspector final:</strong> {detalle.operario_inspeccion_final}</span><span><strong>Estado:</strong> <span className={`inspeccion-badge inspeccion-${String(detalle.estado_inspeccion || "Pendiente").toLowerCase().replace(" ", "-")}`}>{detalle.estado_inspeccion || "Pendiente"}</span></span>{detalle.observacion_inspeccion && <span className="produccion-inspeccion-observacion"><strong>Observación:</strong> {detalle.observacion_inspeccion}</span>}</div></div><div className="produccion-detalle-etapa"><span><strong>Puntera:</strong> {detalle.operario_puntera}</span><span><strong>Material de puntera:</strong> {detalle.material_puntera}{detalle.color_puntera ? ` · ${detalle.color_puntera}` : ""} · Remito {detalle.remito_puntera}</span></div><div className="produccion-detalle-etapa"><span><strong>Inyección:</strong> {detalle.operario_inyeccion}</span><span><strong>PU:</strong> {detalle.material_pu}{detalle.color_pu ? ` · ${detalle.color_pu}` : ""} · Remito {detalle.remito_pu}</span></div></div>{detalle.otros_materiales?.length > 0 && <div className="produccion-detalle-otros">{detalle.otros_materiales.map((material, indiceMaterial) => <span key={`${material.numero_remito}-${indiceMaterial}`}><strong>Otro material:</strong> {material.material}{material.color ? ` · ${material.color}` : ""} · Remito {material.numero_remito}</span>)}</div>}<div className="produccion-detalle-talles">{detalle.talles.map((talle) => <span key={talle.talle}>T{talle.talle}: <strong>{talle.cantidad_pares}</strong></span>)}</div></div> : <div className="produccion-detalle-cargando">Cargando detalle…</div>}</td></tr>}</Fragment>;
+        }) : <tr><td colSpan="7" className="produccion-sin-registros">No hay producciones registradas.</td></tr>}</tbody></table></div>
         <Pagination {...paginacionHistorial} />
       </div>
     </>}

@@ -235,7 +235,7 @@ CREATE TABLE planilla_produccion (
   orden_fabricacion_id_orden INT NOT NULL,
   numero_planilla VARCHAR(45) NOT NULL,
   fecha DATE NOT NULL,
-  tipo_planilla VARCHAR(45) NOT NULL,
+  tipo_planilla VARCHAR(100) NOT NULL,
   maquinas_id_maquina INT NULL,
   estado VARCHAR(45) NOT NULL DEFAULT 'pendiente',
 

@@ -292,6 +292,19 @@ body,
   border-color: #f59e0b;
 }
 
+:root[data-theme="noche"] .planilla-talles-comparacion .fila-carga input:not(:disabled) {
+  border-color: #4f8ee8;
+  background: #172a44;
+  color: #f8fafc;
+}
+
+:root[data-theme="noche"] .planilla-talles-comparacion .fila-carga input:disabled {
+  border-color: #26364c;
+  background: #0a1423;
+  color: #52637a;
+  opacity: .7;
+}
+
 :root[data-theme="noche"] .planilla-talles-comparacion .columna-total {
   border-color: #40516a;
 }

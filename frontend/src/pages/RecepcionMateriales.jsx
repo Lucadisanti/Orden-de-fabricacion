@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import CatalogModal from "../components/CatalogModal";
 import ConfirmModal from "../components/ConfirmModal";
@@ -22,6 +23,9 @@ const crearLineaVacia = () => ({
 });
 
 export default function RecepcionMateriales() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const volverA = searchParams.get("volver");
   const formularioRef = useRef(null);
   const listadoRef = useRef(null);
   const [proveedores, setProveedores] = useState([]);
@@ -132,6 +136,14 @@ export default function RecepcionMateriales() {
     // La carga inicial sincroniza los catálogos y recepciones con la API.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarDatos();
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("nuevo") !== "1") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    abrirFormularioNuevo();
+    // La apertura automática sólo se procesa al entrar desde otro formulario.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -268,8 +280,15 @@ export default function RecepcionMateriales() {
         await axios.put(`/api/remitos/${recepcionEditando.remitos_id_remito}`, datosRemito);
         mostrarToast("success", "Recepción actualizada", "Los cambios se guardaron correctamente.");
       } else {
-        await axios.post("/api/remitos/", datosRemito);
+        const respuesta = await axios.post("/api/remitos/", datosRemito);
         mostrarToast("success", "Recepción registrada", "El remito y sus materiales se guardaron correctamente.");
+        if (volverA) {
+          const lotesRes = await axios.get("/api/lotes/");
+          const creados = lotesRes.data.filter((lote) => String(lote.remitos_id_remito) === String(respuesta.data.id_remito));
+          sessionStorage.setItem("alta-material-resultado", JSON.stringify({ lotes: creados }));
+          navigate(`/${volverA}?materialCreado=1`);
+          return;
+        }
       }
 
       setForm(formularioVacio);
@@ -529,6 +548,10 @@ export default function RecepcionMateriales() {
                 type="button"
                 className="ui-btn ui-btn-secondary"
                 onClick={() => {
+                  if (volverA) {
+                    navigate(`/${volverA}?materialCancelado=1`);
+                    return;
+                  }
                   setMostrarFormulario(false);
                   setEditando(false);
                   setRecepcionEditando(null);

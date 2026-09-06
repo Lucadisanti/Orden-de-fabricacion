@@ -32,6 +32,9 @@ it("consulta sin copiar cantidades y edita la registrada sin crear otra producci
   const user = userEvent.setup();
   render(<MemoryRouter><Planillas /></MemoryRouter>);
   await user.click(await screen.findByRole("button", { name: "Editar" }));
+  const nuevaProduccion = await screen.findByRole("button", { name: /Producción 3/ });
+  expect(screen.queryByRole("textbox", { name: "Cantidad producida para talle 35" })).not.toBeInTheDocument();
+  await user.click(nuevaProduccion);
   const carga = await screen.findByRole("textbox", { name: "Cantidad producida para talle 35" });
   expect(carga).toHaveValue("");
   await user.click(screen.getByRole("button", { name: /Producción 1/ }));
@@ -51,5 +54,8 @@ it("consulta sin copiar cantidades y edita la registrada sin crear otra producci
   await user.click(screen.getByRole("button", { name: "Guardar producciones" }));
   await waitFor(() => expect(axios.put).toHaveBeenCalledWith("/api/produccion-diaria/linea/1", expect.objectContaining({ linea: expect.objectContaining({ talles: [{ talle: "35", cantidad_pares: 25 }, { talle: "36", cantidad_pares: 5 }] }) })));
   expect(axios.post).not.toHaveBeenCalled();
-  await waitFor(() => expect(screen.getByRole("textbox", { name: "Cantidad producida para talle 35" })).toHaveValue(""));
+  await screen.findByRole("button", { name: /Producción 3/ });
+  expect(screen.queryByRole("textbox", { name: "Cantidad producida para talle 35" })).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: /Producción 3/ }));
+  expect(screen.getByRole("textbox", { name: "Cantidad producida para talle 35" })).toHaveValue("");
 });

@@ -21,17 +21,18 @@
 .produccion-linea-header { margin-bottom: 12px; }
 .produccion-linea-header h3 { margin: 0; }
 .produccion-linea-datos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.produccion-linea-materiales { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: start; gap: 12px; margin-top: 12px; }
+.produccion-linea-materiales { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 12px; margin-top: 12px; }
 .produccion-linea-materiales > label { min-width: 0; }
 .produccion-material-selector { display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: 8px; }
 .produccion-material-selector button, .produccion-alta-material { border: 1px solid var(--border); border-radius: 9px; background: var(--bg-card); color: var(--text-main); font-size: 24px; font-weight: 800; cursor: pointer; }
 .produccion-material-selector button:hover, .produccion-alta-material:hover { border-color: var(--primary); color: var(--primary); }
-.produccion-linea-materiales .produccion-sector-materiales { grid-column: auto; align-self: start; padding-top: 19px; }
+.produccion-linea-materiales .produccion-sector-materiales { grid-column: auto; align-self: start; min-width: 0; padding-top: calc(1.5 * 13px + 6px); }
 .produccion-config-extra { display: grid; grid-template-columns: 1fr 1fr 1.4fr 1.4fr; gap: 12px; align-items: start; margin-top: 12px; }
 .produccion-sector-materiales { grid-column: 4; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
 .produccion-materiales-extra { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.produccion-agregar-material { order: -1; align-self: flex-end; min-height: 42px; }
-.produccion-material-extra { display: grid; grid-template-columns: minmax(240px, 1fr) 44px 40px; gap: 8px; width: 100%; }
+.produccion-agregar-material { align-self: stretch; min-height: 44px; width: 100%; }
+.produccion-material-extra { display: grid; grid-template-columns: minmax(0, 1fr) 44px 40px; gap: 8px; width: 100%; min-width: 0; }
+.produccion-linea-configuracion > label, .produccion-material-selector input, .produccion-material-extra input { min-width: 0; }
 .produccion-material-extra button { border: 1px solid #fecaca; border-radius: 8px; background: #fff; color: #b91c1c; font-size: 20px; cursor: pointer; }
 .produccion-articulo { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 9px 12px; border-radius: 9px; background: var(--primary-soft, #eff6ff); }
 .produccion-articulo span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
@@ -60,10 +61,17 @@
 .produccion-talles label.talle-sin-pendiente { opacity: .5; background: var(--bg-page, #f5f8fc); }
 .produccion-talles input { min-width: 0; padding: 7px 4px; text-align: center; }
 .produccion-acciones { position: sticky; bottom: 10px; z-index: 5; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); box-shadow: var(--shadow-card); }
+.produccion-acciones-guardado { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .produccion-historial { margin-top: 28px; }
 .produccion-historial-header, .produccion-historial-filtros, .produccion-paginacion, .produccion-paginacion > div, .produccion-paginacion label { display: flex; align-items: flex-end; gap: 12px; }
-.produccion-historial-header { justify-content: space-between; margin-bottom: 12px; }
+.produccion-historial-header { flex-direction: column; align-items: stretch; gap: 20px; margin-bottom: 12px; }
+.produccion-historial-filtros { justify-content: flex-end; }
+.produccion-historial .produccion-historial-tabla { width: 100%; min-width: 0; table-layout: fixed; }
+.produccion-historial-tabla > thead > tr > th,
+.produccion-historial-tabla > tbody > tr > td { min-width: 0; padding: 12px 8px; white-space: normal; overflow-wrap: anywhere; }
+.produccion-historial-tabla .inspeccion-badge { max-width: 100%; box-sizing: border-box; white-space: normal; }
 .produccion-historial-header h2 { margin: 0; }
+.produccion-historial-header p { margin: 6px 0 0; color: var(--text-muted); font-size: 14px; }
 .produccion-historial-filtros .ui-filter-select select { min-width: 168px; }
 .produccion-paginacion { justify-content: space-between; margin-top: 14px; }
 .produccion-paginacion > div { align-items: center; }

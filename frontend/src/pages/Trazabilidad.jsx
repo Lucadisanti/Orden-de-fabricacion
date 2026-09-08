@@ -333,7 +333,7 @@ export default function Trazabilidad() {
 
     tituloSeccion("Datos generales de la orden");
     tabla(
-      ["Articulo", "Producto", "Color", "Fecha", "Estado", "Pares solicitados"],
+      ["Articulo", "Producto", "Color", "Fecha de corte", "Estado", "Pares solicitados"],
       [[valor(ordenSeleccionada.articulo_producto), valor(ordenSeleccionada.producto || ordenSeleccionada.nombre_producto), valor(ordenSeleccionada.color), formatearFecha(ordenSeleccionada.fecha), mostrarEstado(ordenSeleccionada.estado), valor(totalPlanificado)]],
       { alternateRowStyles: {}, pageBreak: "avoid" }
     );
@@ -342,9 +342,10 @@ export default function Trazabilidad() {
     const operariosR013 = planillaR013 ? ordenarOperariosPorEtapa(operariosPorPlanilla[planillaR013.id_planilla] || []) : [];
     tituloSeccion("R013 - Corte y Aparado (compartida por toda la orden)");
     tabla(
-      ["Fecha", "Estado", "Operario de corte", "Taller de aparado", "Total de la orden"],
+      ["Fecha de corte", "Fecha de aparado", "Estado", "Operario de corte", "Taller de aparado", "Total de la orden"],
       [[
         formatearFecha(planillaR013?.fecha || ordenSeleccionada.fecha),
+        formatearFecha(ordenSeleccionada.fecha_aparado),
         mostrarEstado(planillaR013?.estado || ordenSeleccionada.estado),
         valor(operariosR013.find((operario) => String(operario.etapa).toLowerCase() === "corte")?.nombre_operario),
         valor(operariosR013.find((operario) => String(operario.etapa).toLowerCase() === "aparado")?.nombre_operario),
@@ -365,18 +366,24 @@ export default function Trazabilidad() {
       .flatMap((planilla) => obtenerDesgloseFiltrado(planilla.id_planilla));
     tituloSeccion(`R013/1 - Planilla de Calzado, Inyeccion e Inspeccion final - Articulo ${valor(ordenSeleccionada.articulo_producto)}`);
     tabla(
-      ["Fecha", "Inyectora", "Puntera", "Adicional", "Inspeccion", "Operarios", "Pares por talle", "Total"],
+      ["Fecha", "Inyectora", "Puntera", "Adicional", "Inspeccion", "Calzado", "Puntera", "Inyeccion", "Inspector final", "Pares por talle", "Total"],
       produccionesArticulo.length ? produccionesArticulo.flatMap((produccion) => produccion.jornadas.map((jornada) => [
         formatearFecha(jornada.fecha),
         valor(produccion.maquina),
         valor(produccion.tipo_puntera),
         valor(produccion.adicionales || "Sin adicional"),
         `${valor(produccion.estado_inspeccion || "Pendiente")}${produccion.observacion_inspeccion ? `\n${produccion.observacion_inspeccion}` : ""}`,
-        `Calzado: ${jornada.operarios_calzado.join(", ") || "-"}\nPuntera: ${jornada.operarios_puntera.join(", ") || "-"}\nInyeccion: ${jornada.operarios_inyeccion.join(", ") || "-"}\nInspeccion final: ${jornada.operarios_inspeccion_final?.join(", ") || "-"}`,
+        jornada.operarios_calzado.join(", ") || "-",
+        jornada.operarios_puntera.join(", ") || "-",
+        jornada.operarios_inyeccion.join(", ") || "-",
+        jornada.operarios_inspeccion_final?.join(", ") || "-",
         jornada.talles.map((detalle) => `${detalle.talle}: ${detalle.cantidad_pares}`).join(" | ") || "Sin talles",
         `${jornada.total_pares} pares`,
-      ])) : [["Sin producciones registradas", "-", "-", "-", "-", "-", "-", "-"]],
-      { columnStyles: { 1: { cellWidth: 29 }, 4: { cellWidth: 30 }, 5: { cellWidth: 48 }, 6: { cellWidth: 48 } } }
+      ])) : [["Sin producciones registradas", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"]],
+      {
+        styles: { font: "helvetica", fontSize: 7, cellPadding: 1.2, textColor: [30, 41, 59], lineColor: [203, 213, 225], overflow: "linebreak" },
+        columnStyles: Object.fromEntries([22, 32, 17, 22, 29, 22, 22, 22, 24, 47, 18].map((cellWidth, indice) => [indice, { cellWidth }])),
+      }
     );
 
     tituloSeccion("Materiales utilizados");
@@ -438,7 +445,7 @@ export default function Trazabilidad() {
                 />
               </div>
               <SortControls opciones={[
-                { value: "fecha", label: "Fecha" },
+                { value: "fecha", label: "Fecha de corte" },
                 { value: "numero", label: "Número de orden" },
                 { value: "producto", label: "Producto" },
                 { value: "articulo", label: "Artículo" },
@@ -451,7 +458,7 @@ export default function Trazabilidad() {
                 <tr>
                   <th>Nº Orden</th>
                   <th>Artículo</th>
-                  <th>Fecha</th>
+                  <th>Fecha de corte</th>
                   <th>Estado</th>
                 </tr>
               </thead>
@@ -521,7 +528,7 @@ export default function Trazabilidad() {
                     <div><span>Artículo</span><strong>{ordenSeleccionada.articulo_producto || "-"}</strong></div>
                     <div><span>Producto</span><strong>{ordenSeleccionada.producto || ordenSeleccionada.nombre_producto || "-"}</strong></div>
                     <div><span>Color</span><strong>{ordenSeleccionada.color || "-"}</strong></div>
-                    <div><span>Fecha</span><strong>{formatearFecha(ordenSeleccionada.fecha)}</strong></div>
+                    <div><span>Fecha de corte</span><strong>{formatearFecha(ordenSeleccionada.fecha)}</strong></div>
                     <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(ordenSeleccionada.estado)}`}>{mostrarEstado(ordenSeleccionada.estado)}</span></strong></div>
                   </div>
 
@@ -619,7 +626,8 @@ export default function Trazabilidad() {
                               const inyectoras = [...new Set(desglose.map((linea) => linea.maquina).filter(Boolean))];
                               const esCorteYAparado = obtenerGrupoPlanilla(planilla) === "R013";
                               return <div className={`trazabilidad-planilla-meta ${esCorteYAparado ? "sin-inyectora" : ""}`}>
-                                <div><span>Fecha</span><strong>{fechas.length > 1 ? `${fechas.length} jornadas` : formatearFecha(fechas[0] || planilla.fecha)}</strong></div>
+                                <div><span>{esCorteYAparado ? "Fecha de corte" : "Fecha"}</span><strong>{esCorteYAparado ? formatearFecha(planilla.fecha || ordenSeleccionada.fecha) : fechas.length > 1 ? `${fechas.length} jornadas` : formatearFecha(fechas[0] || planilla.fecha)}</strong></div>
+                                {esCorteYAparado && <div><span>Fecha de aparado</span><strong>{formatearFecha(ordenSeleccionada.fecha_aparado)}</strong></div>}
                                 {!esCorteYAparado && <div><span>Inyectora</span><strong>{inyectoras.length > 1 ? `${inyectoras.length} inyectoras` : inyectoras[0] || planilla.maquina || "Sin inyectora"}</strong></div>}
                                 <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(planilla.estado)}`}>{mostrarEstado(planilla.estado)}</span></strong></div>
                               </div>;
@@ -628,7 +636,7 @@ export default function Trazabilidad() {
                               <div className="trazabilidad-desglose-inyectoras">
                                 {obtenerDesgloseFiltrado(planilla.id_planilla).map((inyectora) => <div className="trazabilidad-inyectora" key={inyectora.id_linea}>
                                   <div className="trazabilidad-inyectora-header">
-                                    <div><span>{inyectora.maquina}</span><h4>{inyectora.articulo || "Artículo anterior"}</h4><small><strong>Puntera:</strong> {inyectora.tipo_puntera || "Sin especificar"} · <strong>Adicional:</strong> {inyectora.adicionales || "No"}</small><small><strong>{inyectora.total_pares} pares</strong></small></div>
+                                    <div><span>{inyectora.maquina}</span><h4>{inyectora.articulo || "Artículo anterior"}</h4><small><strong>Puntera:</strong> {inyectora.tipo_puntera || "Sin especificar"} · <strong>Adicional:</strong> {inyectora.adicionales || "No"}</small></div>
                                     <div className="trazabilidad-inspeccion-veredicto">
                                       <strong className={`trazabilidad-inspeccion-estado ${inyectora.estado_inspeccion === "Conforme" ? "conforme" : inyectora.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{inyectora.estado_inspeccion || "Pendiente"}</strong>
                                       {inyectora.estado_inspeccion === "No conforme" && inyectora.observacion_inspeccion && <p>{inyectora.observacion_inspeccion}</p>}

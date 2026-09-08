@@ -65,6 +65,5 @@ def test_error_interno_devuelve_un_mensaje_controlado(client):
         response = client.get("/api/productos/")
 
     assert response.status_code == 500
-    assert response.get_json() == {"mensaje": "Ocurrio un error al procesar la solicitud"}
+    assert response.get_json() == {"mensaje": "Ocurrió un error al procesar la solicitud."}
     assert "Access denied" not in response.get_data(as_text=True)
-

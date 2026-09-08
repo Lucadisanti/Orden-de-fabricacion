@@ -85,7 +85,7 @@ def listar_producciones_diarias():
             """
             SELECT pdl.id_linea, ofab.id_orden, ofab.numero_orden,
                    COALESCE(pv.articulo_producto, prod.articulo_producto) AS articulo,
-                   prod.nombre_producto AS producto,
+                   prod.nombre_producto AS producto, col.color AS color,
                    m.nombre_maquina AS inyectora, pd.fecha, pdl.estado_inspeccion,
                    COALESCE(SUM(dpdl.cantidad_pares), 0) AS total_pares
             FROM produccion_diaria pd
@@ -95,10 +95,11 @@ def listar_producciones_diarias():
             INNER JOIN produccion_diaria_linea pdl ON pdl.bloque_id = pdb.id_bloque
             INNER JOIN orden_fabricacion ofab ON ofab.id_orden = pdl.orden_fabricacion_id_orden
             INNER JOIN producto prod ON prod.id_producto = ofab.producto_id_producto
+            LEFT JOIN colores col ON col.id_color = prod.colores_id_color
             LEFT JOIN producto_variante pv ON pv.id_variante = pdl.producto_variante_id_variante
             LEFT JOIN detalle_produccion_diaria dpdl ON dpdl.linea_id = pdl.id_linea
             GROUP BY pdl.id_linea, ofab.id_orden, ofab.numero_orden, pv.articulo_producto, prod.articulo_producto,
-                     prod.nombre_producto, m.nombre_maquina, pd.fecha, pdl.estado_inspeccion
+                     prod.nombre_producto, col.color, m.nombre_maquina, pd.fecha, pdl.estado_inspeccion
             ORDER BY pd.fecha DESC, pd.id_produccion_diaria DESC, pdl.id_linea DESC
             """
         )
@@ -423,7 +424,7 @@ def actualizar_linea_produccion(id_linea):
         extras = linea.get("materiales_extra") or []
         talles = [(str(item.get("talle")), int(item.get("cantidad_pares") or 0)) for item in linea.get("talles") or []]
         talles = [(talle, cantidad) for talle, cantidad in talles if cantidad > 0]
-        if not fecha or not all((calzado, puntera, inspeccion, inyeccion, talles)):
+        if not fecha or not all((calzado, puntera, inyeccion, talles)):
             raise ValueError("Completá la fecha, los operarios y al menos una cantidad.")
     except (TypeError, ValueError) as error:
         return jsonify({"mensaje": str(error) or "La producción está incompleta."}), 400
@@ -519,7 +520,7 @@ def crear_produccion_diaria():
     operarios_inspeccion_final = _lista_textos(data, "operarios_inspeccion_final", "operario_inspeccion_final")
     bloques = data.get("bloques") or []
 
-    if not fecha or not operarios_calzado or not operarios_puntera or not operarios_inspeccion_final or not bloques:
+    if not fecha or not operarios_calzado or not operarios_puntera or not bloques:
         return jsonify({"mensaje": "Completá la fecha, los operarios y al menos una inyectora."}), 400
 
     lineas_validas = []

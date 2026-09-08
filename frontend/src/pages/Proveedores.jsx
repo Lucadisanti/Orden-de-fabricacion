@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
@@ -172,6 +173,8 @@ export default function Proveedores() {
     });
   };
 
+  const textoBusqueda = busqueda.trim();
+
   const proveedoresFiltrados = proveedores.filter((proveedor) => {
     const texto = `
       ${proveedor.nombre_proveedor || ""}
@@ -180,8 +183,13 @@ export default function Proveedores() {
       ${proveedor.email || ""}
     `.toLowerCase();
 
-    return texto.includes(busqueda.toLowerCase());
+    return texto.includes(textoBusqueda.toLowerCase());
   });
+
+  const hayBusqueda = textoBusqueda.length > 0;
+  const sinResultados = hayBusqueda && proveedoresFiltrados.length === 0;
+  const sinProveedores = !hayBusqueda && proveedores.length === 0;
+
   const paginacionProveedores = usePagination(proveedoresFiltrados);
 
   return (
@@ -257,48 +265,58 @@ export default function Proveedores() {
 
       {!cargando && !error && (
         <>
-        <div className="ui-search-bar">
-          <input
-            className="ui-input"
-            type="text"
-            placeholder="Buscar por proveedor, CUIT, teléfono o email..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </div>
-        <div className="ui-table-card">
-          <table className="ui-data-table">
-            <thead>
-              <tr>
-                <th>Proveedor</th>
-                <th>CUIT</th>
-                <th>Teléfono</th>
-                <th>Email</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
+        <ClearableSearch
+          placeholder="Buscar por proveedor, CUIT, teléfono o email..."
+          value={busqueda}
+          onChange={setBusqueda}
+        />
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron proveedores con “{textoBusqueda}”.</strong>
+            <span>Probá con otro nombre, CUIT, teléfono o email.</span>
+          </div>
+        ) : sinProveedores ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay proveedores cargados.</strong>
+            <span>Creá un proveedor para poder registrar recepciones de materiales.</span>
+          </div>
+        ) : (
+          <>
+            <div className="ui-table-card">
+              <table className="ui-data-table">
+                <thead>
+                  <tr>
+                    <th>Proveedor</th>
+                    <th>CUIT</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
 
-            <tbody>
-              {paginacionProveedores.pageItems.map((proveedor) => (
-                <tr key={proveedor.id_proveedor}>
-                  <td>{proveedor.nombre_proveedor}</td>
-                  <td>{proveedor.cuit || "-"}</td>
-                  <td>{proveedor.telefono || "-"}</td>
-                  <td>{proveedor.email || "-"}</td>
-                  <td>
-                    <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(proveedor)}>
-                      Editar
-                    </button>
-                    <button className="ui-btn ui-btn-danger" onClick={() => eliminarProveedor(proveedor.id_proveedor)}>
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <Pagination {...paginacionProveedores} />
+                <tbody>
+                  {paginacionProveedores.pageItems.map((proveedor) => (
+                    <tr key={proveedor.id_proveedor}>
+                      <td>{proveedor.nombre_proveedor}</td>
+                      <td>{proveedor.cuit || "-"}</td>
+                      <td>{proveedor.telefono || "-"}</td>
+                      <td>{proveedor.email || "-"}</td>
+                      <td>
+                        <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(proveedor)}>
+                          Editar
+                        </button>
+                        <button className="ui-btn ui-btn-danger" onClick={() => eliminarProveedor(proveedor.id_proveedor)}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination {...paginacionProveedores} />
+          </>
+        )}
         </>
       )}
     </section>

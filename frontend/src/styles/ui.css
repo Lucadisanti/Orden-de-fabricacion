@@ -686,3 +686,90 @@ input[type="number"]::-webkit-outer-spin-button {
 :root[data-theme="noche"] .ui-pagination-size select { border-color: #34465f; background: #111d31; color: #f1f5f9; }
 :root[data-theme="noche"] .ui-pagination-number-wrap i { color: #71839c; }
 @media (max-width: 700px) { .ui-pagination { grid-template-columns: 1fr auto; } .ui-pagination-pages { grid-column: 1 / -1; grid-row: 1; justify-self: center; } .ui-pagination-summary { grid-row: 2; } .ui-pagination-size { grid-row: 2; } }
+
+
+/* Buscador con botón para limpiar */
+.ui-search-clearable .ui-input {
+  padding-right: 48px;
+}
+
+.ui-search-clear-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transform: translateY(-50%);
+  transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.ui-search-clear-btn:hover,
+.ui-search-clear-btn:focus-visible {
+  transform: translateY(-50%) scale(1.04);
+  border-color: var(--primary);
+  color: var(--primary);
+  outline: none;
+}
+
+.ui-search-clear-btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+}
+
+.ui-empty-state {
+  width: min(100%, 560px);
+  margin: 16px 0;
+  padding: 18px 20px;
+  border: 1px dashed #cbdcf0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--text-main);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ui-empty-state strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.ui-empty-state span {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+:root[data-theme="noche"] .ui-empty-state {
+  border-color: var(--border);
+  background: var(--bg-card);
+  box-shadow: none;
+}
+
+:root[data-theme="noche"] .ui-search-clear-btn {
+  background: var(--bg-soft);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+:root[data-theme="noche"] .ui-search-clear-btn:hover,
+:root[data-theme="noche"] .ui-search-clear-btn:focus-visible {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.ui-empty-state-inside-card {
+  width: auto;
+  margin: 12px 14px 16px;
+}

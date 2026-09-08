@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { obtenerMensajeError } from "../utils/errorMessages";
@@ -184,6 +185,8 @@ export default function UsoMateriales() {
     return formatearFecha(planilla?.fecha);
   };
 
+  const textoBusqueda = busqueda.trim();
+
   const usosFiltrados = usos.filter((uso) => {
   const texto = `
     ${uso.numero_planilla || ""}
@@ -196,8 +199,12 @@ export default function UsoMateriales() {
 
   const planillaParametro = searchParams.get("planilla");
   const coincidePlanilla = !planillaParametro || (uso.numero_planilla || uso.planilla || "").toLowerCase() === planillaParametro.toLowerCase();
-  return texto.includes(busqueda.toLowerCase()) && coincidePlanilla;
+  return texto.includes(textoBusqueda.toLowerCase()) && coincidePlanilla;
   });
+
+  const hayBusqueda = textoBusqueda.length > 0;
+  const sinResultados = hayBusqueda && usosFiltrados.length === 0;
+  const sinUsos = !hayBusqueda && usos.length === 0;
 
   const usosOrdenados = filaAbierta
     ? [...usosFiltrados].sort((a, b) => Number(String(b.id_uso) === String(filaAbierta)) - Number(String(a.id_uso) === String(filaAbierta)))
@@ -319,15 +326,23 @@ export default function UsoMateriales() {
 
       {!cargando && !error && (
         <>
-        <div className="ui-search-bar">
-          <input
-            className="ui-input"
-            type="text"
-            placeholder="Buscar por planilla, orden, remito, proveedor, material o color..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </div>
+        <ClearableSearch
+          placeholder="Buscar por planilla, orden, remito, proveedor, material o color..."
+          value={busqueda}
+          onChange={setBusqueda}
+        />
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron usos de materiales con “{textoBusqueda}”.</strong>
+            <span>Probá con otra planilla, orden, remito, proveedor, material o color.</span>
+          </div>
+        ) : sinUsos ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay usos de materiales cargados.</strong>
+            <span>Registrá un uso para vincular materiales con una planilla de producción.</span>
+          </div>
+        ) : (
+          <>
         <div ref={listadoRef} className="ui-table-card listado-desplegable">
           <table className="ui-data-table">
             <thead>
@@ -413,6 +428,8 @@ export default function UsoMateriales() {
           </table>
         </div>
         <Pagination {...paginacionUsos} />
+          </>
+        )}
         </>
       )}
     </section>

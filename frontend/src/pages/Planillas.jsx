@@ -6,6 +6,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import CatalogModal from "../components/CatalogModal";
 import SortControls from "../components/SortControls";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
@@ -913,10 +914,15 @@ export default function Planillas() {
   };
 
 
-    const planillasFiltradas = planillas.filter((planilla) => {
-    const esR013DeOrden = planilla.numero_planilla?.toUpperCase() === "R013"
-      || planilla.tipo_planilla === "Corte y Aparado";
-    if (esR013DeOrden) return false;
+    const textoBusqueda = busqueda.trim();
+
+    const planillasVisibles = planillas.filter((planilla) => {
+      const esR013DeOrden = planilla.numero_planilla?.toUpperCase() === "R013"
+        || planilla.tipo_planilla === "Corte y Aparado";
+      return !esR013DeOrden;
+    });
+
+    const planillasFiltradas = planillasVisibles.filter((planilla) => {
     const texto = `
       ${planilla.numero_planilla || ""}
       ${planilla.numero_orden || planilla.orden || ""}
@@ -927,8 +933,12 @@ export default function Planillas() {
       ${planilla.estado || ""}
     `.toLowerCase();
 
-    return texto.includes(busqueda.toLowerCase());
+    return texto.includes(textoBusqueda.toLowerCase());
     });
+
+    const hayBusqueda = textoBusqueda.length > 0;
+    const sinResultados = hayBusqueda && planillasFiltradas.length === 0;
+    const sinPlanillas = !hayBusqueda && planillasVisibles.length === 0;
 
     const planillasConOrden = ordenarRegistros(planillasFiltradas, (planilla) => ({
       fecha: planilla.fecha,
@@ -1332,21 +1342,29 @@ export default function Planillas() {
       {!cargando && !error && (
         <>
         <div className="ui-list-tools">
-          <div className="ui-search-bar">
-            <input
-              className="ui-input"
-              type="text"
-              placeholder="Buscar por producto, máquina, fecha o estado..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
+          <ClearableSearch
+            placeholder="Buscar por producto, máquina, fecha o estado..."
+            value={busqueda}
+            onChange={setBusqueda}
+          />
           <SortControls opciones={[
             { value: "fecha", label: "Fecha" },
             { value: "producto", label: "Producto" },
             { value: "maquina", label: "Máquina" },
           ]} {...ordenListado} />
         </div>
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron planillas con “{textoBusqueda}”.</strong>
+            <span>Probá con otro producto, máquina, fecha o estado.</span>
+          </div>
+        ) : sinPlanillas ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay planillas de producción cargadas.</strong>
+            <span>Creá una planilla R013/1 para empezar a registrar producción.</span>
+          </div>
+        ) : (
+          <>
         <div ref={listadoRef} className={`ui-table-card planillas-listado-card ${filaDetalleAbierta ? "detalle-visible" : ""}`}>
           <table className="ui-data-table">
             <thead>
@@ -1466,6 +1484,8 @@ export default function Planillas() {
           </table>
         </div>
         <Pagination {...paginacionPlanillas} />
+          </>
+        )}
         </>
       )}
     </section>

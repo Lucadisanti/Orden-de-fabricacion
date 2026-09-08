@@ -4,6 +4,7 @@ import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 import CatalogModal from "../components/CatalogModal";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { obtenerMensajeError } from "../utils/errorMessages";
@@ -79,7 +80,18 @@ export default function Productos() {
     } catch (error) { setToast({ type: "error", title: "No se pudo guardar", message: obtenerMensajeError(error, "producto") }); }
   };
   const eliminar = (id) => setConfirmacion({ title: "Eliminar producto", message: "Se eliminará el producto si no tiene órdenes asociadas.", confirmText: "Eliminar", danger: true, onConfirm: async () => { setConfirmacion(null); try { await axios.delete(`${API_URL}/productos/${id}`); cargar(); } catch (error) { setToast({ type: "error", title: "No se pudo eliminar", message: obtenerMensajeError(error, "producto") }); } } });
-  const filtrados = productos.filter((p) => `${p.nombre_producto} ${p.color} ${p.articulo_producto}`.toLowerCase().includes(busqueda.toLowerCase()));
+  const textoBusqueda = busqueda.trim();
+
+  const filtrados = productos.filter((p) =>
+    `${p.nombre_producto} ${p.color} ${p.articulo_producto}`
+      .toLowerCase()
+      .includes(textoBusqueda.toLowerCase())
+  );
+
+  const hayBusqueda = textoBusqueda.length > 0;
+  const sinResultados = hayBusqueda && filtrados.length === 0;
+  const sinProductos = !hayBusqueda && productos.length === 0;
+
   const paginacion = usePagination(filtrados);
 
   return <section className="productos">
@@ -93,6 +105,62 @@ export default function Productos() {
       <div className="articulo-preview"><span>Código base</span><strong>{codigoBase || "Seleccioná modelo y color"}</strong><small>La puntera y los adicionales completarán el artículo en la orden.</small></div>
       <div className="ui-form-actions"><button className="ui-btn ui-btn-primary">Guardar</button><button type="button" className="ui-btn ui-btn-secondary" onClick={cancelar}>Cancelar</button></div>
     </form></div>}
-    {cargando ? <p>Cargando productos...</p> : <><div className="ui-search-bar"><input className="ui-input" placeholder="Buscar producto o color..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} /></div><div className="ui-table-card"><table className="ui-data-table"><thead><tr><th>Producto</th><th>Color fijo</th><th>Código base</th><th>Acciones</th></tr></thead><tbody>{paginacion.pageItems.map((p) => <tr key={p.id_producto}><td>{p.nombre_producto}</td><td>{p.color || "-"}</td><td>{String(p.articulo_producto || "").replace(/^BASE-/, "")}</td><td><button className="ui-btn ui-btn-secondary" onClick={() => editar(p)}>Editar</button> <button className="ui-btn ui-btn-danger" onClick={() => eliminar(p.id_producto)}>Eliminar</button></td></tr>)}</tbody></table></div><Pagination {...paginacion} /></>}
+    {cargando ? (
+      <p>Cargando productos...</p>
+    ) : (
+      <>
+        <ClearableSearch
+          placeholder="Buscar producto o color..."
+          value={busqueda}
+          onChange={setBusqueda}
+        />
+
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron productos con “{textoBusqueda}”.</strong>
+            <span>Probá con otro nombre, color o código base.</span>
+          </div>
+        ) : sinProductos ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay productos cargados.</strong>
+            <span>Creá un producto base para empezar a cargar órdenes.</span>
+          </div>
+        ) : (
+          <>
+            <div className="ui-table-card">
+              <table className="ui-data-table">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Color fijo</th>
+                    <th>Código base</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginacion.pageItems.map((p) => (
+                    <tr key={p.id_producto}>
+                      <td>{p.nombre_producto}</td>
+                      <td>{p.color || "-"}</td>
+                      <td>{String(p.articulo_producto || "").replace(/^BASE-/, "")}</td>
+                      <td>
+                        <button className="ui-btn ui-btn-secondary" onClick={() => editar(p)}>
+                          Editar
+                        </button>{" "}
+                        <button className="ui-btn ui-btn-danger" onClick={() => eliminar(p.id_producto)}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <Pagination {...paginacion} />
+          </>
+        )}
+      </>
+    )}
   </section>;
 }

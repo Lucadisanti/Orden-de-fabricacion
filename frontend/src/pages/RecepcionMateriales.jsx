@@ -5,6 +5,7 @@ import CatalogModal from "../components/CatalogModal";
 import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import SortControls from "../components/SortControls";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
@@ -356,6 +357,8 @@ export default function RecepcionMateriales() {
     return grupos;
   }, {}));
 
+  const textoBusqueda = busqueda.trim();
+
   const recepcionesFiltradas = recepciones.filter((recepcion) => {
     const textoMateriales = recepcion.materiales
       .map((lote) => `${lote.material || ""} ${lote.color || ""}`)
@@ -367,8 +370,12 @@ export default function RecepcionMateriales() {
       ${recepcion.estado_recepcion || ""}
       ${recepcion.recibido_por || ""}
     `.toLowerCase();
-    return texto.includes(busqueda.toLowerCase());
+    return texto.includes(textoBusqueda.toLowerCase());
   });
+
+  const hayBusqueda = textoBusqueda.length > 0;
+  const sinResultados = hayBusqueda && recepcionesFiltradas.length === 0;
+  const sinRecepciones = !hayBusqueda && recepciones.length === 0;
 
   const obtenerValorOrdenRecepcion = (recepcion) => ({
     fecha: recepcion.fecha_entrega || recepcion.fecha_solicitud,
@@ -574,15 +581,11 @@ export default function RecepcionMateriales() {
       {!cargando && !error && (
         <>
         <div className="ui-list-tools">
-          <div className="ui-search-bar">
-            <input
-              className="ui-input"
-              type="text"
-              placeholder="Buscar por proveedor, material, color, remito, estado o recibido por..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
+          <ClearableSearch
+            placeholder="Buscar por proveedor, material, color, remito, estado o recibido por..."
+            value={busqueda}
+            onChange={setBusqueda}
+          />
           <SortControls
             opciones={[
               { value: "fecha", label: "Fecha" },
@@ -593,6 +596,18 @@ export default function RecepcionMateriales() {
             {...orden}
           />
         </div>
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron recepciones con “{textoBusqueda}”.</strong>
+            <span>Probá con otro proveedor, material, color, remito o estado.</span>
+          </div>
+        ) : sinRecepciones ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay recepciones cargadas.</strong>
+            <span>Creá una recepción para empezar a registrar remitos y materiales.</span>
+          </div>
+        ) : (
+          <>
         <div ref={listadoRef} className="ui-table-card recepcion-listado-desplegable">
           <table className="ui-data-table">
             <thead>
@@ -696,6 +711,8 @@ export default function RecepcionMateriales() {
           </table>
         </div>
         <Pagination {...paginacionRecepciones} />
+          </>
+        )}
         </>
       )}
     </section>

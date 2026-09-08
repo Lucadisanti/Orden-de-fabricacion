@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
@@ -155,11 +156,18 @@ export default function Materiales() {
     });
   };
 
+  const textoBusqueda = busqueda.trim();
+
   const materialesFiltrados = materiales.filter((material) =>
-  (material.material || "")
-    .toLowerCase()
-    .includes(busqueda.toLowerCase())
+    (material.material || "")
+      .toLowerCase()
+      .includes(textoBusqueda.toLowerCase())
   );
+
+  const hayBusqueda = textoBusqueda.length > 0;
+  const sinResultados = hayBusqueda && materialesFiltrados.length === 0;
+  const sinMateriales = !hayBusqueda && materiales.length === 0;
+
   const paginacionMateriales = usePagination(materialesFiltrados);
 
   return (
@@ -227,42 +235,52 @@ export default function Materiales() {
 
       {!cargando && !error && (
         <>
-        <div className="ui-search-bar">
-          <input
-            className="ui-input"
-            type="text"
-            placeholder="Buscar material..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </div>
-        <div className="ui-table-card">
-          <table className="ui-data-table">
-            <thead>
-              <tr>
-                <th>Material</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
+        <ClearableSearch
+          placeholder="Buscar material..."
+          value={busqueda}
+          onChange={setBusqueda}
+        />
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron materiales con “{textoBusqueda}”.</strong>
+            <span>Probá con otro nombre de material.</span>
+          </div>
+        ) : sinMateriales ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay materiales cargados.</strong>
+            <span>Creá un material para poder usarlo en recepciones y producción.</span>
+          </div>
+        ) : (
+          <>
+            <div className="ui-table-card">
+              <table className="ui-data-table">
+                <thead>
+                  <tr>
+                    <th>Material</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
 
-            <tbody>
-              {paginacionMateriales.pageItems.map((material) => (
-                <tr key={material.id_material}>
-                  <td>{material.material}</td>
-                  <td>
-                    <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(material)}>
-                      Editar
-                    </button>
-                    <button className="ui-btn ui-btn-danger" onClick={() => eliminarMaterial(material.id_material)}>
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <Pagination {...paginacionMateriales} />
+                <tbody>
+                  {paginacionMateriales.pageItems.map((material) => (
+                    <tr key={material.id_material}>
+                      <td>{material.material}</td>
+                      <td>
+                        <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(material)}>
+                          Editar
+                        </button>
+                        <button className="ui-btn ui-btn-danger" onClick={() => eliminarMaterial(material.id_material)}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination {...paginacionMateriales} />
+          </>
+        )}
         </>
       )}
     </section>

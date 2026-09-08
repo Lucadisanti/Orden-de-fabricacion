@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
 import SortControls from "../components/SortControls";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
@@ -249,6 +250,8 @@ export default function Trazabilidad() {
     return total + obtenerDesgloseFiltrado(planilla.id_planilla).reduce((subtotal, linea) => subtotal + 2 + Number(linea.materiales_extra?.length || 0), 0);
   }, 0);
 
+  const textoBusquedaOrden = busquedaOrden.trim();
+
   const ordenesFiltradas = ordenes.filter((orden) => {
     const texto = `
       ${orden.numero_orden || ""}
@@ -259,8 +262,12 @@ export default function Trazabilidad() {
       ${orden.estado || ""}
     `.toLowerCase();
 
-    return texto.includes(busquedaOrden.toLowerCase());
+    return texto.includes(textoBusquedaOrden.toLowerCase());
   });
+
+  const hayBusquedaOrden = textoBusquedaOrden.length > 0;
+  const sinResultadosOrdenes = hayBusquedaOrden && ordenesFiltradas.length === 0;
+  const sinOrdenes = !hayBusquedaOrden && ordenes.length === 0;
   const ordenesOrdenadas = ordenarRegistros(ordenesFiltradas, (orden) => ({
     fecha: orden.fecha,
     numero: orden.numero_orden,
@@ -428,15 +435,11 @@ export default function Trazabilidad() {
         <div className="ui-grid-2">
           <div className={`trazabilidad-columna-listado ${ordenSeleccionada ? "oculto-movil" : ""}`}>
             <div className="ui-list-tools">
-              <div className="ui-search-bar">
-                <input
-                  className="ui-input"
-                  type="text"
-                  placeholder="Buscar por orden, producto, artículo, color, fecha o estado..."
-                  value={busquedaOrden}
-                  onChange={(e) => setBusquedaOrden(e.target.value)}
-                />
-              </div>
+              <ClearableSearch
+                placeholder="Buscar por orden, producto, artículo, color, fecha o estado..."
+                value={busquedaOrden}
+                onChange={setBusquedaOrden}
+              />
               <SortControls opciones={[
                 { value: "fecha", label: "Fecha" },
                 { value: "numero", label: "Número de orden" },
@@ -446,6 +449,18 @@ export default function Trazabilidad() {
             </div>
             <div className="ui-table-card trazabilidad-listado">
             <h2>Órdenes por artículo</h2>
+            {sinResultadosOrdenes ? (
+              <div className="ui-empty-state ui-empty-state-inside-card">
+                <strong>No se encontraron órdenes con “{textoBusquedaOrden}”.</strong>
+                <span>Probá con otro número de orden, artículo, producto, color, fecha o estado.</span>
+              </div>
+            ) : sinOrdenes ? (
+              <div className="ui-empty-state ui-empty-state-inside-card">
+                <strong>Todavía no hay órdenes cargadas.</strong>
+                <span>Cuando cargues una orden, va a aparecer en el listado de trazabilidad.</span>
+              </div>
+            ) : (
+              <>
             <table className="ui-data-table trazabilidad-ordenes-table">
               <thead>
                 <tr>
@@ -481,6 +496,8 @@ export default function Trazabilidad() {
               </tbody>
             </table>
             <Pagination {...paginacionOrdenes} />
+              </>
+            )}
             </div>
           </div>
 

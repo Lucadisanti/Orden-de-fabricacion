@@ -1,4 +1,5 @@
 from flask import jsonify, request
+from datetime import date
 
 from db.connection import get_connection
 from utils.db_helpers import responder_lista, responder_uno
@@ -48,8 +49,45 @@ def _guardar_r013(cursor, id_orden, fecha, data):
     return id_planilla
 
 
-def listar_ordenes(): return responder_lista("sp_listar_ordenes")
-def obtener_orden(id_orden): return responder_uno("sp_obtener_orden", (id_orden,))
+def _asegurar_fecha_aparado(cursor):
+    cursor.execute("SHOW COLUMNS FROM orden_fabricacion LIKE 'fecha_aparado'")
+    if not cursor.fetchone():
+        cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN fecha_aparado DATE NULL")
+
+
+def _agregar_datos_corte_aparado(respuesta):
+    response, status = respuesta
+    if status != 200:
+        return respuesta
+    conn = get_connection(); cursor = conn.cursor(dictionary=True)
+    try:
+        _asegurar_fecha_aparado(cursor)
+        cursor.execute("SELECT id_orden, fecha_aparado FROM orden_fabricacion")
+        fechas = {fila['id_orden']: fila['fecha_aparado'].isoformat() if fila['fecha_aparado'] else None for fila in cursor.fetchall()}
+        cursor.execute("""SELECT pp.orden_fabricacion_id_orden AS id_orden, op.etapa, op.nombre_operario
+            FROM planilla_produccion pp
+            INNER JOIN operarios_planilla op ON op.planilla_produccion_id_planilla = pp.id_planilla
+            WHERE (UPPER(pp.numero_planilla) = 'R013' OR pp.tipo_planilla = 'Corte y Aparado')
+              AND LOWER(op.etapa) IN ('corte', 'aparado')
+            ORDER BY pp.id_planilla, op.id_operario_planilla""")
+        responsables = {}
+        for operario in cursor.fetchall():
+            nombre = (operario['nombre_operario'] or '').strip()
+            nombres = responsables.setdefault((operario['id_orden'], operario['etapa'].lower()), [])
+            if nombre and nombre not in nombres:
+                nombres.append(nombre)
+        datos = response.get_json()
+        for fila in datos if isinstance(datos, list) else [datos]:
+            fila['fecha_aparado'] = fechas.get(fila['id_orden'])
+            fila['operario_corte'] = ' / '.join(responsables.get((fila['id_orden'], 'corte'), []))
+            fila['operario_aparado'] = ' / '.join(responsables.get((fila['id_orden'], 'aparado'), []))
+        return jsonify(datos), status
+    finally:
+        cursor.close(); conn.close()
+
+
+def listar_ordenes(): return _agregar_datos_corte_aparado(responder_lista("sp_listar_ordenes"))
+def obtener_orden(id_orden): return _agregar_datos_corte_aparado(responder_uno("sp_obtener_orden", (id_orden,)))
 def listar_talles_orden(id_orden): return responder_lista("sp_listar_talles_orden", (id_orden,))
 
 
@@ -58,11 +96,19 @@ def _guardar_orden(id_orden=None):
     if not talles: return jsonify({"error": "Debe cargar al menos un talle con cantidad."}), 400
     if not str(data.get("operario_corte") or "").strip(): return jsonify({"error": "Debe indicar el operario de corte."}), 400
     if not materiales: return jsonify({"error": "Debe seleccionar al menos un material utilizado."}), 400
+    fecha_aparado = data.get("fecha_aparado") or None
+    try:
+        if fecha_aparado: fecha_aparado = date.fromisoformat(fecha_aparado).isoformat()
+    except (ValueError, TypeError):
+        return jsonify({"error": "La fecha de aparado no es válida."}), 400
     conn = get_connection(); cursor = conn.cursor(dictionary=True)
     try:
+        _asegurar_fecha_aparado(cursor)
         valores = (data.get("producto_id_producto"), data.get("numero_orden"), data.get("fecha"))
         if id_orden: cursor.execute("UPDATE orden_fabricacion SET producto_id_producto=%s,numero_orden=%s,fecha=%s WHERE id_orden=%s", (*valores, id_orden))
         else: cursor.execute("INSERT INTO orden_fabricacion (producto_id_producto,numero_orden,fecha) VALUES (%s,%s,%s)", valores); id_orden = cursor.lastrowid
+        if "fecha_aparado" in data:
+            cursor.execute("UPDATE orden_fabricacion SET fecha_aparado=%s WHERE id_orden=%s", (fecha_aparado, id_orden))
         _guardar_talles(cursor, id_orden, talles); id_planilla = _guardar_r013(cursor, id_orden, data.get("fecha"), data); conn.commit()
         return jsonify({"id_orden": id_orden, "id_planilla": id_planilla, "mensaje": "Orden guardada correctamente"}), 201 if request.method == "POST" else 200
     except Exception as error: conn.rollback(); return jsonify({"error": str(error)}), 500

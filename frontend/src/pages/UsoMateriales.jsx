@@ -1,3 +1,4 @@
+import SeparadorListado from "../components/SeparadorListado";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -312,6 +313,8 @@ export default function UsoMateriales() {
           </form>
         </div>
       )}
+
+      {(mostrarFormulario) && <SeparadorListado titulo="Usos de materiales registrados" descripcion="Consultá los usos de materiales guardados." />}
 
       {cargando && <p>Cargando usos de materiales...</p>}
 

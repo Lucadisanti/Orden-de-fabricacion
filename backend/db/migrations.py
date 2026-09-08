@@ -316,6 +316,10 @@ def migrate_schema(connection=None):
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
         )
+        if not _column_definition(cursor, "orden_fabricacion", "fecha_aparado"):
+            cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN fecha_aparado DATE NULL")
+            LOGGER.info("Agregada la fecha independiente de aparado.")
+
         if not _column_definition(cursor, "produccion_diaria_linea", "producto_variante_id_variante"):
             cursor.execute("ALTER TABLE produccion_diaria_linea ADD producto_variante_id_variante INT NULL AFTER orden_fabricacion_id_orden")
             cursor.execute("ALTER TABLE produccion_diaria_linea ADD KEY idx_pdl_variante (producto_variante_id_variante)")

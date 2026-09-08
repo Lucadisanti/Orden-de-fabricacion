@@ -1,3 +1,4 @@
+import SeparadorListado from "../components/SeparadorListado";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -42,6 +43,7 @@ export default function Planillas() {
   const seleccionAplicadaRef = useRef(null);
   const talleRefs = useRef([]);
   const guardarTallesRef = useRef(null);
+  const produccionActivaRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -683,12 +685,17 @@ export default function Planillas() {
   const ordenVariante = ordenesDisponibles.find((orden) => Number(orden.id_orden) === Number(planillaSeleccionada?.orden_fabricacion_id_orden));
   const articuloVariante = `${ordenVariante?.codigo_modelo || ""}${punteras.find((puntera) => String(puntera.id_puntera) === String(varianteForm.punteras_id_puntera))?.codigo_puntera || ""}${adicionales.find((adicional) => String(adicional.id_adicional) === String(varianteForm.adicionales_id_adicional))?.codigo_adicional || ""}${ordenVariante?.codigo_color || ""}`;
   const reiniciarVariante = () => setVarianteForm({ maquinas_id_maquina: "", operarios_calzado: [""], operarios_puntera: [""], operarios_inyeccion: [""], operarios_inspeccion_final: [""], estado_inspeccion: "Pendiente", observacion_inspeccion: "", punteras_id_puntera: "", adicionales_id_adicional: "", lote_puntera_id: "", lote_pu_id: "", busqueda_puntera: "", busqueda_pu: "", materiales_extra: [] });
-  const varianteCompleta = (variante) => variante.maquinas_id_maquina && variante.operarios_calzado.every((n) => n.trim()) && variante.operarios_puntera.every((n) => n.trim()) && variante.operarios_inyeccion.every((n) => n.trim()) && variante.operarios_inspeccion_final.every((n) => n.trim()) && variante.punteras_id_puntera && variante.lote_puntera_id && variante.lote_pu_id && variante.materiales_extra.every((m) => m.lote_id) && (variante.estado_inspeccion !== "No conforme" || variante.observacion_inspeccion?.trim());
+  const varianteCompleta = (variante) => variante.maquinas_id_maquina && variante.operarios_calzado.every((n) => n.trim()) && variante.operarios_puntera.every((n) => n.trim()) && variante.operarios_inyeccion.every((n) => n.trim()) && variante.punteras_id_puntera && variante.lote_puntera_id && variante.lote_pu_id && variante.materiales_extra.every((m) => m.lote_id) && (variante.estado_inspeccion !== "No conforme" || variante.observacion_inspeccion?.trim());
   const varianteTieneDatos = (variante, talles = []) => Boolean(variante.maquinas_id_maquina || variante.punteras_id_puntera || variante.lote_puntera_id || variante.lote_pu_id || variante.adicionales_id_adicional || variante.materiales_extra.length || talles.length || [...variante.operarios_calzado, ...variante.operarios_puntera, ...variante.operarios_inyeccion, ...variante.operarios_inspeccion_final].some((nombre) => nombre.trim()));
   const numerosProduccionesContraidas = variantesPendientes.map((item, indice) => item.numero || indice + 1);
   const numeroProduccionVisible = numerosProduccionesContraidas.includes(numeroProduccionActiva) ? Math.max(0, ...numerosProduccionesContraidas) + 1 : numeroProduccionActiva;
   const prepararOtraVariante = () => {
     const talles = tallesDisponibles.map((talle) => ({ talle, cantidad: Number(tallesForm[talle] || 0) })).filter((item) => item.cantidad > 0);
+    if (!varianteTieneDatos(varianteForm, talles)) {
+      setProduccionActivaAbierta(true);
+      produccionActivaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     setVariantesPendientes((actuales) => [...actuales, { ...varianteForm, talles, articulo: articuloVariante, numero: numeroProduccionVisible }]);
     reiniciarVariante();
     setTallesForm(crearTallesIniciales());
@@ -706,6 +713,12 @@ export default function Planillas() {
     setNumeroProduccionActiva(numeroSeleccionado);
     setProduccionActivaAbierta(true);
   };
+
+  const produccionesOrdenadas = variantesPendientes.map((variante, indice) => ({ variante, indice, numero: variante.numero || indice + 1 })).sort((a, b) => a.numero - b.numero);
+  useEffect(() => {
+    if (produccionActivaAbierta) produccionActivaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [produccionActivaAbierta, numeroProduccionVisible]);
+  const renderProduccionContraida = ({ variante, indice }) => (<div className={`planilla-produccion-contraida ${variante.id_linea ? "produccion-registrada" : ""}`} key={variante.numero || indice}><button type="button" className="planilla-produccion-acordeon" onClick={() => editarProduccionPreparada(indice)}><span><strong>Producción {variante.numero || indice + 1}</strong><small>{variante.articulo || "Sin configurar"} · {maquinas.find((maquina) => String(maquina.id_maquina) === String(variante.maquinas_id_maquina))?.nombre_maquina || "Sin inyectora"} · {variante.talles.reduce((total, item) => total + item.cantidad, 0)} pares{variante.id_linea ? " · Registrada" : ""}</small>{variante.id_linea && <small>Fecha: {formatearFecha(variante.fecha || planillaSeleccionada.fecha)}</small>}</span>{variante.id_linea && <strong className={`trazabilidad-inspeccion-estado ${variante.estado_inspeccion === "Conforme" ? "conforme" : variante.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{variante.estado_inspeccion || "Pendiente"}</strong>}<b>▼</b></button>{!variante.id_linea && <button type="button" className="ui-btn ui-btn-danger" onClick={() => setVariantesPendientes((actuales) => actuales.filter((_, posicion) => posicion !== indice))}>Quitar</button>}</div>);
 
   const guardarTalles = async () => {
     if (!planillaSeleccionada) return;
@@ -757,7 +770,7 @@ export default function Planillas() {
         });
         for (const variante of variantesAGuardar.filter((item) => item.id_linea && item.modificada)) {
           await axios.put(`/api/produccion-diaria/linea/${variante.id_linea}`, {
-            fecha: planillaSeleccionada.fecha,
+            fecha: variante.fecha || planillaSeleccionada.fecha,
             operarios_calzado: variante.operarios_calzado,
             operarios_puntera: variante.operarios_puntera,
             operarios_inspeccion_final: variante.operarios_inspeccion_final,
@@ -767,12 +780,12 @@ export default function Planillas() {
           });
         }
         const nuevas = variantesAGuardar.filter((variante) => !variante.id_linea);
-        if (nuevas.length) await axios.post("/api/produccion-diaria/", {
-          fecha: planillaSeleccionada.fecha,
-          operarios_calzado: [...new Set(nuevas.flatMap((variante) => variante.operarios_calzado))],
-          operarios_puntera: [...new Set(nuevas.flatMap((variante) => variante.operarios_puntera))],
-          operarios_inspeccion_final: [...new Set(nuevas.flatMap((variante) => variante.operarios_inspeccion_final))],
-          bloques: nuevas.map((variante) => ({
+        for (const nueva of nuevas) await axios.post("/api/produccion-diaria/", {
+          fecha: nueva.fecha || planillaSeleccionada.fecha,
+          operarios_calzado: [...new Set([nueva].flatMap((variante) => variante.operarios_calzado))],
+          operarios_puntera: [...new Set([nueva].flatMap((variante) => variante.operarios_puntera))],
+          operarios_inspeccion_final: [...new Set([nueva].flatMap((variante) => variante.operarios_inspeccion_final))],
+          bloques: [nueva].map((variante) => ({
             maquinas_id_maquina: Number(variante.maquinas_id_maquina),
             operarios_inyeccion: variante.operarios_inyeccion,
             lineas: [{
@@ -1056,9 +1069,9 @@ export default function Planillas() {
               <button type="button" className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(planillaSeleccionada)}>
                 Editar datos generales
               </button>
-              <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPlanillaSeleccionada(null)}>
+              {(!esPlanillaInyeccion || seccionAbierta !== "produccion") && <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPlanillaSeleccionada(null)}>
                 Cerrar
-              </button>
+              </button>}
             </div>
           </div>
 
@@ -1077,19 +1090,20 @@ export default function Planillas() {
             </div>
           </div>
 
-          {esPlanillaInyeccion && variantesPendientes.map((variante, indice) => { return <div className={`planilla-produccion-contraida ${variante.id_linea ? "produccion-registrada" : ""}`} key={variante.numero || indice}><button type="button" className="planilla-produccion-acordeon" onClick={() => editarProduccionPreparada(indice)}><span><strong>Producción {variante.numero || indice + 1}</strong><small>{variante.articulo || "Sin configurar"} · {maquinas.find((maquina) => String(maquina.id_maquina) === String(variante.maquinas_id_maquina))?.nombre_maquina || "Sin inyectora"} · {variante.talles.reduce((total, item) => total + item.cantidad, 0)} pares{variante.id_linea ? " · Registrada" : ""}</small>{variante.id_linea && <small>Fecha: {formatearFecha(variante.fecha || planillaSeleccionada.fecha)}</small>}</span>{variante.id_linea && <strong className={`trazabilidad-inspeccion-estado ${variante.estado_inspeccion === "Conforme" ? "conforme" : variante.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{variante.estado_inspeccion || "Pendiente"}</strong>}<b>▼</b></button>{!variante.id_linea && <button type="button" className="ui-btn ui-btn-danger" onClick={() => setVariantesPendientes((actuales) => actuales.filter((_, posicion) => posicion !== indice))}>Quitar</button>}</div>; })}
+          {esPlanillaInyeccion && produccionesOrdenadas.filter((item) => item.numero < numeroProduccionVisible).map(renderProduccionContraida)}
 
-          {esPlanillaInyeccion && <button type="button" className={`planilla-produccion-acordeon ${produccionActivaAbierta ? "activo" : ""}`} onClick={() => setProduccionActivaAbierta((abierta) => !abierta)}><span><strong>Producción {numeroProduccionVisible}</strong><small>{articuloVariante || "Sin configurar"} · {calcularTotalPares()} pares</small></span><b>{produccionActivaAbierta ? "▲" : "▼"}</b></button>}
+          {esPlanillaInyeccion && <button type="button" ref={produccionActivaRef} aria-expanded={produccionActivaAbierta} className={`planilla-produccion-acordeon ${produccionActivaAbierta ? "activo" : ""}`} onClick={() => setProduccionActivaAbierta((abierta) => !abierta)}><span><strong>Producción {numeroProduccionVisible}</strong><small>{articuloVariante || "Sin configurar"} · {maquinas.find((maquina) => String(maquina.id_maquina) === String(varianteForm.maquinas_id_maquina))?.nombre_maquina || "Sin inyectora"} · {calcularTotalPares()} pares{varianteForm.id_linea ? " · Registrada" : ""}</small><small>Fecha: {formatearFecha(varianteForm.fecha || planillaSeleccionada.fecha)}</small></span>{varianteForm.id_linea && <strong className={`trazabilidad-inspeccion-estado ${varianteForm.estado_inspeccion === "Conforme" ? "conforme" : varianteForm.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{varianteForm.estado_inspeccion || "Pendiente"}</strong>}<b>{produccionActivaAbierta ? "▲" : "▼"}</b></button>}
 
           {esPlanillaInyeccion && produccionActivaAbierta && <div className="planilla-variante-editor">
             <div className="planilla-variante-titulo"><div><strong>Carga de producción</strong><span>Completá la configuración y las cantidades por talle.</span></div><div className="planilla-articulo-variante"><span>Artículo resultante</span><strong>{articuloVariante || "Completá la configuración"}</strong></div></div>
+            <label className="planilla-fecha-produccion">Fecha de producción<input type="date" value={varianteForm.fecha ?? planillaSeleccionada.fecha ?? ""} onChange={(e) => setVarianteForm({ ...varianteForm, fecha: e.target.value })} required /></label>
             <div className="planilla-variante-grid">
               <label>Inyectora<div className="planilla-selector-con-alta"><select value={varianteForm.maquinas_id_maquina} onChange={(e) => setVarianteForm({ ...varianteForm, maquinas_id_maquina: e.target.value })} required><option value="">Seleccione inyectora</option>{maquinas.map((maquina) => <option key={maquina.id_maquina} value={maquina.id_maquina}>{maquina.nombre_maquina || maquina.maquina}</option>)}</select><button type="button" className="planilla-alta-maquina" onClick={() => setMostrarAltaMaquina(true)}>+</button></div></label>
               <label>Tipo de puntera<div className="planilla-selector-con-alta"><select value={varianteForm.punteras_id_puntera} onChange={(e) => setVarianteForm({ ...varianteForm, punteras_id_puntera: e.target.value })}><option value="">Seleccione puntera</option>{punteras.map((puntera) => <option key={puntera.id_puntera} value={puntera.id_puntera}>{puntera.codigo_puntera} - {puntera.nombre_puntera}</option>)}</select><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("puntera")}>+</button></div></label>
               <label>Adicional (opcional)<div className="planilla-selector-con-alta"><select value={varianteForm.adicionales_id_adicional} onChange={(e) => setVarianteForm({ ...varianteForm, adicionales_id_adicional: e.target.value })}><option value="">Sin adicional</option>{adicionales.map((adicional) => <option key={adicional.id_adicional} value={adicional.id_adicional}>{adicional.codigo_adicional} - {adicional.nombre_adicional}</option>)}</select><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("adicional")}>+</button></div></label>
             </div>
             <div className="planilla-seccion-variante"><div className="planilla-seccion-variante-titulo"><strong>Operarios</strong><span>Podés asignar más de uno por etapa.</span></div><div className="planilla-operarios-variante">
-              {[{ campo: "operarios_calzado", titulo: "Operarios de calzado" }, { campo: "operarios_puntera", titulo: "Operarios de puntera" }, { campo: "operarios_inyeccion", titulo: "Operarios de inyección" }, { campo: "operarios_inspeccion_final", titulo: "Operarios de inspección final" }].map((grupo) => <div key={grupo.campo}><span>{grupo.titulo}</span>{varianteForm[grupo.campo].map((nombre, indice) => <div key={indice}><input value={nombre} onChange={(e) => cambiarOperarioVariante(grupo.campo, indice, e.target.value)} required/>{varianteForm[grupo.campo].length > 1 && <button type="button" onClick={() => quitarOperarioVariante(grupo.campo, indice)}>×</button>}</div>)}<button type="button" className="planilla-agregar-inline" onClick={() => agregarOperarioVariante(grupo.campo)}>+ Agregar operario</button></div>)}
+              {[{ campo: "operarios_calzado", titulo: "Operarios de calzado" }, { campo: "operarios_puntera", titulo: "Operarios de puntera" }, { campo: "operarios_inyeccion", titulo: "Operarios de inyección" }, { campo: "operarios_inspeccion_final", titulo: "Operarios de inspección final" }].map((grupo) => <div key={grupo.campo}><span>{grupo.titulo}</span>{varianteForm[grupo.campo].map((nombre, indice) => <div key={indice}><input value={nombre} onChange={(e) => cambiarOperarioVariante(grupo.campo, indice, e.target.value)} required={grupo.campo !== "operarios_inspeccion_final"}/>{varianteForm[grupo.campo].length > 1 && <button type="button" onClick={() => quitarOperarioVariante(grupo.campo, indice)}>×</button>}</div>)}<button type="button" className="planilla-agregar-inline" onClick={() => agregarOperarioVariante(grupo.campo)}>+ Agregar operario</button></div>)}
             </div></div>
             <div className="planilla-seccion-variante planilla-seccion-materiales"><div className="planilla-seccion-variante-titulo"><strong>Materiales utilizados</strong><span>Seleccionados por material, remito y proveedor.</span></div><div className="planilla-materiales-principales"><label>Material/remito de puntera<div className="planilla-material-selector"><input type="search" list="materiales-variante-planilla" value={varianteForm.busqueda_puntera} onChange={(e) => cambiarMaterialVariante("lote_puntera_id", e.target.value)} placeholder="Material, remito o proveedor" required pattern={varianteForm.lote_puntera_id ? undefined : "(?!)"}/><button type="button" onClick={() => cargarMaterialNuevo({ tipo: "puntera" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label><label>PU utilizado<div className="planilla-material-selector"><input type="search" list="materiales-variante-planilla" value={varianteForm.busqueda_pu} onChange={(e) => cambiarMaterialVariante("lote_pu_id", e.target.value)} placeholder="Material, remito o proveedor" required pattern={varianteForm.lote_pu_id ? undefined : "(?!)"}/><button type="button" onClick={() => cargarMaterialNuevo({ tipo: "pu" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label></div><div className="planilla-variante-materiales">{varianteForm.materiales_extra.map((material, indice) => <div key={indice}><input type="search" list="materiales-variante-planilla" value={material.busqueda} onChange={(e) => cambiarMaterialExtra(indice, e.target.value)} placeholder="Material, remito o proveedor" required pattern={material.lote_id ? undefined : "(?!)"}/><button type="button" className="planilla-alta-material" onClick={() => cargarMaterialNuevo({ tipo: "extra", extra: indice })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button><button type="button" onClick={() => setVarianteForm((actual) => ({ ...actual, materiales_extra: actual.materiales_extra.filter((_, posicion) => posicion !== indice) }))}>×</button></div>)}<button type="button" className="ui-btn ui-btn-secondary" onClick={() => setVarianteForm((actual) => ({ ...actual, materiales_extra: [...actual.materiales_extra, { busqueda: "", lote_id: "" }] }))}>+ Agregar material</button></div></div>
             <fieldset className="produccion-inspeccion"><legend>Inspección final</legend><div className="produccion-inspeccion-opciones">{["Pendiente", "Conforme", "No conforme"].map((estado) => <label key={estado} className="inspeccion-opcion"><input type="radio" name="inspeccion-planilla" value={estado} checked={varianteForm.estado_inspeccion === estado} onChange={(e) => setVarianteForm({ ...varianteForm, estado_inspeccion: e.target.value })}/><span>{estado === "Pendiente" ? "Pendiente de inspección" : estado}</span></label>)}</div>{varianteForm.estado_inspeccion === "No conforme" && <label className="produccion-observacion">Observación de la no conformidad<textarea value={varianteForm.observacion_inspeccion} onChange={(e) => setVarianteForm({ ...varianteForm, observacion_inspeccion: e.target.value })} required rows="2" /></label>}</fieldset>
@@ -1158,7 +1172,6 @@ export default function Planillas() {
             <div className="ui-form-actions">
               <strong>{varianteForm.id_linea ? `Editando producción ${numeroProduccionVisible}` : "Carga actual"}: {calcularTotalPares()} pares</strong>
               {corrigiendoRealizados && <><button type="button" className="ui-btn ui-btn-secondary" onClick={() => { setCorrigiendoRealizados(false); setCorreccionesRealizados({}); }}>Cancelar corrección</button><button type="button" className="ui-btn ui-btn-primary" onClick={guardarCorreccionRealizados}>Guardar corrección</button></>}
-              {esPlanillaInyeccion && !corrigiendoRealizados && <button type="button" className="ui-btn ui-btn-secondary" onClick={prepararOtraVariante}>+ Agregar otra variante</button>}
               {!corrigiendoRealizados && <button
                 type="submit"
                 className="ui-btn ui-btn-primary"
@@ -1169,6 +1182,8 @@ export default function Planillas() {
             </div>
           </div>}
 
+          {esPlanillaInyeccion && produccionesOrdenadas.filter((item) => item.numero > numeroProduccionVisible).map(renderProduccionContraida)}
+          {esPlanillaInyeccion && <div className="ui-form-actions">{!corrigiendoRealizados && <button type="button" className="ui-btn ui-btn-secondary" onClick={prepararOtraVariante}>Cargar nueva producción</button>}<button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPlanillaSeleccionada(null)}>Cerrar</button></div>}
           </form>}
 
           {!esPlanillaInyeccion && <button type="button" className={`planilla-acordeon ${seccionAbierta === "operarios" ? "activo" : ""}`} onClick={() => setSeccionAbierta(seccionAbierta === "operarios" ? "" : "operarios")}>
@@ -1325,6 +1340,8 @@ export default function Planillas() {
         </div>
       )}
 
+      {(mostrarFormulario || planillaSeleccionada) && <SeparadorListado titulo="Planillas registradas" descripcion="Consultá las planillas de producción guardadas." />}
+
       {cargando && <p>Cargando planillas...</p>}
 
       {error && <p>{error}</p>}
@@ -1422,7 +1439,7 @@ export default function Planillas() {
 
                         {resumen.desglose?.length > 0 ? <div className="planilla-desglose-inyectoras">
                           {resumen.desglose.map((linea, indice) => <div className="planilla-desglose-bloque" key={linea.id_linea}>
-                            <div className="planilla-desglose-header"><div><span>Producción {indice + 1} · {linea.maquina}</span><h4>{linea.articulo || "Artículo anterior"}</h4><small>{linea.tipo_puntera || "Puntera sin especificar"}{linea.adicionales ? ` · ${linea.adicionales}` : ""}</small><small className="planilla-produccion-pares">{linea.total_pares} pares</small></div><div className="trazabilidad-inspeccion-veredicto"><strong className={`trazabilidad-inspeccion-estado ${linea.estado_inspeccion === "Conforme" ? "conforme" : linea.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{linea.estado_inspeccion || "Pendiente"}</strong>{linea.estado_inspeccion === "No conforme" && linea.observacion_inspeccion && <p>{linea.observacion_inspeccion}</p>}</div></div>
+                            <div className="planilla-desglose-header"><div><span>Producción {indice + 1} · {linea.maquina}</span><h4>{linea.articulo || "Artículo anterior"}</h4><small>{linea.tipo_puntera || "Puntera sin especificar"}{linea.adicionales ? ` · ${linea.adicionales}` : ""}</small></div><div className="trazabilidad-inspeccion-veredicto"><strong className={`trazabilidad-inspeccion-estado ${linea.estado_inspeccion === "Conforme" ? "conforme" : linea.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{linea.estado_inspeccion || "Pendiente"}</strong>{linea.estado_inspeccion === "No conforme" && linea.observacion_inspeccion && <p>{linea.observacion_inspeccion}</p>}</div></div>
                             <div className="planilla-jornadas">
                               {linea.jornadas.map((jornada) => <div className="planilla-jornada" key={jornada.fecha}>
                                 <div className="planilla-jornada-header"><strong>{formatearFecha(jornada.fecha)}</strong><span>{jornada.total_pares} pares</span></div>

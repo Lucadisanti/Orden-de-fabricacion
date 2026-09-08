@@ -1,3 +1,4 @@
+import SeparadorListado from "../components/SeparadorListado";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
@@ -221,6 +222,8 @@ export default function Materiales() {
           </form>
         </div>
       )}
+
+      {(mostrarFormulario) && <SeparadorListado titulo="Materiales registrados" descripcion="Consultá los materiales guardados." />}
 
       {cargando && <p>Cargando materiales...</p>}
       {error && <p>{error}</p>}

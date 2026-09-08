@@ -56,10 +56,12 @@
 .planilla-produccion-registrada-talles span { padding: 5px 8px; border-radius: 7px; background: var(--primary-soft, #eff6ff); color: var(--text-main); text-transform: none; }
 .planilla-produccion-acordeon { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 10px; padding: 13px 16px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg-card); color: var(--text-main); cursor: pointer; text-align: left; }
 .planilla-produccion-acordeon.activo { border-color: var(--primary); background: var(--primary-soft, #eff6ff); }
+.planilla-produccion-acordeon { scroll-margin-top: 20px; }
 .planilla-produccion-acordeon > span { display: flex; flex-direction: column; gap: 3px; }
 .planilla-produccion-acordeon small { color: var(--text-muted); font-weight: 500; }
 .planilla-produccion-acordeon b { color: var(--primary); }
 .planilla-produccion-acordeon > .trazabilidad-inspeccion-estado { margin-left: auto; flex-shrink: 0; }
+.planilla-fecha-produccion { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 260px; margin-bottom: 16px; color: var(--text-muted); font-weight: 700; }
 .planilla-variante-titulo { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .planilla-variante-titulo > div:first-child { display: flex; flex-direction: column; gap: 3px; }
 .planilla-variante-titulo span { color: var(--text-muted); font-size: 13px; }

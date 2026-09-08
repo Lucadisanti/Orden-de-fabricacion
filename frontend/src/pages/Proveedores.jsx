@@ -1,3 +1,4 @@
+import SeparadorListado from "../components/SeparadorListado";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
@@ -251,6 +252,8 @@ export default function Proveedores() {
           </form>
         </div>
       )}
+
+      {(mostrarFormulario) && <SeparadorListado titulo="Proveedores registrados" descripcion="Consultá los proveedores guardados." />}
 
       {cargando && <p>Cargando proveedores...</p>}
       {error && <p>{error}</p>}

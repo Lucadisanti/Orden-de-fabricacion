@@ -270,7 +270,7 @@ export default function Proveedores() {
           />
         </div>
         <div className="ui-table-card">
-          <table className="ui-data-table">
+          <table className="ui-data-table ui-listado-ajustado"><colgroup>{[23,17,16,26,18].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
               <tr>
                 <th>Proveedor</th>

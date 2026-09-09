@@ -242,6 +242,10 @@
 .planilla-desglose-operarios { padding-top: 8px; border-top: 1px solid var(--border); }
 .planilla-desglose-materiales { flex-direction: column; margin-bottom: 0; }
 .ui-table-card.planillas-listado-card { scroll-margin-top: 18px; }
+.planillas-listado-card > .ui-data-table { width: 100%; min-width: 0; table-layout: fixed; }
+.planillas-listado-card > .ui-data-table > thead > tr > th,
+.planillas-listado-card > .ui-data-table > tbody > tr > td { min-width: 0; padding: 12px 8px; white-space: normal; overflow-wrap: anywhere; }
+.planillas-listado-card > .ui-data-table > tbody > tr > td:last-child .ui-btn { min-width: 0; padding: 8px 10px; }
 .ui-table-card.planillas-listado-card.detalle-visible { max-height: none; overflow: visible; scrollbar-gutter: auto; }
 .planilla-variante-editor .produccion-inspeccion { margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-page, #f8fafc); }
 .planilla-variante-editor .produccion-inspeccion legend { padding: 0 5px; color: var(--text-main); font-size: 14px; font-weight: 800; }

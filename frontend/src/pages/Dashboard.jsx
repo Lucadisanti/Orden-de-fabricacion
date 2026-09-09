@@ -28,10 +28,10 @@ function claseEstado(estado = "") {
 }
 
 const secciones = {
-  productos: { ruta: "/productos", endpoint: "/productos/", id: "id_producto", columnas: ["Artículo", "Producto", "Color"], celdas: (item) => [item.articulo_producto || "-", item.nombre_producto || "-", item.color || "Sin color"] },
+  productos: { ruta: "/productos", endpoint: "/productos/", id: "id_producto", columnas: ["Código base", "Producto", "Color"], celdas: (item) => [String(item.articulo_producto || "").replace(/^BASE-/, "") || "-", item.nombre_producto || "-", item.color || "Sin color"] },
   proveedores: { ruta: "/proveedores", endpoint: "/proveedores/", id: "id_proveedor", columnas: ["Proveedor", "CUIT", "Contacto"], celdas: (item) => [item.nombre_proveedor || "-", item.cuit || "-", item.telefono || item.email || "-"] },
-  ordenes: { ruta: "/ordenes", endpoint: "/ordenes/", id: "id_orden", accion: "Ver orden →", detalleRuta: (item) => `/ordenes?seleccion=${item.id_orden}`, columnas: ["N.º de orden", "Producto", "Fecha", "Estado"], celdas: (item) => [item.numero_orden || "-", item.producto || item.nombre_producto || "-", formatearFecha(item.fecha), <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>] },
-  planillas: { ruta: "/planillas", endpoint: "/planillas/", id: "id_planilla", accion: "Abrir detalle →", detalleRuta: (item) => `/planillas?seleccion=${item.id_planilla}`, columnas: ["N.º de planilla", "Orden", "Tipo", "Fecha", "Estado"], celdas: (item) => [item.numero_planilla || "-", item.numero_orden || item.orden || "-", item.tipo_planilla || "-", formatearFecha(item.fecha), <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>] },
+  ordenes: { ruta: "/ordenes", endpoint: "/ordenes/", id: "id_orden", accion: "Ver orden →", detalleRuta: (item) => `/ordenes?seleccion=${item.id_orden}`, columnas: ["N.º de orden", "Producto", "Color", "Fecha", "Estado"], celdas: (item) => [item.numero_orden || "-", item.producto || item.nombre_producto || "-", item.color || "-", formatearFecha(item.fecha), <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>] },
+  planillas: { ruta: "/planillas", endpoint: "/planillas/", id: "id_planilla", accion: "Abrir detalle →", detalleRuta: (item) => `/planillas?seleccion=${item.id_planilla}`, columnas: ["N.º de planilla", "Orden", "Producto", "Color", "Fecha", "Estado"], celdas: (item) => [item.numero_planilla || "-", item.numero_orden || item.orden || "-", item.producto || item.nombre_producto || "-", item.color || "-", formatearFecha(item.fecha), <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>] },
 };
 
 function claveDesdeTitulo(titulo = "") {
@@ -89,7 +89,10 @@ export default function Dashboard() {
     try {
       const configuracion = secciones[clave];
       const { data } = await axios.get(`${API_URL}${configuracion.endpoint}`);
+      const ordenesRelacionadas = clave === "planillas" ? (await axios.get(`${API_URL}/ordenes/`)).data : [];
       const recientes = [...(Array.isArray(data) ? data : [])]
+        .map((item) => clave === "planillas" ? { ...item, color: item.color || ordenesRelacionadas.find((orden) => Number(orden.id_orden) === Number(item.orden_fabricacion_id_orden))?.color } : item)
+        .filter((item) => clave !== "planillas" || String(item.numero_planilla || "").trim().toUpperCase() === "R013/1")
         .sort((a, b) => Number(b[configuracion.id] || 0) - Number(a[configuracion.id] || 0))
         .slice(0, 4);
       setUltimos((actuales) => ({ ...actuales, [clave]: recientes }));
@@ -107,7 +110,7 @@ export default function Dashboard() {
   const renderPanel = (clase) => seccionActiva && (
     <div className={`dashboard-recientes ${clase}`}>
       <div className="dashboard-recientes-header">
-        <div><span>Actividad reciente</span><h2>Últimos {itemActivo?.titulo.toLowerCase()}</h2></div>
+        <div><span>Actividad reciente</span><h2>{["ordenes", "planillas"].includes(seccionActiva) ? "Últimas" : "Últimos"} {itemActivo?.titulo.toLowerCase()}</h2></div>
         <Link className="ui-btn ui-btn-primary dashboard-ver-todos" to={configuracionActiva.ruta}>Ver todos →</Link>
       </div>
       {cargando === seccionActiva && <p className="dashboard-mensaje">Cargando últimos registros…</p>}

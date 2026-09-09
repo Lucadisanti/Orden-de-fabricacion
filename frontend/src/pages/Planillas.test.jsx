@@ -13,7 +13,7 @@ beforeEach(() => {
   const planilla = { id_planilla: 1, numero_planilla: "R013/1", orden_fabricacion_id_orden: 1, fecha: "2026-09-06", estado: "Pendiente" };
   const lineas = [30, 10].map((cantidad, i) => ({
     id_linea: i + 1, articulo: `100${i}`, maquinas_id_maquina: 1, punteras_id_puntera: 1,
-    lote_puntera_id: 1, lote_pu_id: 2, materiales_extra: [],
+    lote_puntera_id: i === 0 ? 1 : null, lote_pu_id: i === 0 ? 2 : null, materiales_extra: [],
     jornadas: [{ fecha: i === 0 ? "2026-09-04" : "2026-09-07", operarios_calzado: ["Ana"], operarios_puntera: ["Luis"], operarios_inyeccion: ["Juan"], operarios_inspeccion_final: ["Eva"], talles: [{ talle: "35", cantidad_pares: cantidad }] }],
   }));
   axios.get.mockImplementation(async (url) => ({ data: ({
@@ -84,5 +84,5 @@ it("mantiene el orden y conserva la fecha editada al alternar producciones", asy
   expect(screen.getByLabelText("Fecha de producción")).toHaveValue("2026-09-03");
   await user.click(screen.getByRole("button", { name: "Guardar producciones" }));
   await waitFor(() => expect(axios.put).toHaveBeenCalledWith("/api/produccion-diaria/linea/1", expect.objectContaining({ fecha: "2026-09-03" })));
-  expect(axios.put).toHaveBeenCalledWith("/api/produccion-diaria/linea/2", expect.objectContaining({ fecha: "2026-09-07" }));
+  expect(axios.put).toHaveBeenCalledWith("/api/produccion-diaria/linea/2", expect.objectContaining({ fecha: "2026-09-07", linea: expect.objectContaining({ lote_puntera_id: null, lote_pu_id: null }) }));
 });

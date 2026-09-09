@@ -240,7 +240,7 @@ export default function Materiales() {
           />
         </div>
         <div className="ui-table-card">
-          <table className="ui-data-table">
+          <table className="ui-data-table ui-listado-ajustado"><colgroup>{[75,25].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
               <tr>
                 <th>Material</th>

@@ -2,22 +2,31 @@
   width: 100%;
 }
 
+.dashboard .ui-page-header {
+  gap: 4px;
+  margin-bottom: clamp(12px, 2vh, 18px);
+}
+
+.dashboard .ui-page-header h1 {
+  font-size: clamp(28px, 2.5vw, 36px);
+}
+
 .dashboard-cards {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
+  gap: clamp(12px, 1.2vw, 16px);
 }
 
 .dashboard-card {
   width: 100%;
   min-width: 0;
-  min-height: 150px;
+  min-height: 130px;
   box-sizing: border-box;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 24px;
+  padding: clamp(14px, 1.4vw, 20px);
   border: 1px solid rgba(59, 130, 246, 0.24);
   border-radius: 20px;
   background: var(--bg-card);
@@ -53,9 +62,9 @@
 }
 
 .dashboard-card h2 {
-  margin: 14px 0 8px;
+  margin: 8px 0 4px;
   color: var(--text-main);
-  font-size: clamp(34px, 4vw, 48px);
+  font-size: clamp(30px, 3vw, 40px);
   line-height: 1;
   font-weight: 850;
   letter-spacing: -0.05em;
@@ -69,7 +78,7 @@
 }
 
 .dashboard-card small {
-  margin-top: 12px;
+  margin-top: 8px;
   color: var(--primary);
   font-size: 13px;
   font-weight: 800;
@@ -194,17 +203,20 @@
   color: var(--danger-text);
 }
 
-/* Paneles nuevos del dashboard */
+/* Paneles compactos, con altura natural y columnas alineadas. */
 .dashboard-paneles {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  gap: 18px;
-  margin-top: 22px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: clamp(12px, 1.2vw, 16px);
+  margin-top: clamp(12px, 2vh, 18px);
 }
 
 .dashboard-panel {
   min-width: 0;
-  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(14px, 1.4vw, 20px);
   border: 1px solid var(--border);
   border-radius: 22px;
   background: var(--bg-card);
@@ -212,8 +224,12 @@
   box-shadow: var(--shadow-card), inset 0 3px 0 rgba(59, 130, 246, 0.18);
 }
 
+.dashboard-panel-header h2 {
+  font-size: clamp(20px, 1.8vw, 22px);
+}
+
 .dashboard-panel-header p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   max-width: 720px;
   color: var(--text-muted);
   font-size: 14px;
@@ -222,15 +238,22 @@
 
 .dashboard-alertas-lista {
   display: grid;
-  gap: 12px;
-  margin-top: 18px;
+  align-content: start;
+  grid-auto-rows: max-content;
+  gap: 8px;
+  min-height: 0;
+  /* El límite afecta solo a la lista; la página puede crecer si lo necesita. */
+  max-height: clamp(12rem, 30vh, 18rem);
+  max-height: clamp(12rem, 30dvh, 18rem);
+  overflow-y: auto;
+  margin-top: 12px;
 }
 
 .dashboard-alerta {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 10px 12px;
   border: 1px solid #dbe7f5;
   border-radius: 16px;
   background: #f8fbff;
@@ -248,14 +271,14 @@
 
 .dashboard-alerta h3 {
   margin: 0;
-  color: #142033;
+  color: var(--text-main);
   font-size: 15px;
   font-weight: 850;
 }
 
 .dashboard-alerta p {
-  margin: 4px 0 0;
-  color: #64748b;
+  margin: 3px 0 0;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.45;
 }
@@ -291,13 +314,13 @@
 }
 
 .dashboard-avance {
-  margin-top: 18px;
+  margin-top: 12px;
 }
 
 .dashboard-avance strong {
   display: block;
   color: var(--text-main);
-  font-size: clamp(42px, 6vw, 64px);
+  font-size: clamp(36px, 4vw, 48px);
   line-height: 1;
   font-weight: 900;
   letter-spacing: -0.06em;
@@ -306,7 +329,7 @@
 .dashboard-progress {
   overflow: hidden;
   height: 10px;
-  margin-top: 16px;
+  margin-top: 10px;
   border-radius: 999px;
   background: #e2e8f0;
 }
@@ -322,13 +345,13 @@
 .dashboard-metricas {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .dashboard-metricas div {
   min-width: 0;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--bg-soft);
@@ -468,7 +491,7 @@
   background: #1b3150 !important;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1000px) {
   .dashboard-paneles {
     grid-template-columns: 1fr;
   }
@@ -482,12 +505,8 @@
 
 @media (max-width: 720px) {
   .dashboard-panel {
-    padding: 18px;
+    padding: 16px;
     border-radius: 18px;
-  }
-
-  .dashboard-metricas {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -515,5 +534,11 @@
   .dashboard-table th,
   .dashboard-table td {
     padding: 13px 16px;
+  }
+}
+
+@media (max-width: 400px) {
+  .dashboard-metricas {
+    grid-template-columns: 1fr;
   }
 }

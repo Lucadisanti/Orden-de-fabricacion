@@ -32,7 +32,8 @@
   --bg-soft: #172236;
   --text-main: #f1f5f9;
   --text-muted: #9fb0c6;
-  --border: #2a3950;
+  --border: #465e7e;
+  --border-panel: #526c90;
   --primary: #60a5fa;
   --primary-soft: #172b49;
   --primary-hover: #93c5fd;
@@ -504,3 +505,38 @@ p {
     --sidebar-width: 100%;
   }
 }
+
+/* Contornos del modo noche: paneles principales y divisiones interiores. */
+:root[data-theme="noche"] .main-content :is(.ui-form-card, .ui-table-card, .dashboard-recientes, .modal-content, .modal-card) {
+  border-color: var(--border-panel);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(147, 197, 253, .08);
+}
+
+:root[data-theme="noche"] :is(.planilla-detalle-compacto, .recepcion-detalle-compacto, .uso-detalle-compacto, .planilla-desglose-bloque, .trazabilidad-inyectora) {
+  border-color: var(--border-panel);
+}
+
+:root[data-theme="noche"] :is(.planilla-jornada, .trazabilidad-jornada, .planificacion-referencia, .trazabilidad-materiales-tabla, .recepcion-observaciones, .trazabilidad-detalle-header) {
+  border-color: var(--border);
+}
+
+:root[data-theme="noche"] :is(.planilla-acordeon, .trazabilidad-acordeon):not(:hover):not(.activo) {
+  border-color: var(--border-panel);
+}
+
+:root[data-theme="noche"] .main-content :is(input, select, textarea):not(:disabled):not(:focus) {
+  border-color: #587292;
+}
+
+:root[data-theme="noche"] .main-content :is(.ui-data-table, .dashboard-table) :is(th, td) {
+  border-color: #394e6b;
+}
+
+:root[data-theme="noche"] .main-content :is(.produccion-inyectora-grid, .produccion-articulo, .produccion-detalle-cabecera > div, .trazabilidad-planilla-meta > div, .trazabilidad-etapas > div, .planilla-detalle-meta) {
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+}
+
+:root[data-theme="noche"] .main-content .inspeccion-badge.inspeccion-conforme { border-color: #38c98a; background: #124b38; color: #9ff5c4; }
+:root[data-theme="noche"] .main-content .inspeccion-badge.inspeccion-no-conforme { border-color: #fb7185; background: #612737; color: #ffd0d7; }
+:root[data-theme="noche"] .main-content .inspeccion-badge.inspeccion-pendiente { border-color: #eebf43; background: #554010; color: #ffe795; }

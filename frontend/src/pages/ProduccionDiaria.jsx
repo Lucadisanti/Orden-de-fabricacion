@@ -329,7 +329,7 @@ export default function ProduccionDiaria() {
       <datalist id="ordenes-pendientes-produccion">{ordenes.filter((orden) => Number(orden.total_pendiente) > 0).map((orden) => <option key={orden.id_orden} value={etiquetaOrden(orden)} />)}</datalist>
 
       <div className={`produccion-historial${formularioAbierto ? " produccion-historial-separado" : ""}`}>
-        <div className="produccion-historial-header"><div><h2>Producciones registradas</h2><p>Consultá el historial de producción guardado.</p></div><div className="ui-sort-controls produccion-historial-filtros">
+        <div className="produccion-historial-header">{formularioAbierto && <div><h2>Producciones registradas</h2><p>Consultá el historial de producción guardado.</p></div>}<div className="ui-sort-controls produccion-historial-filtros">
           <label className="ui-filter-select"><span>Ordenar por</span><select value={ordenHistorial} onChange={(evento) => setOrdenHistorial(evento.target.value)}><option value="fecha">Fecha</option><option value="orden">Orden</option><option value="producto">Producto</option><option value="inyectora">Inyectora</option><option value="total">Total de pares</option></select></label>
           <button type="button" className="ui-btn ui-sort-direction" onClick={() => setDireccionHistorial((actual) => actual === "asc" ? "desc" : "asc")}>{direccionHistorial === "asc" ? "↑ Ascendente" : "↓ Descendente"}</button>
           <label className="ui-filter-select"><span>Agrupar por</span><select value={grupoHistorial} onChange={(evento) => setGrupoHistorial(evento.target.value)}><option value="">Sin agrupar</option><option value="inyectora">Inyectora</option><option value="producto">Producto</option></select></label>

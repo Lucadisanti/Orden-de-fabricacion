@@ -11,6 +11,7 @@ const enlaces = [
   ["/produccion-diaria", "Producción diaria"],
   ["/uso-materiales", "Uso Materiales"],
   ["/trazabilidad", "Trazabilidad"],
+  ["/estadisticas", "Estadísticas"],
 ];
 
 const enlacesDatosGenerales = [

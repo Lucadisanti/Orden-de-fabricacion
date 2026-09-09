@@ -10,6 +10,8 @@
 .ordenes-listado-tabla .ui-status-badge { max-width: 100%; box-sizing: border-box; white-space: normal; }
 .ordenes-listado-tabla td:last-child .ui-btn { min-width: 0; padding: 8px 10px; margin: 3px 0 3px 5px; }
 .ordenes-listado-tabla .orden-detalle-chips { flex-wrap: wrap; }
+.ordenes .ui-table-card > .ordenes-listado-tabla > thead > tr > th:nth-child(4),
+.ordenes .ui-table-card > .ordenes-listado-tabla > tbody > tr > td:nth-child(4) { white-space: nowrap; overflow-wrap: normal; padding-left: 6px; padding-right: 6px; }
 .orden-detalle-resumen { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 16px 24px; min-width: 0; }
 .orden-responsables { display: flex; flex-wrap: wrap; gap: 12px 24px; min-width: 0; }
 .orden-responsables > div { min-width: 0; }

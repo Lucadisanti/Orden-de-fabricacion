@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 
 import Dashboard from "./pages/Dashboard";
+import Estadisticas from "./pages/Estadisticas";
 import Productos from "./pages/Productos";
 import Proveedores from "./pages/Proveedores";
 import Materiales from "./pages/Materiales";
@@ -29,6 +30,7 @@ function App() {
         <main className="main-content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/estadisticas" element={<Estadisticas />} />
             <Route path="/productos" element={<Productos />} />
             <Route path="/proveedores" element={<Proveedores />} />
             <Route path="/recepcion-materiales" element={<RecepcionMateriales />}/>

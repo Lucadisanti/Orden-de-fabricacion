@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { formatearFecha } from "../utils/dateFormat";
+import { fechaLocal } from "../utils/estadisticas";
 import "../styles/Dashboard.css";
 
 const API_URL = "/api";
@@ -54,7 +55,7 @@ function comoNumero(valor) {
 }
 
 function fechaISOHoy() {
-  return new Date().toISOString().slice(0, 10);
+  return fechaLocal();
 }
 
 function normalizarFechaISO(fecha = "") {

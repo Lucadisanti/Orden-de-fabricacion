@@ -7,6 +7,7 @@ import CatalogModal from "../components/CatalogModal";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { formatearFecha } from "../utils/dateFormat";
+import { fechaLocal } from "../utils/estadisticas";
 import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/ProduccionDiaria.css";
 
@@ -36,7 +37,7 @@ export default function ProduccionDiaria() {
   const [detallesHistorial, setDetallesHistorial] = useState({});
   const [altaMaquinaBloque, setAltaMaquinaBloque] = useState(null);
   const [altaCatalogo, setAltaCatalogo] = useState(null);
-  const [form, setForm] = useState({ fecha: new Date().toISOString().slice(0, 10), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
+  const [form, setForm] = useState({ fecha: fechaLocal(), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
   const [bloques, setBloques] = useState([nuevoBloque()]);
   const historialOrdenado = useMemo(() => [...historial].sort((a, b) => {
     if (grupoHistorial) {

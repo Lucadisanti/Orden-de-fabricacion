@@ -17,6 +17,9 @@ export default function UsoMateriales() {
   const [planillas, setPlanillas] = useState([]);
   const [lotes, setLotes] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const envioEnCurso = useRef(false);
+  const versionFormulario = useRef(0);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
@@ -84,6 +87,7 @@ export default function UsoMateriales() {
   };
 
   const abrirFormularioNuevo = () => {
+    versionFormulario.current += 1;
     setEditando(false);
     setIdEditando(null);
     setForm({
@@ -96,6 +100,7 @@ export default function UsoMateriales() {
   };
 
   const iniciarEdicion = (uso) => {
+    versionFormulario.current += 1;
     setEditando(true);
     setIdEditando(uso.id_uso);
 
@@ -115,6 +120,7 @@ export default function UsoMateriales() {
 
   const guardarUsoMaterial = async (e) => {
     e.preventDefault();
+    if (envioEnCurso.current) return;
 
     const datos = {
       lote_materiales_id_lote: Number(form.lote_materiales_id_lote),
@@ -123,6 +129,10 @@ export default function UsoMateriales() {
       ),
       cantidad_usada: Number(form.cantidad_usada),
     };
+
+    envioEnCurso.current = true;
+    setGuardando(true);
+    const versionEnviada = versionFormulario.current;
 
     try {
       if (editando) {
@@ -138,19 +148,25 @@ export default function UsoMateriales() {
         mostrarToast("success", "Uso registrado", "El material utilizado se registró correctamente.");
       }
 
-      setForm({
-        lote_materiales_id_lote: "",
-        planilla_produccion_id_planilla: "",
-        cantidad_usada: "",
-      });
+      // Una respuesta anterior no debe cerrar otro formulario recién abierto.
+      if (versionFormulario.current === versionEnviada) {
+        setForm({
+          lote_materiales_id_lote: "",
+          planilla_produccion_id_planilla: "",
+          cantidad_usada: "",
+        });
 
-      setEditando(false);
-      setIdEditando(null);
-      setMostrarFormulario(false);
+        setEditando(false);
+        setIdEditando(null);
+        setMostrarFormulario(false);
+      }
       cargarDatos();
     } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "uso de material"));
+    } finally {
+      envioEnCurso.current = false;
+      setGuardando(false);
     }
   };
 
@@ -252,63 +268,73 @@ export default function UsoMateriales() {
           <h2>{editando ? "Editar uso de material" : "Nuevo uso de material"}</h2>
 
           <form onSubmit={guardarUsoMaterial} className="form-uso-material">
-            <select
-              name="planilla_produccion_id_planilla"
-              value={form.planilla_produccion_id_planilla}
-              onChange={manejarCambio}
-              required
-            >
-              <option value="">Seleccione planilla</option>
+            <label>
+              <span>Planilla</span>
+              <select
+                name="planilla_produccion_id_planilla"
+                value={form.planilla_produccion_id_planilla}
+                onChange={manejarCambio}
+                required
+              >
+                <option value="">Seleccione planilla</option>
 
-              {planillas.map((planilla) => (
-                <option key={planilla.id_planilla} value={planilla.id_planilla}>
-                  {planilla.numero_planilla} - Orden{" "}
-                  {planilla.numero_orden || planilla.orden || "-"}
-                </option>
-              ))}
-            </select>
+                {planillas.map((planilla) => (
+                  <option key={planilla.id_planilla} value={planilla.id_planilla}>
+                    {planilla.numero_planilla} - Orden{" "}
+                    {planilla.numero_orden || planilla.orden || "-"}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-            <select
-              name="lote_materiales_id_lote"
-              value={form.lote_materiales_id_lote}
-              onChange={manejarCambio}
-              required
-            >
-              <option value="">Seleccione material recibido</option>
+            <label>
+              <span>Material recibido</span>
+              <select
+                name="lote_materiales_id_lote"
+                value={form.lote_materiales_id_lote}
+                onChange={manejarCambio}
+                required
+              >
+                <option value="">Seleccione material recibido</option>
 
-              {lotes.map((lote) => (
-                <option
-                  key={lote.id_lote_materiales || lote.id_lote}
-                  value={lote.id_lote_materiales || lote.id_lote}
-                >
-                  Remito {lote.numero_remito || "-"} -{" "}
-                  {lote.nombre_proveedor || lote.proveedor || "Proveedor"} -{" "}
-                  {lote.material || "Material"}{" "}
-                  {lote.color ? `(${lote.color})` : ""} - Recibido:{" "}
-                  {lote.cantidad_recibida ?? "-"}
-                </option>
-              ))}
-            </select>
+                {lotes.map((lote) => (
+                  <option
+                    key={lote.id_lote_materiales || lote.id_lote}
+                    value={lote.id_lote_materiales || lote.id_lote}
+                  >
+                    Remito {lote.numero_remito || "-"} -{" "}
+                    {lote.nombre_proveedor || lote.proveedor || "Proveedor"} -{" "}
+                    {lote.material || "Material"}{" "}
+                    {lote.color ? `(${lote.color})` : ""} - Recibido:{" "}
+                    {lote.cantidad_recibida ?? "-"}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-            <input
-              type="number"
-              step="0.01"
-              name="cantidad_usada"
-              placeholder="Cantidad usada"
-              value={form.cantidad_usada}
-              onChange={manejarCambio}
-              required
-            />
+            <label>
+              <span>Cantidad usada</span>
+              <input
+                type="number"
+                step="0.01"
+                name="cantidad_usada"
+                placeholder="Cantidad usada"
+                value={form.cantidad_usada}
+                onChange={manejarCambio}
+                required
+              />
+            </label>
 
             <div className="ui-form-actions">
-              <button type="submit" className="ui-btn ui-btn-primary">
-                {editando ? "Actualizar" : "Guardar"}
+              <button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>
+                {guardando ? (editando ? "Actualizando..." : "Guardando...") : (editando ? "Actualizar" : "Guardar")}
               </button>
 
               <button
                 type="button"
                 className="ui-btn ui-btn-secondary"
                 onClick={() => {
+                  versionFormulario.current += 1;
                   setMostrarFormulario(false);
                   setEditando(false);
                   setIdEditando(null);

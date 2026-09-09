@@ -88,6 +88,11 @@ export default function Materiales() {
 
     const nombreMaterial = materialForm.material.trim();
 
+    if (!nombreMaterial) {
+      mostrarToast("warning", "Falta el nombre", "Ingresá el nombre del material.");
+      return;
+    }
+
     const repetido = materiales.some(
       (material) =>
         material.material.trim().toLowerCase() === nombreMaterial.toLowerCase() &&
@@ -217,14 +222,17 @@ export default function Materiales() {
           <h2>{editando ? "Editar material" : "Nuevo material"}</h2>
 
           <form onSubmit={guardarMaterial} className="form-producto">
-            <input
-              type="text"
-              name="material"
-              placeholder="Nombre del material"
-              value={materialForm.material}
-              onChange={manejarCambio}
-              required
-            />
+            <label>
+              <span>Nombre del material</span>
+              <input
+                type="text"
+                name="material"
+                placeholder="Nombre del material"
+                value={materialForm.material}
+                onChange={manejarCambio}
+                required
+              />
+            </label>
 
             <div className="ui-form-actions">
               <button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>

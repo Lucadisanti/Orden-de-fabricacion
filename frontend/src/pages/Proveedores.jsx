@@ -98,6 +98,11 @@ export default function Proveedores() {
     const cuit = proveedorForm.cuit.trim();
     const email = proveedorForm.email.trim();
 
+    if (!nombre) {
+      mostrarToast("warning", "Falta el nombre", "Ingresá el nombre del proveedor.");
+      return;
+    }
+
     const repetido = proveedores.some(
       (proveedor) =>
         proveedor.id_proveedor !== idEditando &&
@@ -239,23 +244,35 @@ export default function Proveedores() {
           <h2>{editando ? "Editar proveedor" : "Nuevo proveedor"}</h2>
 
           <form onSubmit={guardarProveedor} className="form-proveedor">
-            <input
-              type="text"
-              name="nombre_proveedor"
-              placeholder="Nombre del proveedor"
-              value={proveedorForm.nombre_proveedor}
-              onChange={manejarCambio}
-              required
-            />
-            <input type="text" name="cuit" placeholder="CUIT" value={proveedorForm.cuit} onChange={manejarCambio} />
-            <input
-              type="text"
-              name="telefono"
-              placeholder="Teléfono"
-              value={proveedorForm.telefono}
-              onChange={manejarCambio}
-            />
-            <input type="email" name="email" placeholder="Email" value={proveedorForm.email} onChange={manejarCambio} />
+            <label>
+              <span>Nombre del proveedor</span>
+              <input
+                type="text"
+                name="nombre_proveedor"
+                placeholder="Nombre del proveedor"
+                value={proveedorForm.nombre_proveedor}
+                onChange={manejarCambio}
+                required
+              />
+            </label>
+            <label>
+              <span>CUIT</span>
+              <input type="text" name="cuit" placeholder="CUIT" value={proveedorForm.cuit} onChange={manejarCambio} />
+            </label>
+            <label>
+              <span>Teléfono</span>
+              <input
+                type="text"
+                name="telefono"
+                placeholder="Teléfono"
+                value={proveedorForm.telefono}
+                onChange={manejarCambio}
+              />
+            </label>
+            <label>
+              <span>Email</span>
+              <input type="email" name="email" placeholder="Email" value={proveedorForm.email} onChange={manejarCambio} />
+            </label>
 
             <div className="ui-form-actions">
               <button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>

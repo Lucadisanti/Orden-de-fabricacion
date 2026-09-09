@@ -6,6 +6,11 @@ from utils.db_helpers import serializar_filas
 
 def _asegurar_esquema_variantes(cursor):
     """Actualiza instalaciones existentes antes de guardar la primera variante."""
+    for campo in ("lote_puntera_id", "lote_pu_id"):
+        cursor.execute("SELECT IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='produccion_diaria_linea' AND COLUMN_NAME=%s", (campo,))
+        columna = cursor.fetchone()
+        if columna and columna["IS_NULLABLE"] == "NO":
+            cursor.execute(f"ALTER TABLE produccion_diaria_linea MODIFY {campo} INT NULL")
     cursor.execute("""
       CREATE TABLE IF NOT EXISTS producto_variante (
         id_variante INT AUTO_INCREMENT PRIMARY KEY,
@@ -201,14 +206,14 @@ def detalle_linea_produccion(id_linea):
           INNER JOIN producto prod ON prod.id_producto=ofab.producto_id_producto
           LEFT JOIN producto_variante pv ON pv.id_variante=pdl.producto_variante_id_variante
           LEFT JOIN punteras pt ON pt.id_puntera=pv.punteras_id_puntera
-          INNER JOIN lote_materiales lp ON lp.id_lote=pdl.lote_puntera_id
-          INNER JOIN materiales mp ON mp.id_material=lp.materiales_id_material
+          LEFT JOIN lote_materiales lp ON lp.id_lote=pdl.lote_puntera_id
+          LEFT JOIN materiales mp ON mp.id_material=lp.materiales_id_material
           LEFT JOIN colores cp ON cp.id_color=lp.colores_id_color
-          INNER JOIN remitos rp ON rp.id_remito=lp.remitos_id_remito
-          INNER JOIN lote_materiales lu ON lu.id_lote=pdl.lote_pu_id
-          INNER JOIN materiales mu ON mu.id_material=lu.materiales_id_material
+          LEFT JOIN remitos rp ON rp.id_remito=lp.remitos_id_remito
+          LEFT JOIN lote_materiales lu ON lu.id_lote=pdl.lote_pu_id
+          LEFT JOIN materiales mu ON mu.id_material=lu.materiales_id_material
           LEFT JOIN colores cu ON cu.id_color=lu.colores_id_color
-          INNER JOIN remitos ru ON ru.id_remito=lu.remitos_id_remito
+          LEFT JOIN remitos ru ON ru.id_remito=lu.remitos_id_remito
           WHERE pdl.id_linea=%s
         """, (id_linea,))
         detalle = cursor.fetchone()
@@ -263,16 +268,16 @@ def desglose_por_planilla(id_planilla):
             INNER JOIN detalle_produccion_diaria dpd ON dpd.linea_id = pdl.id_linea
             LEFT JOIN producto_variante pv ON pv.id_variante=pdl.producto_variante_id_variante
             LEFT JOIN punteras pt ON pt.id_puntera=pv.punteras_id_puntera
-            INNER JOIN lote_materiales lp ON lp.id_lote = pdl.lote_puntera_id
-            INNER JOIN materiales mp ON mp.id_material = lp.materiales_id_material
+            LEFT JOIN lote_materiales lp ON lp.id_lote = pdl.lote_puntera_id
+            LEFT JOIN materiales mp ON mp.id_material = lp.materiales_id_material
             LEFT JOIN colores cp ON cp.id_color = lp.colores_id_color
-            INNER JOIN remitos rp ON rp.id_remito = lp.remitos_id_remito
-            INNER JOIN proveedores provp ON provp.id_proveedor = rp.proveedores_id_proveedor
-            INNER JOIN lote_materiales lu ON lu.id_lote = pdl.lote_pu_id
-            INNER JOIN materiales mu ON mu.id_material = lu.materiales_id_material
+            LEFT JOIN remitos rp ON rp.id_remito = lp.remitos_id_remito
+            LEFT JOIN proveedores provp ON provp.id_proveedor = rp.proveedores_id_proveedor
+            LEFT JOIN lote_materiales lu ON lu.id_lote = pdl.lote_pu_id
+            LEFT JOIN materiales mu ON mu.id_material = lu.materiales_id_material
             LEFT JOIN colores cu ON cu.id_color = lu.colores_id_color
-            INNER JOIN remitos ru ON ru.id_remito = lu.remitos_id_remito
-            INNER JOIN proveedores provu ON provu.id_proveedor = ru.proveedores_id_proveedor
+            LEFT JOIN remitos ru ON ru.id_remito = lu.remitos_id_remito
+            LEFT JOIN proveedores provu ON provu.id_proveedor = ru.proveedores_id_proveedor
             WHERE pdl.planilla_produccion_id_planilla = %s
             ORDER BY pd.fecha, pdl.id_linea, CAST(dpd.talle AS UNSIGNED)
             """,
@@ -342,9 +347,9 @@ def desglose_por_planilla(id_planilla):
                         jornada[campo].append(nombre)
             puntera = {"material": fila["material_puntera"], "color": fila["color_puntera"], "remito": fila["remito_puntera"], "proveedor": fila["proveedor_puntera"]}
             pu = {"material": fila["material_pu"], "color": fila["color_pu"], "remito": fila["remito_pu"], "proveedor": fila["proveedor_pu"]}
-            if puntera not in jornada["punteras"]:
+            if fila["lote_puntera_id"] and puntera not in jornada["punteras"]:
                 jornada["punteras"].append(puntera)
-            if pu not in jornada["pus"]:
+            if fila["lote_pu_id"] and pu not in jornada["pus"]:
                 jornada["pus"].append(pu)
             talle = str(fila["talle"])
             cantidad = int(fila["cantidad_pares"] or 0)
@@ -418,8 +423,8 @@ def actualizar_linea_produccion(id_linea):
             raise ValueError("Indicá la observación de la no conformidad.")
         id_maquina = int(data.get("maquinas_id_maquina"))
         id_tipo_puntera = int(linea.get("punteras_id_puntera"))
-        id_lote_puntera = int(linea.get("lote_puntera_id"))
-        id_lote_pu = int(linea.get("lote_pu_id"))
+        id_lote_puntera = int(linea.get("lote_puntera_id") or 0) or None
+        id_lote_pu = int(linea.get("lote_pu_id") or 0) or None
         adicionales = linea.get("adicionales") or []
         extras = linea.get("materiales_extra") or []
         talles = [(str(item.get("talle")), int(item.get("cantidad_pares") or 0)) for item in linea.get("talles") or []]
@@ -540,16 +545,16 @@ def crear_produccion_diaria():
                     raise ValueError("Indicá la observación de cada producción no conforme.")
                 id_orden = int(linea.get("orden_fabricacion_id_orden"))
                 id_tipo_puntera = int(linea.get("punteras_id_puntera"))
-                id_puntera = int(linea.get("lote_puntera_id"))
-                id_pu = int(linea.get("lote_pu_id"))
+                id_puntera = int(linea.get("lote_puntera_id") or 0) or None
+                id_pu = int(linea.get("lote_pu_id") or 0) or None
                 materiales_extra = linea.get("materiales_extra") or []
                 adicionales_linea = linea.get("adicionales") or []
                 for material in materiales_extra:
                     if int(material.get("lote_id") or 0) <= 0: raise ValueError("Cada material adicional debe tener un remito seleccionado.")
                 talles = [(str(item.get("talle")), int(item.get("cantidad_pares") or 0)) for item in linea.get("talles") or []]
                 talles = [(talle, cantidad) for talle, cantidad in talles if cantidad > 0]
-                if id_orden <= 0 or id_tipo_puntera <= 0 or id_puntera <= 0 or id_pu <= 0 or not talles:
-                    raise ValueError("Cada orden debe incluir talles, puntera y PU.")
+                if id_orden <= 0 or id_tipo_puntera <= 0 or not talles:
+                    raise ValueError("Cada orden debe incluir talles y tipo de puntera.")
                 lineas.append((id_orden, id_tipo_puntera, id_puntera, id_pu, adicionales_linea, materiales_extra, talles, estado_inspeccion, observacion_inspeccion))
             if not lineas:
                 raise ValueError("Cada inyectora debe tener al menos una orden.")
@@ -690,7 +695,7 @@ def crear_produccion_diaria():
                 for material in materiales_extra:
                     cursor.execute("INSERT INTO produccion_diaria_linea_material (linea_id,lote_materiales_id_lote,rol) VALUES (%s,%s,'Otro material')", (id_linea, int(material["lote_id"])))
 
-                for id_lote in (id_puntera, id_pu, *[int(material["lote_id"]) for material in materiales_extra]):
+                for id_lote in filter(None, (id_puntera, id_pu, *[int(material["lote_id"]) for material in materiales_extra])):
                     cursor.execute(
                         "SELECT 1 FROM uso_materiales WHERE planilla_produccion_id_planilla = %s AND lote_materiales_id_lote = %s LIMIT 1",
                         (id_planilla, id_lote),

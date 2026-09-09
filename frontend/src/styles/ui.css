@@ -74,6 +74,18 @@
   border-spacing: 0;
 }
 
+.ui-table-card > .ui-data-table.ui-listado-ajustado { width: 100%; min-width: 0; table-layout: fixed; }
+.ui-table-card > .ui-listado-ajustado > thead > tr > th,
+.ui-table-card > .ui-listado-ajustado > tbody > tr > td { min-width: 0; padding: 12px 10px; white-space: normal; overflow-wrap: anywhere; }
+.ui-table-card > .ui-listado-ajustado > thead > tr > th + th,
+.ui-table-card > .ui-listado-ajustado > tbody > tr > td + td,
+.dashboard-table > thead > tr > th + th,
+.dashboard-table > tbody > tr > td + td,
+.trazabilidad-ordenes-table > thead > tr > th + th,
+.trazabilidad-ordenes-table > tbody > tr > td + td { border-left: 1px solid var(--border); }
+.ui-listado-ajustado .ui-status-badge { max-width: 100%; box-sizing: border-box; white-space: normal; }
+.ui-listado-ajustado > tbody > tr > td:last-child .ui-btn { min-width: 0; padding: 8px 10px; }
+
 .ui-data-table th {
   position: sticky;
   top: 0;

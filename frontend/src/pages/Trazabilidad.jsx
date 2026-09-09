@@ -333,8 +333,8 @@ export default function Trazabilidad() {
 
     tituloSeccion("Datos generales de la orden");
     tabla(
-      ["Articulo", "Producto", "Color", "Fecha de corte", "Estado", "Pares solicitados"],
-      [[valor(ordenSeleccionada.articulo_producto), valor(ordenSeleccionada.producto || ordenSeleccionada.nombre_producto), valor(ordenSeleccionada.color), formatearFecha(ordenSeleccionada.fecha), mostrarEstado(ordenSeleccionada.estado), valor(totalPlanificado)]],
+      ["Articulo", "Producto", "Color", "Estado", "Pares solicitados"],
+      [[valor(ordenSeleccionada.articulo_producto), valor(ordenSeleccionada.producto || ordenSeleccionada.nombre_producto), valor(ordenSeleccionada.color), mostrarEstado(ordenSeleccionada.estado), valor(totalPlanificado)]],
       { alternateRowStyles: {}, pageBreak: "avoid" }
     );
 

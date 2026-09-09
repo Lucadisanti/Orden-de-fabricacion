@@ -332,7 +332,7 @@ export default function UsoMateriales() {
           />
         </div>
         <div ref={listadoRef} className="ui-table-card listado-desplegable">
-          <table className="ui-data-table">
+          <table className="ui-data-table ui-listado-ajustado"><colgroup>{[12,22,22,12,14,18].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
               <tr>
                 <th>Remito</th>

@@ -14,6 +14,9 @@ const API_URL = "/api";
 export default function Proveedores() {
   const [proveedores, setProveedores] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const envioEnCurso = useRef(false);
+  const versionFormulario = useRef(0);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
@@ -65,6 +68,7 @@ export default function Proveedores() {
   };
 
   const abrirFormularioNuevo = () => {
+    versionFormulario.current += 1;
     setEditando(false);
     setIdEditando(null);
     setProveedorForm({ nombre_proveedor: "", cuit: "", telefono: "", email: "" });
@@ -73,6 +77,7 @@ export default function Proveedores() {
   };
 
   const iniciarEdicion = (proveedor) => {
+    versionFormulario.current += 1;
     setEditando(true);
     setIdEditando(proveedor.id_proveedor);
     setProveedorForm({
@@ -87,6 +92,7 @@ export default function Proveedores() {
 
   const guardarProveedor = async (e) => {
     e.preventDefault();
+    if (envioEnCurso.current) return;
 
     const nombre = proveedorForm.nombre_proveedor.trim();
     const cuit = proveedorForm.cuit.trim();
@@ -116,6 +122,10 @@ export default function Proveedores() {
       email,
     };
 
+    envioEnCurso.current = true;
+    setGuardando(true);
+    const versionEnviada = versionFormulario.current;
+
     try {
       if (editando) {
         await axios.put(`${API_URL}/proveedores/${idEditando}`, datos);
@@ -125,14 +135,20 @@ export default function Proveedores() {
         mostrarToast("success", "Proveedor creado", "El proveedor se agregó correctamente.");
       }
 
-      setProveedorForm({ nombre_proveedor: "", cuit: "", telefono: "", email: "" });
-      setEditando(false);
-      setIdEditando(null);
-      setMostrarFormulario(false);
+      // Una respuesta anterior no debe cerrar otro formulario recién abierto.
+      if (versionFormulario.current === versionEnviada) {
+        setProveedorForm({ nombre_proveedor: "", cuit: "", telefono: "", email: "" });
+        setEditando(false);
+        setIdEditando(null);
+        setMostrarFormulario(false);
+      }
       cargarProveedores();
     } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "proveedor"));
+    } finally {
+      envioEnCurso.current = false;
+      setGuardando(false);
     }
   };
 
@@ -242,13 +258,14 @@ export default function Proveedores() {
             <input type="email" name="email" placeholder="Email" value={proveedorForm.email} onChange={manejarCambio} />
 
             <div className="ui-form-actions">
-              <button type="submit" className="ui-btn ui-btn-primary">
-                {editando ? "Actualizar" : "Guardar"}
+              <button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>
+                {guardando ? (editando ? "Actualizando..." : "Guardando...") : (editando ? "Actualizar" : "Guardar")}
               </button>
               <button
                 type="button"
                 className="ui-btn ui-btn-secondary"
                 onClick={() => {
+                  versionFormulario.current += 1;
                   setMostrarFormulario(false);
                   setEditando(false);
                   setIdEditando(null);

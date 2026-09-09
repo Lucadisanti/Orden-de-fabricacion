@@ -14,6 +14,9 @@ const API_URL = "/api";
 export default function Materiales() {
   const [materiales, setMateriales] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const envioEnCurso = useRef(false);
+  const versionFormulario = useRef(0);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
@@ -62,6 +65,7 @@ export default function Materiales() {
   };
 
   const abrirFormularioNuevo = () => {
+    versionFormulario.current += 1;
     setEditando(false);
     setIdEditando(null);
     setMaterialForm({ material: "" });
@@ -70,6 +74,7 @@ export default function Materiales() {
   };
 
   const iniciarEdicion = (material) => {
+    versionFormulario.current += 1;
     setEditando(true);
     setIdEditando(material.id_material);
     setMaterialForm({ material: material.material });
@@ -79,6 +84,7 @@ export default function Materiales() {
 
   const guardarMaterial = async (e) => {
     e.preventDefault();
+    if (envioEnCurso.current) return;
 
     const nombreMaterial = materialForm.material.trim();
 
@@ -97,6 +103,10 @@ export default function Materiales() {
       return;
     }
 
+    envioEnCurso.current = true;
+    setGuardando(true);
+    const versionEnviada = versionFormulario.current;
+
     try {
       const datos = { material: nombreMaterial };
 
@@ -108,14 +118,20 @@ export default function Materiales() {
         mostrarToast("success", "Material creado", "El material se agregó correctamente.");
       }
 
-      setMaterialForm({ material: "" });
-      setEditando(false);
-      setIdEditando(null);
-      setMostrarFormulario(false);
+      // Una respuesta anterior no debe cerrar otro formulario recién abierto.
+      if (versionFormulario.current === versionEnviada) {
+        setMaterialForm({ material: "" });
+        setEditando(false);
+        setIdEditando(null);
+        setMostrarFormulario(false);
+      }
       cargarMateriales();
     } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "material"));
+    } finally {
+      envioEnCurso.current = false;
+      setGuardando(false);
     }
   };
 
@@ -211,14 +227,15 @@ export default function Materiales() {
             />
 
             <div className="ui-form-actions">
-              <button type="submit" className="ui-btn ui-btn-primary">
-                {editando ? "Actualizar" : "Guardar"}
+              <button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>
+                {guardando ? (editando ? "Actualizando..." : "Guardando...") : (editando ? "Actualizar" : "Guardar")}
               </button>
 
               <button
                 type="button"
                 className="ui-btn ui-btn-secondary"
                 onClick={() => {
+                  versionFormulario.current += 1;
                   setMostrarFormulario(false);
                   setEditando(false);
                   setIdEditando(null);

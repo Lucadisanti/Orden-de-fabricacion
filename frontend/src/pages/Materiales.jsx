@@ -1,3 +1,4 @@
+import SeparadorListado from "../components/SeparadorListado";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
@@ -230,6 +231,8 @@ export default function Materiales() {
         </div>
       )}
 
+      {(mostrarFormulario) && <SeparadorListado titulo="Materiales registrados" descripcion="Consultá los materiales guardados." />}
+
       {cargando && <p>Cargando materiales...</p>}
       {error && <p>{error}</p>}
 
@@ -253,7 +256,7 @@ export default function Materiales() {
         ) : (
           <>
             <div className="ui-table-card">
-              <table className="ui-data-table">
+              <table className="ui-data-table ui-listado-ajustado"><colgroup>{[75,25].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
                 <thead>
                   <tr>
                     <th>Material</th>

@@ -72,9 +72,9 @@ const secciones = {
     ruta: "/productos",
     endpoint: "/productos/",
     id: "id_producto",
-    columnas: ["Artículo", "Producto", "Color"],
+    columnas: ["Código base", "Producto", "Color"],
     celdas: (item) => [
-      item.articulo_producto || item.codigo_base || "-",
+      String(item.articulo_producto || item.codigo_base || "").replace(/^\s*BASE\s*[-\u2010-\u2015]\s*/i, "") || "-",
       item.nombre_producto || item.producto || "-",
       item.color || "Sin color",
     ],
@@ -96,10 +96,11 @@ const secciones = {
     id: "id_orden",
     accion: "Ver orden →",
     detalleRuta: (item) => `/ordenes?seleccion=${item.id_orden}`,
-    columnas: ["N.º de orden", "Producto", "Fecha", "Estado"],
+    columnas: ["N.º de orden", "Producto", "Color", "Fecha", "Estado"],
     celdas: (item) => [
       item.numero_orden || "-",
       item.producto || item.nombre_producto || "-",
+      item.color || "-",
       formatearFecha(item.fecha),
       <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>,
     ],
@@ -110,11 +111,12 @@ const secciones = {
     id: "id_planilla",
     accion: "Abrir detalle →",
     detalleRuta: (item) => `/planillas?seleccion=${item.id_planilla}`,
-    columnas: ["N.º de planilla", "Orden", "Tipo", "Fecha", "Estado"],
+    columnas: ["N.º de planilla", "Orden", "Producto", "Color", "Fecha", "Estado"],
     celdas: (item) => [
       item.numero_planilla || "-",
       item.numero_orden || item.orden || "-",
-      item.tipo_planilla || "-",
+      item.producto || item.nombre_producto || "-",
+      item.color || "-",
       formatearFecha(item.fecha),
       <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>,
     ],
@@ -225,7 +227,10 @@ export default function Dashboard() {
     try {
       const configuracion = secciones[clave];
       const { data } = await axios.get(`${API_URL}${configuracion.endpoint}`);
+      const ordenesRelacionadas = clave === "planillas" ? (await axios.get(`${API_URL}/ordenes/`)).data : [];
       const recientes = [...(Array.isArray(data) ? data : [])]
+        .map((item) => clave === "planillas" ? { ...item, color: item.color || ordenesRelacionadas.find((orden) => Number(orden.id_orden) === Number(item.orden_fabricacion_id_orden))?.color } : item)
+        .filter((item) => clave !== "planillas" || String(item.numero_planilla || "").trim().toUpperCase() === "R013/1")
         .sort((a, b) => Number(b[configuracion.id] || 0) - Number(a[configuracion.id] || 0))
         .slice(0, 4);
 
@@ -286,7 +291,7 @@ export default function Dashboard() {
       <div className="dashboard-recientes-header">
         <div>
           <span>Actividad reciente</span>
-          <h2>Últimos {itemActivo?.titulo.toLowerCase()}</h2>
+          <h2>{["ordenes", "planillas"].includes(seccionActiva) ? "Últimas" : "Últimos"} {itemActivo?.titulo.toLowerCase()}</h2>
         </div>
         <Link className="ui-btn ui-btn-primary dashboard-ver-todos" to={configuracionActiva.ruta}>
           Ver todos →

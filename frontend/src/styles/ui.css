@@ -2,6 +2,16 @@
   --ui-transition: 0.16s ease;
 }
 
+.ui-separador-listado,
+.produccion-historial.produccion-historial-separado {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 2px solid color-mix(in srgb, var(--text-muted) 50%, var(--border));
+}
+.ui-separador-listado { margin-bottom: 20px; }
+.ui-separador-listado h2 { margin: 0; }
+.ui-separador-listado p { margin: 6px 0 0; color: var(--text-muted); font-size: 14px; }
+
 .ui-page-header {
   display: flex;
   flex-direction: column;
@@ -63,6 +73,18 @@
   border-collapse: separate;
   border-spacing: 0;
 }
+
+.ui-table-card > .ui-data-table.ui-listado-ajustado { width: 100%; min-width: 0; table-layout: fixed; }
+.ui-table-card > .ui-listado-ajustado > thead > tr > th,
+.ui-table-card > .ui-listado-ajustado > tbody > tr > td { min-width: 0; padding: 12px 10px; white-space: normal; overflow-wrap: anywhere; }
+.ui-table-card > .ui-listado-ajustado > thead > tr > th + th,
+.ui-table-card > .ui-listado-ajustado > tbody > tr > td + td,
+.dashboard-table > thead > tr > th + th,
+.dashboard-table > tbody > tr > td + td,
+.trazabilidad-ordenes-table > thead > tr > th + th,
+.trazabilidad-ordenes-table > tbody > tr > td + td { border-left: 1px solid var(--border); }
+.ui-listado-ajustado .ui-status-badge { max-width: 100%; box-sizing: border-box; white-space: normal; }
+.ui-listado-ajustado > tbody > tr > td:last-child .ui-btn { min-width: 0; padding: 8px 10px; }
 
 .ui-data-table th {
   position: sticky;
@@ -487,7 +509,7 @@ input[type="number"]::-webkit-outer-spin-button {
 .trazabilidad-progreso span { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
 .trazabilidad-cantidad-fija { padding: 5px 8px; border-radius: 7px; background: var(--primary-soft, #eff6ff); color: var(--primary, #2563eb); font-size: 12px; font-weight: 700; text-align: center; }
 .trazabilidad-planilla-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
-.trazabilidad-planilla-meta.sin-inyectora { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.trazabilidad-planilla-meta.sin-inyectora { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .trazabilidad-planilla-meta > div { display: flex; flex-direction: column; gap: 3px; padding: 9px 10px; border-radius: 9px; background: #f8fafc; }
 .trazabilidad-planilla-meta > div > span { color: var(--text-muted); font-size: 11px; font-weight: 700; }
 .trazabilidad-operarios { display: flex; flex-wrap: wrap; gap: 8px; margin: 9px 0 16px; }

@@ -1,3 +1,4 @@
+import SeparadorListado from "../components/SeparadorListado";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -105,6 +106,8 @@ export default function Productos() {
       <div className="articulo-preview"><span>Código base</span><strong>{codigoBase || "Seleccioná modelo y color"}</strong><small>La puntera y los adicionales completarán el artículo en la orden.</small></div>
       <div className="ui-form-actions"><button className="ui-btn ui-btn-primary">Guardar</button><button type="button" className="ui-btn ui-btn-secondary" onClick={cancelar}>Cancelar</button></div>
     </form></div>}
+      {(mostrar) && <SeparadorListado titulo="Productos registrados" descripcion="Consultá los productos guardados." />}
+
     {cargando ? (
       <p>Cargando productos...</p>
     ) : (
@@ -128,7 +131,7 @@ export default function Productos() {
         ) : (
           <>
             <div className="ui-table-card">
-              <table className="ui-data-table">
+              <table className="ui-data-table ui-listado-ajustado"><colgroup>{[36,22,20,22].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
                 <thead>
                   <tr>
                     <th>Producto</th>
@@ -142,7 +145,7 @@ export default function Productos() {
                     <tr key={p.id_producto}>
                       <td>{p.nombre_producto}</td>
                       <td>{p.color || "-"}</td>
-                      <td>{String(p.articulo_producto || "").replace(/^BASE-/, "")}</td>
+                      <td>{String(p.articulo_producto || "").replace(/^\s*BASE\s*[-\u2010-\u2015]\s*/i, "")}</td>
                       <td>
                         <button className="ui-btn ui-btn-secondary" onClick={() => editar(p)}>
                           Editar

@@ -1,3 +1,4 @@
+import SeparadorListado from "../components/SeparadorListado";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -434,7 +435,7 @@ export default function RecepcionMateriales() {
       </div>
 
       {mostrarFormulario && (
-      <div ref={formularioRef} className="ui-form-card">
+      <div ref={formularioRef} className="ui-form-card recepcion-formulario-card">
         <h2>{editando ? "Editar recepción" : "Nueva recepción"}</h2>
 
         <form onSubmit={guardarRecepcion} className="form-recepcion">
@@ -458,19 +459,21 @@ export default function RecepcionMateriales() {
             </label>
 
             <label className="recepcion-campo">
+              <span>Recibido por</span>
+              <input type="text" name="recibido_por" placeholder="Nombre de quien recibe" value={form.recibido_por} onChange={manejarCambio} />
+            </label>
+
+            <label className="recepcion-campo">
               <span>Fecha de solicitud</span>
               <input type="date" name="fecha_solicitud" value={form.fecha_solicitud} onChange={manejarCambio} required />
             </label>
 
             <label className="recepcion-campo">
-              <span>Fecha de entrega (opcional)</span>
+              <span>Fecha de entrega</span>
               <input type="date" name="fecha_entrega" value={form.fecha_entrega} onChange={manejarCambio} />
             </label>
 
-            <label className="recepcion-campo">
-              <span>Recibido por</span>
-              <input type="text" name="recibido_por" placeholder="Nombre de quien recibe" value={form.recibido_por} onChange={manejarCambio} />
-            </label>
+
 
           </div>
 
@@ -536,7 +539,8 @@ export default function RecepcionMateriales() {
 
                 <label className="recepcion-campo">
                   <span>Observaciones (opcional)</span>
-                  <textarea placeholder="Agregue una observación" value={linea.observaciones} onChange={(e) => actualizarLinea(indice, "observaciones", e.target.value)} />
+                  <textarea placeholder="Agregue una observación" maxLength={40} value={linea.observaciones} onChange={(e) => actualizarLinea(indice, "observaciones", e.target.value)} />
+                  <small>{linea.observaciones.length}/40 caracteres</small>
                 </label>
               </div>
             ))}
@@ -574,6 +578,8 @@ export default function RecepcionMateriales() {
 
      
 
+      {(mostrarFormulario) && <SeparadorListado titulo="Recepciones registradas" descripcion="Consultá las recepciones de materiales guardadas." />}
+
       {cargando && <p>Cargando recepciones...</p>}
 
       {error && <p>{error}</p>}
@@ -609,7 +615,7 @@ export default function RecepcionMateriales() {
         ) : (
           <>
         <div ref={listadoRef} className="ui-table-card recepcion-listado-desplegable">
-          <table className="ui-data-table">
+          <table className="ui-data-table ui-listado-ajustado"><colgroup>{[10,20,20,12,10,12,16].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
               <tr>
                 <th>Remito</th>

@@ -284,8 +284,8 @@ def migrate_schema(connection=None):
               bloque_id INT NOT NULL,
               orden_fabricacion_id_orden INT NOT NULL,
               planilla_produccion_id_planilla INT NOT NULL,
-              lote_puntera_id INT NOT NULL,
-              lote_pu_id INT NOT NULL,
+              lote_puntera_id INT NULL,
+              lote_pu_id INT NULL,
               estado_inspeccion VARCHAR(30) NOT NULL DEFAULT 'Pendiente',
               observacion_inspeccion TEXT NULL,
               KEY idx_pdl_bloque (bloque_id),
@@ -316,6 +316,15 @@ def migrate_schema(connection=None):
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
         )
+        if not _column_definition(cursor, "orden_fabricacion", "fecha_aparado"):
+            cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN fecha_aparado DATE NULL")
+            LOGGER.info("Agregada la fecha independiente de aparado.")
+
+        for campo in ("lote_puntera_id", "lote_pu_id"):
+            columna = _column_definition(cursor, "produccion_diaria_linea", campo)
+            if columna and columna["IS_NULLABLE"] == "NO":
+                cursor.execute(f"ALTER TABLE produccion_diaria_linea MODIFY {campo} INT NULL")
+
         if not _column_definition(cursor, "produccion_diaria_linea", "producto_variante_id_variante"):
             cursor.execute("ALTER TABLE produccion_diaria_linea ADD producto_variante_id_variante INT NULL AFTER orden_fabricacion_id_orden")
             cursor.execute("ALTER TABLE produccion_diaria_linea ADD KEY idx_pdl_variante (producto_variante_id_variante)")

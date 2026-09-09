@@ -1,3 +1,4 @@
+import SeparadorListado from "../components/SeparadorListado";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -320,6 +321,8 @@ export default function UsoMateriales() {
         </div>
       )}
 
+      {(mostrarFormulario) && <SeparadorListado titulo="Usos de materiales registrados" descripcion="Consultá los usos de materiales guardados." />}
+
       {cargando && <p>Cargando usos de materiales...</p>}
 
       {error && <p>{error}</p>}
@@ -344,7 +347,7 @@ export default function UsoMateriales() {
         ) : (
           <>
         <div ref={listadoRef} className="ui-table-card listado-desplegable">
-          <table className="ui-data-table">
+          <table className="ui-data-table ui-listado-ajustado"><colgroup>{[12,22,22,12,14,18].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
               <tr>
                 <th>Remito</th>

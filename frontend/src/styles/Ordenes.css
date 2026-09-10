@@ -76,5 +76,8 @@
 :root[data-theme="noche"] .orden-fila-seleccionada td { background: #1d3a61 !important; }
 @media (max-width: 760px) { .orden-datos-grid, .orden-r013-grid, .orden-detalle-meta, .orden-detalle-grupos, .orden-materiales-resumen, .orden-variante-selectores, .orden-resumen-variante { grid-template-columns: 1fr; } .talles-orden-header, .orden-detalle-header { align-items: flex-start; flex-direction: column; } .orden-total-destacado { text-align: left; } .orden-detalle-chips { flex-wrap: wrap; } .orden-detalle-chips > span { flex: 0 1 auto; padding: 6px 8px; } }
 
-.ordenes .orden-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.ordenes .orden-acciones { display: flex; flex-wrap: nowrap; justify-content: flex-end; gap: 5px; width: max-content; margin-left: auto; }
 .ordenes .orden-acciones .ui-btn { margin: 0; padding: 8px; white-space: nowrap; flex-shrink: 0; }
+
+.main-content .ordenes .ordenes-listado-tabla > tbody > tr:not(.orden-detalle-fila) > td { padding: 9px 8px; }
+.main-content .ordenes .ordenes-listado-tabla .orden-acciones .ui-btn { margin: 0; min-height: 32px; padding: 7px 8px; font-size: 12px; }

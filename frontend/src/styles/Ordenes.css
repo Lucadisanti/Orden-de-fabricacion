@@ -79,5 +79,8 @@
 .ordenes .orden-acciones { display: flex; flex-wrap: nowrap; justify-content: flex-end; gap: 5px; width: max-content; margin-left: auto; }
 .ordenes .orden-acciones .ui-btn { margin: 0; padding: 8px; white-space: nowrap; flex-shrink: 0; }
 
-.main-content .ordenes .ordenes-listado-tabla > tbody > tr:not(.orden-detalle-fila) > td { padding: 9px 8px; }
-.main-content .ordenes .ordenes-listado-tabla .orden-acciones .ui-btn { margin: 0; min-height: 32px; padding: 7px 8px; font-size: 12px; }
+.main-content .ordenes .ordenes-listado-tabla .orden-acciones .ui-btn { margin: 0; min-height: 34px; padding: 8px 10px; }
+
+@media (min-width: 1401px) {
+  .main-content .ordenes .ui-table-card > .ordenes-listado-tabla { table-layout: fixed; }
+}

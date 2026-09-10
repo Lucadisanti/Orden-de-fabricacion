@@ -540,3 +540,23 @@ p {
 :root[data-theme="noche"] .main-content .inspeccion-badge.inspeccion-conforme { border-color: #38c98a; background: #124b38; color: #9ff5c4; }
 :root[data-theme="noche"] .main-content .inspeccion-badge.inspeccion-no-conforme { border-color: #fb7185; background: #612737; color: #ffd0d7; }
 :root[data-theme="noche"] .main-content .inspeccion-badge.inspeccion-pendiente { border-color: #eebf43; background: #554010; color: #ffe795; }
+
+/* Material actions added dynamically also follow the active theme. */
+:root[data-theme="noche"] .main-content :is(.produccion-material-extra, .planilla-variante-materiales > div) > button {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: #b85b70;
+}
+:root[data-theme="noche"] .main-content :is(.produccion-material-extra, .planilla-variante-materiales > div) > button:is(.produccion-alta-material, .planilla-alta-material) {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-color: var(--border-panel);
+}
+:root[data-theme="noche"] .main-content :is(.produccion-material-extra, .planilla-variante-materiales > div) > button:hover {
+  filter: brightness(1.2);
+}
+:root[data-theme="noche"] .main-content .material-selector-quitar {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: #b85b70;
+}

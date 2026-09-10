@@ -3,6 +3,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
@@ -49,6 +50,7 @@ export default function UsoMateriales() {
 
 
   async function cargarDatos() {
+    setCargando(true);
     try {
       const [usosRes, planillasRes, lotesRes] = await Promise.all([
         axios.get("/api/uso-materiales/"),
@@ -59,10 +61,11 @@ export default function UsoMateriales() {
       setUsos(usosRes.data);
       setPlanillas(planillasRes.data);
       setLotes(lotesRes.data);
-      setCargando(false);
+      setError("");
     } catch (error) {
       console.error(error);
       setError("No se pudieron cargar los usos de materiales.");
+    } finally {
       setCargando(false);
     }
   }
@@ -349,9 +352,9 @@ export default function UsoMateriales() {
 
       {(mostrarFormulario) && <SeparadorListado titulo="Usos de materiales registrados" descripcion="Consultá los usos de materiales guardados." />}
 
-      {cargando && <p>Cargando usos de materiales...</p>}
+      {cargando && !error && <p>Cargando usos de materiales...</p>}
 
-      {error && <p>{error}</p>}
+      {error && <RetryMessage message={error} onRetry={cargarDatos} retrying={cargando} />}
 
       {!cargando && !error && (
         <>

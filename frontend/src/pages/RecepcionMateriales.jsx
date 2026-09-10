@@ -11,6 +11,7 @@ import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/RecepcionMateriales.css";
@@ -121,6 +122,7 @@ export default function RecepcionMateriales() {
 
 
   async function cargarDatos() {
+    setCargando(true);
     try {
       const [provRes, matRes, colRes, lotesRes] = await Promise.all([
         axios.get("/api/proveedores/"),
@@ -133,10 +135,11 @@ export default function RecepcionMateriales() {
       setMateriales(matRes.data);
       setColores(colRes.data);
       setLotes(lotesRes.data);
-      setCargando(false);
+      setError("");
     } catch (error) {
       console.error(error);
       setError("No se pudieron cargar los datos.");
+    } finally {
       setCargando(false);
     }
   }
@@ -602,9 +605,9 @@ export default function RecepcionMateriales() {
 
       {(mostrarFormulario) && <SeparadorListado titulo="Recepciones registradas" descripcion="Consultá las recepciones de materiales guardadas." />}
 
-      {cargando && <p>Cargando recepciones...</p>}
+      {cargando && !error && <p>Cargando recepciones...</p>}
 
-      {error && <p>{error}</p>}
+      {error && <RetryMessage message={error} onRetry={cargarDatos} retrying={cargando} />}
 
       {!cargando && !error && (
         <>

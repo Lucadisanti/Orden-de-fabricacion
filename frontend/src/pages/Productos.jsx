@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
 import CatalogModal from "../components/CatalogModal";
 import ClearableSearch from "../components/ClearableSearch";
@@ -29,6 +30,7 @@ export default function Productos() {
   const [confirmacion, setConfirmacion] = useState(null);
   const [catalogoModal, setCatalogoModal] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState("");
   const [guardando, setGuardando] = useState(false);
   const envioEnCurso = useRef(false);
   const versionFormulario = useRef(0);
@@ -37,10 +39,12 @@ export default function Productos() {
   const formRef = useRef(null);
 
   const cargar = async () => {
+    setCargando(true);
     try {
       const [p, m, c] = await Promise.all([axios.get(`${API_URL}/productos/`), axios.get(`${API_URL}/catalogos/modelos-calzado`), axios.get(`${API_URL}/colores/`)]);
       setProductos(p.data); setModelos(m.data); setColores(c.data);
-    } catch (error) { console.error(error); setToast({ type: "error", title: "No se pudo cargar", message: "Revisá la conexión con el servidor." }); }
+      setErrorCarga("");
+    } catch (error) { console.error(error); setErrorCarga("No se pudieron cargar los productos y sus opciones. Revisá la conexión con el servidor."); }
     finally { setCargando(false); }
   };
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -118,7 +122,9 @@ export default function Productos() {
     </form></div>}
       {(mostrar) && <SeparadorListado titulo="Productos registrados" descripcion="Consultá los productos guardados." />}
 
-    {cargando ? (
+    {errorCarga ? (
+      <RetryMessage message={errorCarga} onRetry={cargar} retrying={cargando} />
+    ) : cargando ? (
       <p>Cargando productos...</p>
     ) : (
       <>

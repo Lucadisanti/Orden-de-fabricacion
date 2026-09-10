@@ -2,6 +2,7 @@ import SeparadorListado from "../components/SeparadorListado";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
@@ -49,18 +50,18 @@ export default function Proveedores() {
 
   const mostrarToast = (type, title, message) => setToast({ type, title, message });
 
-  function cargarProveedores() {
-    axios
-      .get(`${API_URL}/proveedores/`)
-      .then((response) => {
-        setProveedores(response.data);
-        setCargando(false);
-      })
-      .catch((error) => {
-        console.error(error);
-        setError("No se pudieron cargar los proveedores.");
-        setCargando(false);
-      });
+  async function cargarProveedores() {
+    setCargando(true);
+    try {
+      const response = await axios.get(`${API_URL}/proveedores/`);
+      setProveedores(response.data);
+      setError("");
+    } catch (error) {
+      console.error(error);
+      setError("No se pudieron cargar los proveedores.");
+    } finally {
+      setCargando(false);
+    }
   }
 
   const manejarCambio = (e) => {
@@ -297,8 +298,8 @@ export default function Proveedores() {
 
       {(mostrarFormulario) && <SeparadorListado titulo="Proveedores registrados" descripcion="Consultá los proveedores guardados." />}
 
-      {cargando && <p>Cargando proveedores...</p>}
-      {error && <p>{error}</p>}
+      {cargando && !error && <p>Cargando proveedores...</p>}
+      {error && <RetryMessage message={error} onRetry={cargarProveedores} retrying={cargando} />}
 
       {!cargando && !error && (
         <>

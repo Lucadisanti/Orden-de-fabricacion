@@ -2,6 +2,7 @@ import SeparadorListado from "../components/SeparadorListado";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
@@ -46,18 +47,18 @@ export default function Materiales() {
     setToast({ type, title, message });
   };
 
-  function cargarMateriales() {
-    axios
-      .get(`${API_URL}/materiales/`)
-      .then((response) => {
-        setMateriales(response.data);
-        setCargando(false);
-      })
-      .catch((error) => {
-        console.error(error);
-        setError("No se pudieron cargar los materiales.");
-        setCargando(false);
-      });
+  async function cargarMateriales() {
+    setCargando(true);
+    try {
+      const response = await axios.get(`${API_URL}/materiales/`);
+      setMateriales(response.data);
+      setError("");
+    } catch (error) {
+      console.error(error);
+      setError("No se pudieron cargar los materiales.");
+    } finally {
+      setCargando(false);
+    }
   }
 
   const manejarCambio = (e) => {
@@ -258,8 +259,8 @@ export default function Materiales() {
 
       {(mostrarFormulario) && <SeparadorListado titulo="Materiales registrados" descripcion="Consultá los materiales guardados." />}
 
-      {cargando && <p>Cargando materiales...</p>}
-      {error && <p>{error}</p>}
+      {cargando && !error && <p>Cargando materiales...</p>}
+      {error && <RetryMessage message={error} onRetry={cargarMateriales} retrying={cargando} />}
 
       {!cargando && !error && (
         <>

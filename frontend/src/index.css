@@ -560,3 +560,26 @@ p {
   color: var(--danger-text);
   border-color: #b85b70;
 }
+
+/* Shared interaction contrast across the application's lists and controls. */
+:root { --hover-row: #d7e8ff; --hover-edge: #397be5; --hover-ring: rgba(37, 99, 235, .22); }
+:root[data-theme="noche"] { --hover-row: #24466d; --hover-edge: #80baff; --hover-ring: rgba(96, 165, 250, .32); }
+.main-content :is(.ui-table-card:not(.planilla-talles-comparacion) > .ui-data-table, .dashboard-table, .trazabilidad-ordenes-table) > tbody > tr:is(:hover, :focus-visible) > td:not([colspan]) {
+  background: var(--hover-row) !important;
+  color: var(--text-main);
+}
+.main-content :is(.ui-table-card:not(.planilla-talles-comparacion) > .ui-data-table, .dashboard-table, .trazabilidad-ordenes-table) > tbody > tr:is(:hover, :focus-visible) > td:first-child:not([colspan]) {
+  box-shadow: inset 3px 0 0 var(--hover-edge);
+}
+.main-content :is(button, a.ui-btn):not(:disabled):is(:hover, :focus-visible) {
+  outline: 2px solid var(--hover-edge);
+  outline-offset: 2px;
+}
+.main-content :is(input, select, textarea):not(:disabled):is(:hover, :focus-visible) {
+  border-color: var(--hover-edge);
+  box-shadow: 0 0 0 3px var(--hover-ring);
+}
+.main-content :is(.planilla-acordeon, .planilla-produccion-acordeon, .trazabilidad-acordeon):hover {
+  background: var(--hover-row);
+  border-color: var(--hover-edge);
+}

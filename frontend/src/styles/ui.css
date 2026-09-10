@@ -224,6 +224,46 @@
   margin: 0 auto;
 }
 
+/* Etiquetas de carga: excluye filtros, modales, talles y opciones de inspección. */
+:is(
+  .productos form.form-producto,
+  .materiales form.form-producto,
+  .proveedores form.form-proveedor,
+  .recepcion-materiales form.form-recepcion,
+  .ordenes form.form-orden,
+  .planillas form.form-planilla,
+  .planillas form.planilla-acordeon-contenido,
+  .produccion-diaria form.produccion-diaria-form,
+  .uso-materiales form.form-uso-material
+) label:where(:not(.inspeccion-opcion, .talles-orden-grid label, .produccion-talles label)) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* El texto envuelto en span debe verse igual que el texto directo del label. */
+:is(
+  .productos form.form-producto,
+  .materiales form.form-producto,
+  .proveedores form.form-proveedor,
+  .recepcion-materiales form.form-recepcion,
+  .ordenes form.form-orden,
+  .planillas form.form-planilla,
+  .planillas form.planilla-acordeon-contenido,
+  .produccion-diaria form.produccion-diaria-form,
+  .uso-materiales form.form-uso-material
+) label:where(:not(.inspeccion-opcion, .talles-orden-grid label, .produccion-talles label)) > span {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
 .ui-form-card input,
 .ui-form-card select,
 .ui-form-card textarea {

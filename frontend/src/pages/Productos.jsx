@@ -29,6 +29,11 @@ export default function Productos() {
   const [confirmacion, setConfirmacion] = useState(null);
   const [catalogoModal, setCatalogoModal] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const envioEnCurso = useRef(false);
+  const versionFormulario = useRef(0);
+  // Invalida respuestas pendientes al salir de la pantalla.
+  useEffect(() => () => { versionFormulario.current += 1; }, []);
   const formRef = useRef(null);
 
   const cargar = async () => {
@@ -46,9 +51,9 @@ export default function Productos() {
   const modelo = modelos.find((x) => String(x.id_modelo) === String(form.modelos_calzado_id_modelo));
   const color = colores.find((x) => String(x.id_color) === String(form.colores_id_color));
   const codigoBase = `${modelo?.codigo_modelo || ""}${color?.codigo_color || ""}`;
-  const abrirNuevo = () => { setForm(vacio()); setIdEditando(null); setMostrar(true); setTimeout(() => formRef.current?.scrollIntoView(), 50); };
-  const editar = (producto) => { setForm({ modelos_calzado_id_modelo: producto.modelos_calzado_id_modelo || "", nombre_producto: producto.nombre_producto || "", colores_id_color: producto.colores_id_color || "" }); setIdEditando(producto.id_producto); setMostrar(true); };
-  const cancelar = () => { setMostrar(false); if (desdeOrden) navigate("/ordenes?producto=cancelado"); };
+  const abrirNuevo = () => { versionFormulario.current += 1; setForm(vacio()); setIdEditando(null); setMostrar(true); setTimeout(() => formRef.current?.scrollIntoView(), 50); };
+  const editar = (producto) => { versionFormulario.current += 1; setForm({ modelos_calzado_id_modelo: producto.modelos_calzado_id_modelo || "", nombre_producto: producto.nombre_producto || "", colores_id_color: producto.colores_id_color || "" }); setIdEditando(producto.id_producto); setMostrar(true); };
+  const cancelar = () => { versionFormulario.current += 1; setMostrar(false); if (desdeOrden) navigate("/ordenes?producto=cancelado"); };
 
   const guardarCatalogo = async ({ codigo, nombre }) => {
     try {
@@ -70,15 +75,20 @@ export default function Productos() {
 
   const guardar = async (event) => {
     event.preventDefault();
+    if (envioEnCurso.current) return;
     const datos = { ...form, modelos_calzado_id_modelo: Number(form.modelos_calzado_id_modelo), colores_id_color: Number(form.colores_id_color), articulo_producto: codigoBase };
+    envioEnCurso.current = true;
+    setGuardando(true);
+    const versionEnviada = versionFormulario.current;
     try {
       if (idEditando) await axios.put(`${API_URL}/productos/${idEditando}`, datos);
       else {
         const respuesta = await axios.post(`${API_URL}/productos/`, datos);
-        if (desdeOrden) { navigate(`/ordenes?producto=${respuesta.data.id_producto}`); return; }
+        if (desdeOrden && versionFormulario.current === versionEnviada) { navigate(`/ordenes?producto=${respuesta.data.id_producto}`); return; }
       }
-      setToast({ type: "success", title: "Producto guardado", message: "Modelo y color fijo quedaron registrados." }); setMostrar(false); setForm(vacio()); setIdEditando(null); cargar();
+      setToast({ type: "success", title: "Producto guardado", message: "Modelo y color fijo quedaron registrados." }); if (versionFormulario.current === versionEnviada) { setMostrar(false); setForm(vacio()); setIdEditando(null); } cargar();
     } catch (error) { setToast({ type: "error", title: "No se pudo guardar", message: obtenerMensajeError(error, "producto") }); }
+    finally { envioEnCurso.current = false; setGuardando(false); }
   };
   const eliminar = (id) => setConfirmacion({ title: "Eliminar producto", message: "Se eliminará el producto si no tiene órdenes asociadas.", confirmText: "Eliminar", danger: true, onConfirm: async () => { setConfirmacion(null); try { await axios.delete(`${API_URL}/productos/${id}`); cargar(); } catch (error) { setToast({ type: "error", title: "No se pudo eliminar", message: obtenerMensajeError(error, "producto") }); } } });
   const textoBusqueda = busqueda.trim();
@@ -104,7 +114,7 @@ export default function Productos() {
       <label>Modelo de calzado<div className="catalogo-selector-row"><select required value={form.modelos_calzado_id_modelo} onChange={(e) => { const elegido = modelos.find((x) => String(x.id_modelo) === e.target.value); setForm({ ...form, modelos_calzado_id_modelo: e.target.value, nombre_producto: elegido?.nombre_modelo || "" }); }}><option value="">Seleccione modelo</option>{modelos.map((x) => <option key={x.id_modelo} value={x.id_modelo}>{x.codigo_modelo} - {x.nombre_modelo}</option>)}</select><button type="button" className="catalogo-icon-btn" title="Agregar modelo" aria-label="Agregar modelo" onClick={() => setCatalogoModal("modelo")}>+</button></div></label>
       <label>Color fijo<div className="catalogo-selector-row"><select required value={form.colores_id_color} onChange={(e) => setForm({ ...form, colores_id_color: e.target.value })}><option value="">Seleccione color</option>{colores.filter((x) => x.codigo_color).map((x) => <option key={x.id_color} value={x.id_color}>{x.codigo_color} - {x.color}</option>)}</select><button type="button" className="catalogo-icon-btn" title="Agregar color" aria-label="Agregar color" onClick={() => setCatalogoModal("color")}>+</button></div></label>
       <div className="articulo-preview"><span>Código base</span><strong>{codigoBase || "Seleccioná modelo y color"}</strong><small>La puntera y los adicionales completarán el artículo en la orden.</small></div>
-      <div className="ui-form-actions"><button className="ui-btn ui-btn-primary">Guardar</button><button type="button" className="ui-btn ui-btn-secondary" onClick={cancelar}>Cancelar</button></div>
+      <div className="ui-form-actions"><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? (idEditando ? "Actualizando..." : "Guardando...") : (idEditando ? "Actualizar" : "Guardar")}</button><button type="button" className="ui-btn ui-btn-secondary" onClick={cancelar}>Cancelar</button></div>
     </form></div>}
       {(mostrar) && <SeparadorListado titulo="Productos registrados" descripcion="Consultá los productos guardados." />}
 

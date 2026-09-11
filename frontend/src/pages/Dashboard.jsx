@@ -22,7 +22,7 @@ const panelInicial = {
   unidadesPendientes: 0,
   paresSolicitados: 0,
   paresProducidos: 0,
-  produccionesRegistradas: 0,
+  modelosProducidosHoy: 0,
   produccionesHoy: 0,
 };
 
@@ -197,7 +197,10 @@ export default function Dashboard() {
         unidadesPendientes: lotes.reduce((total, lote) => total + comoNumero(lote.pendiente), 0),
         paresSolicitados: ordenes.reduce((total, orden) => total + comoNumero(orden.total_pares), 0),
         paresProducidos: producciones.reduce((total, produccion) => total + comoNumero(produccion.total_pares), 0),
-        produccionesRegistradas: producciones.length,
+        modelosProducidosHoy: new Set(producciones
+          .filter((produccion) => normalizarFechaISO(produccion.fecha) === hoy && comoNumero(produccion.total_pares) > 0)
+          .map((produccion) => produccion.id_modelo != null ? String(produccion.id_modelo) : String(produccion.producto || "").trim().toLowerCase())
+          .filter(Boolean)).size,
         produccionesHoy: producciones.filter((produccion) => normalizarFechaISO(produccion.fecha) === hoy).length,
       });
 
@@ -435,8 +438,8 @@ export default function Dashboard() {
               <span>Producciones hoy</span>
             </div>
             <div>
-              <strong>{panelControl.produccionesRegistradas}</strong>
-              <span>Líneas cargadas</span>
+              <strong>{panelControl.modelosProducidosHoy}</strong>
+              <span>Modelos producidos hoy</span>
             </div>
           </div>
         </section>

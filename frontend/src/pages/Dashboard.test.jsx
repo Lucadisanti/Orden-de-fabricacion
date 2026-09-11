@@ -76,3 +76,18 @@ describe("Inicio", () => {
     expect(await screen.findByText("No se pudo cargar el resumen de Inicio.")).toBeInTheDocument();
   });
 });
+
+ it("cuenta modelos distintos con pares producidos hoy", async () => {
+    const ahora = new Date();
+    const hoy = [ahora.getFullYear(), String(ahora.getMonth() + 1).padStart(2, "0"), String(ahora.getDate()).padStart(2, "0")].join("-");
+    axios.get.mockImplementation(async (url) => ({ data: url === "/api/produccion-diaria/" ? [
+      { id_modelo: 1, producto: "Bota", color: "Negro", fecha: hoy, total_pares: 10 },
+      { id_modelo: 1, producto: "Bota", color: "Marron", fecha: hoy, total_pares: 20 },
+      { id_modelo: 2, producto: "Zapato", fecha: hoy, total_pares: 5 },
+      { id_modelo: 3, producto: "Otro", fecha: "2000-01-01", total_pares: 5 },
+      { id_modelo: 4, producto: "Vacio", fecha: hoy, total_pares: 0 },
+    ] : [] }));
+    renderDashboard();
+    const etiqueta = await screen.findByText("Modelos producidos hoy");
+    await vi.waitFor(() => expect(etiqueta.parentElement.querySelector("strong")).toHaveTextContent(/^2$/));
+ });

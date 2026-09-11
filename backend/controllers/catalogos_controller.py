@@ -47,6 +47,9 @@ def _actualizar_catalogo(tabla, columna_id, columna_codigo, columna_nombre, larg
     try:
         conn = get_connection()
         cursor = conn.cursor()
+        cursor.execute(f"SELECT {columna_id} FROM {tabla} WHERE {columna_id} = %s FOR UPDATE", (item_id,))
+        if not cursor.fetchone():
+            return jsonify({"mensaje": "La opcion ya no existe"}), 404
         cursor.execute(
             f"UPDATE {tabla} SET {columna_codigo} = %s, {columna_nombre} = %s WHERE {columna_id} = %s",
             (codigo, nombre, item_id),
@@ -56,7 +59,16 @@ def _actualizar_catalogo(tabla, columna_id, columna_codigo, columna_nombre, larg
                 "UPDATE producto SET nombre_producto = %s WHERE modelos_calzado_id_modelo = %s",
                 (nombre, item_id),
             )
-        recalcular_articulos(cursor)
+            cursor.execute("""UPDATE producto p INNER JOIN colores c ON c.id_color=p.colores_id_color
+                SET p.articulo_producto=CASE WHEN p.punteras_id_puntera IS NULL
+                THEN CONCAT('BASE-', %s, c.codigo_color)
+                ELSE CONCAT(%s, SUBSTRING(p.articulo_producto, 4)) END
+                WHERE p.modelos_calzado_id_modelo=%s""", (codigo, codigo, item_id))
+            cursor.execute("""UPDATE producto_variante pv INNER JOIN producto p ON p.id_producto=pv.producto_id_producto
+                SET pv.articulo_producto=CONCAT(%s, SUBSTRING(pv.articulo_producto, 4))
+                WHERE p.modelos_calzado_id_modelo=%s""", (codigo, item_id))
+        else:
+            recalcular_articulos(cursor)
         conn.commit()
         return jsonify({columna_id: item_id, columna_codigo: codigo, columna_nombre: nombre}), 200
     except Exception as error:

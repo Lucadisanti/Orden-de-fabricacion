@@ -1,6 +1,6 @@
 import Selector from "../components/Selector";
 import SelectorMaterial from "../components/SelectorMaterial";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
@@ -9,6 +9,7 @@ import CatalogModal from "../components/CatalogModal";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { formatearFecha } from "../utils/dateFormat";
+import { fechaLocal } from "../utils/estadisticas";
 import { obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/ProduccionDiaria.css";
 
@@ -29,6 +30,10 @@ export default function ProduccionDiaria() {
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const envioEnCurso = useRef(false);
+  const versionFormulario = useRef(0);
+  // Invalida respuestas pendientes al salir de la pantalla.
+  useEffect(() => () => { versionFormulario.current += 1; }, []);
   const [formularioAbierto, setFormularioAbierto] = useState(false);
   const [ordenHistorial, setOrdenHistorial] = useState("fecha");
   const [direccionHistorial, setDireccionHistorial] = useState("desc");
@@ -38,7 +43,7 @@ export default function ProduccionDiaria() {
   const [detallesHistorial, setDetallesHistorial] = useState({});
   const [altaMaquinaBloque, setAltaMaquinaBloque] = useState(null);
   const [altaCatalogo, setAltaCatalogo] = useState(null);
-  const [form, setForm] = useState({ fecha: new Date().toISOString().slice(0, 10), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
+  const [form, setForm] = useState({ fecha: fechaLocal(), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
   const [bloques, setBloques] = useState([nuevoBloque()]);
   const historialOrdenado = useMemo(() => [...historial].sort((a, b) => {
     if (grupoHistorial) {
@@ -250,8 +255,20 @@ export default function ProduccionDiaria() {
 
   const guardar = async (event) => {
     event.preventDefault();
+    if (envioEnCurso.current) return;
+    const operariosObligatorios = [...form.operarios_calzado, ...form.operarios_puntera, ...bloques.flatMap((bloque) => bloque.operarios_inyeccion)];
+    if (operariosObligatorios.some((nombre) => !nombre.trim())) {
+      setToast({ type: "warning", title: "Operarios requeridos", message: "Completá los nombres de calzado, puntera e inyección; no pueden contener solo espacios." });
+      return;
+    }
+    if (bloques.some((bloque) => bloque.lineas.some((linea) => linea.estado_inspeccion === "No conforme" && !linea.observacion_inspeccion.trim()))) {
+      setToast({ type: "warning", title: "Observación requerida", message: "Describí el motivo de cada no conformidad; no puede contener solo espacios." });
+      return;
+    }
     const datos = {
       ...form,
+      operarios_calzado: form.operarios_calzado.map((nombre) => nombre.trim()),
+      operarios_puntera: form.operarios_puntera.map((nombre) => nombre.trim()),
       bloques: bloques.map((bloque) => ({
         maquinas_id_maquina: Number(bloque.maquinas_id_maquina),
         operarios_inyeccion: bloque.operarios_inyeccion.map((nombre) => nombre.trim()).filter(Boolean),
@@ -268,32 +285,36 @@ export default function ProduccionDiaria() {
         })),
       })),
     };
+    envioEnCurso.current = true;
     setGuardando(true);
+    const versionEnviada = versionFormulario.current;
     try {
       const respuesta = await axios.post("/api/produccion-diaria/", datos);
       setToast({ type: "success", title: "Producción registrada", message: `${respuesta.data.planillas_actualizadas} R013/1 actualizadas correctamente.` });
-      setBloques([nuevoBloque()]);
-      setFormularioAbierto(false);
+      if (versionFormulario.current === versionEnviada) {
+        setBloques([nuevoBloque()]);
+        setFormularioAbierto(false);
+      }
       await cargarDatos();
     } catch (error) {
       console.error(error);
       setToast({ type: "error", title: "No se pudo guardar", message: obtenerMensajeError(error, "producción diaria") });
-    } finally { setGuardando(false); }
+    } finally { envioEnCurso.current = false; setGuardando(false); }
   };
 
   return <section className="produccion-diaria">
     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
     <PromptModal open={altaMaquinaBloque !== null} title="Nueva inyectora" label="Nombre de la inyectora" placeholder="Ej. Máquina INYEC-BGM" confirmText="Crear y seleccionar" onConfirm={crearMaquinaRapida} onCancel={() => setAltaMaquinaBloque(null)} />
     <CatalogModal key={altaCatalogo ? `${altaCatalogo.tipo}-${altaCatalogo.bloque}-${altaCatalogo.linea}` : "catalogo-cerrado"} open={Boolean(altaCatalogo)} title={altaCatalogo?.tipo === "puntera" ? "Agregar tipo de puntera" : "Agregar adicional"} codeLength={2} onConfirm={crearCatalogoRapido} onCancel={() => setAltaCatalogo(null)} />
-    <div className="ui-page-header ui-page-header-row"><div><h1>Producción diaria</h1><p>Carga conjunta por inyectora que actualiza la R013/1 de cada orden.</p></div>{!formularioAbierto && <button type="button" className="ui-btn ui-btn-primary" onClick={() => setFormularioAbierto(true)}>+ Nueva producción diaria</button>}</div>
+    <div className="ui-page-header ui-page-header-row"><div><h1>Producción diaria</h1><p>Carga conjunta por inyectora que actualiza la R013/1 de cada orden.</p></div>{!formularioAbierto && <button type="button" className="ui-btn ui-btn-primary" onClick={() => { versionFormulario.current += 1; setFormularioAbierto(true); }}>+ Nueva producción diaria</button>}</div>
     {cargando ? <p>Cargando datos…</p> : <>
       {formularioAbierto && <form className="produccion-diaria-form" onSubmit={guardar}>
         <div className="ui-form-card produccion-cabecera">
           <div><h2>Datos de la jornada</h2><p>Los operarios de calzado, puntera e inspección final se aplican a todos los bloques.</p></div>
           <label>Fecha<input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required /></label>
-          <div className="produccion-operarios"><span>Operarios de calzado</span>{form.operarios_calzado.map((nombre, indice) => <div key={indice}><input value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_calzado", indice, e.target.value)} required />{form.operarios_calzado.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_calzado", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_calzado")}>+ Agregar operario</button></div>
-          <div className="produccion-operarios"><span>Operarios de puntera</span>{form.operarios_puntera.map((nombre, indice) => <div key={indice}><input value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_puntera", indice, e.target.value)} required />{form.operarios_puntera.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_puntera", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_puntera")}>+ Agregar operario</button></div>
-          <div className="produccion-operarios"><span>Operarios de inspección final</span>{form.operarios_inspeccion_final.map((nombre, indice) => <div key={indice}><input value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_inspeccion_final", indice, e.target.value)} />{form.operarios_inspeccion_final.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_inspeccion_final", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_inspeccion_final")}>+ Agregar operario</button></div>
+          <div className="produccion-operarios"><span>Operarios de calzado</span>{form.operarios_calzado.map((nombre, indice) => <div key={indice}><label>Operario de calzado {indice + 1}<input value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_calzado", indice, e.target.value)} required /></label>{form.operarios_calzado.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_calzado", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_calzado")}>+ Agregar operario</button></div>
+          <div className="produccion-operarios"><span>Operarios de puntera</span>{form.operarios_puntera.map((nombre, indice) => <div key={indice}><label>Operario de puntera {indice + 1}<input value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_puntera", indice, e.target.value)} required /></label>{form.operarios_puntera.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_puntera", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_puntera")}>+ Agregar operario</button></div>
+          <div className="produccion-operarios"><span>Operarios de inspección final</span>{form.operarios_inspeccion_final.map((nombre, indice) => <div key={indice}><label>Operario de inspección final {indice + 1}<input value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_inspeccion_final", indice, e.target.value)} /></label>{form.operarios_inspeccion_final.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_inspeccion_final", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_inspeccion_final")}>+ Agregar operario</button></div>
         </div>
 
         {bloques.map((bloque, indiceBloque) => <div className="ui-form-card produccion-bloque" key={indiceBloque}>
@@ -325,7 +346,7 @@ export default function ProduccionDiaria() {
           <button type="button" className="ui-btn ui-btn-secondary" onClick={() => agregarLinea(indiceBloque)}>+ Agregar orden</button>
         </div>)}
 
-        <div className="produccion-acciones"><button type="button" className="ui-btn ui-btn-secondary" onClick={agregarBloque}>+ Agregar inyectora</button><strong>Total del día: {totalGeneral} pares</strong><div className="produccion-acciones-guardado"><button type="button" className="ui-btn ui-btn-secondary" onClick={() => setFormularioAbierto(false)}>Ocultar formulario</button><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producción diaria"}</button></div></div>
+        <div className="produccion-acciones"><button type="button" className="ui-btn ui-btn-secondary" onClick={agregarBloque}>+ Agregar inyectora</button><strong>Total del día: {totalGeneral} pares</strong><div className="produccion-acciones-guardado"><button type="button" className="ui-btn ui-btn-secondary" onClick={() => { versionFormulario.current += 1; setFormularioAbierto(false); }}>Ocultar formulario</button><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producción diaria"}</button></div></div>
       </form>}
 
 

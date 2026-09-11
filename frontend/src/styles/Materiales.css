@@ -3,3 +3,16 @@
   flex-direction: column;
   gap: 15px;
 }
+
+.materiales .form-producto > label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.materiales .form-producto > label > span {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+}

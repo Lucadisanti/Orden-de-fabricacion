@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { formatearFecha } from "../utils/dateFormat";
+import { fechaLocal } from "../utils/estadisticas";
 import "../styles/Dashboard.css";
 
 const API_URL = "/api";
@@ -12,6 +13,18 @@ const resumenInicial = [
   { clave: "ordenes", titulo: "Órdenes", valor: "-", detalle: "Órdenes registradas" },
   { clave: "planillas", titulo: "Planillas", valor: "-", detalle: "Planillas cargadas" },
 ];
+
+const panelInicial = {
+  ordenesPendientes: 0,
+  ordenesProceso: 0,
+  planillasProceso: 0,
+  lotesPendientes: 0,
+  unidadesPendientes: 0,
+  paresSolicitados: 0,
+  paresProducidos: 0,
+  produccionesRegistradas: 0,
+  produccionesHoy: 0,
+};
 
 function estadoLegible(estado = "") {
   const valor = estado.toLowerCase();
@@ -27,11 +40,88 @@ function claseEstado(estado = "") {
   return "ui-status-pendiente";
 }
 
+function estaPendiente(estado = "") {
+  return estado.toLowerCase().includes("pendiente");
+}
+
+function estaEnProceso(estado = "") {
+  const valor = estado.toLowerCase();
+  return valor.includes("proceso") || valor.includes("producci");
+}
+
+function comoNumero(valor) {
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? numero : 0;
+}
+
+function fechaISOHoy() {
+  return fechaLocal();
+}
+
+function normalizarFechaISO(fecha = "") {
+  if (!fecha) return "";
+  if (typeof fecha === "string") return fecha.slice(0, 10);
+  try {
+    return new Date(fecha).toISOString().slice(0, 10);
+  } catch {
+    return "";
+  }
+}
+
 const secciones = {
-  productos: { ruta: "/productos", endpoint: "/productos/", id: "id_producto", columnas: ["Código base", "Producto", "Color"], celdas: (item) => [String(item.articulo_producto || "").replace(/^\s*BASE\s*[-\u2010-\u2015]\s*/i, "") || "-", item.nombre_producto || "-", item.color || "Sin color"] },
-  proveedores: { ruta: "/proveedores", endpoint: "/proveedores/", id: "id_proveedor", columnas: ["Proveedor", "CUIT", "Contacto"], celdas: (item) => [item.nombre_proveedor || "-", item.cuit || "-", item.telefono || item.email || "-"] },
-  ordenes: { ruta: "/ordenes", endpoint: "/ordenes/", id: "id_orden", accion: "Ver orden →", detalleRuta: (item) => `/ordenes?seleccion=${item.id_orden}`, columnas: ["N.º de orden", "Producto", "Color", "Fecha", "Estado"], celdas: (item) => [item.numero_orden || "-", item.producto || item.nombre_producto || "-", item.color || "-", formatearFecha(item.fecha), <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>] },
-  planillas: { ruta: "/planillas", endpoint: "/planillas/", id: "id_planilla", accion: "Abrir detalle →", detalleRuta: (item) => `/planillas?seleccion=${item.id_planilla}`, columnas: ["N.º de planilla", "Orden", "Producto", "Color", "Fecha", "Estado"], celdas: (item) => [item.numero_planilla || "-", item.numero_orden || item.orden || "-", item.producto || item.nombre_producto || "-", item.color || "-", formatearFecha(item.fecha), <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>] },
+  productos: {
+    ruta: "/productos",
+    endpoint: "/productos/",
+    id: "id_producto",
+    columnas: ["Código base", "Producto", "Color"],
+    celdas: (item) => [
+      String(item.articulo_producto || item.codigo_base || "").replace(/^\s*BASE\s*[-\u2010-\u2015]\s*/i, "") || "-",
+      item.nombre_producto || item.producto || "-",
+      item.color || "Sin color",
+    ],
+  },
+  proveedores: {
+    ruta: "/proveedores",
+    endpoint: "/proveedores/",
+    id: "id_proveedor",
+    columnas: ["Proveedor", "CUIT", "Contacto"],
+    celdas: (item) => [
+      item.nombre_proveedor || item.proveedor || "-",
+      item.cuit || "-",
+      item.telefono || item.email || "-",
+    ],
+  },
+  ordenes: {
+    ruta: "/ordenes",
+    endpoint: "/ordenes/",
+    id: "id_orden",
+    accion: "Ver orden →",
+    detalleRuta: (item) => `/ordenes?seleccion=${item.id_orden}`,
+    columnas: ["N.º de orden", "Producto", "Color", "Fecha", "Estado"],
+    celdas: (item) => [
+      item.numero_orden || "-",
+      item.producto || item.nombre_producto || "-",
+      item.color || "-",
+      formatearFecha(item.fecha),
+      <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>,
+    ],
+  },
+  planillas: {
+    ruta: "/planillas",
+    endpoint: "/planillas/",
+    id: "id_planilla",
+    accion: "Abrir detalle →",
+    detalleRuta: (item) => `/planillas?seleccion=${item.id_planilla}`,
+    columnas: ["N.º de planilla", "Orden", "Producto", "Color", "Fecha", "Estado"],
+    celdas: (item) => [
+      item.numero_planilla || "-",
+      item.numero_orden || item.orden || "-",
+      item.producto || item.nombre_producto || "-",
+      item.color || "-",
+      formatearFecha(item.fecha),
+      <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>,
+    ],
+  },
 };
 
 function claveDesdeTitulo(titulo = "") {
@@ -53,6 +143,11 @@ function normalizarResumen(data) {
   }));
 }
 
+function obtenerDatos(resultado) {
+  if (resultado.status !== "fulfilled") return [];
+  return Array.isArray(resultado.value.data) ? resultado.value.data : [];
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [resumen, setResumen] = useState(resumenInicial);
@@ -61,6 +156,9 @@ export default function Dashboard() {
   const [cargando, setCargando] = useState("");
   const [error, setError] = useState("");
   const [errorDetalle, setErrorDetalle] = useState("");
+  const [panelControl, setPanelControl] = useState(panelInicial);
+  const [cargandoPanel, setCargandoPanel] = useState(true);
+  const [errorPanel, setErrorPanel] = useState("");
 
   useEffect(() => {
     async function cargarResumen() {
@@ -73,7 +171,45 @@ export default function Dashboard() {
         setError("No se pudo cargar el resumen de Inicio.");
       }
     }
+
+    async function cargarPanelControl() {
+      setCargandoPanel(true);
+      setErrorPanel("");
+
+      const hoy = fechaISOHoy();
+      const resultados = await Promise.allSettled([
+        axios.get(`${API_URL}/ordenes/`),
+        axios.get(`${API_URL}/planillas/`),
+        axios.get(`${API_URL}/lotes/`),
+        axios.get(`${API_URL}/produccion-diaria/`),
+      ]);
+
+      const ordenes = obtenerDatos(resultados[0]);
+      const planillas = obtenerDatos(resultados[1]);
+      const lotes = obtenerDatos(resultados[2]);
+      const producciones = obtenerDatos(resultados[3]);
+
+      setPanelControl({
+        ordenesPendientes: ordenes.filter((orden) => estaPendiente(orden.estado)).length,
+        ordenesProceso: ordenes.filter((orden) => estaEnProceso(orden.estado)).length,
+        planillasProceso: planillas.filter((planilla) => String(planilla.numero_planilla).trim().toUpperCase() === "R013/1" && estaEnProceso(planilla.estado)).length,
+        lotesPendientes: lotes.filter((lote) => comoNumero(lote.pendiente) > 0).length,
+        unidadesPendientes: lotes.reduce((total, lote) => total + comoNumero(lote.pendiente), 0),
+        paresSolicitados: ordenes.reduce((total, orden) => total + comoNumero(orden.total_pares), 0),
+        paresProducidos: producciones.reduce((total, produccion) => total + comoNumero(produccion.total_pares), 0),
+        produccionesRegistradas: producciones.length,
+        produccionesHoy: producciones.filter((produccion) => normalizarFechaISO(produccion.fecha) === hoy).length,
+      });
+
+      if (resultados.some((resultado) => resultado.status === "rejected")) {
+        setErrorPanel("Algunos indicadores no se pudieron actualizar.");
+      }
+
+      setCargandoPanel(false);
+    }
+
     cargarResumen();
+    cargarPanelControl();
   }, []);
 
   async function alternarDetalle(clave) {
@@ -81,11 +217,14 @@ export default function Dashboard() {
       setSeccionActiva("");
       return;
     }
+
     setSeccionActiva(clave);
     setErrorDetalle("");
+
     if (ultimos[clave]) return;
 
     setCargando(clave);
+
     try {
       const configuracion = secciones[clave];
       const { data } = await axios.get(`${API_URL}${configuracion.endpoint}`);
@@ -95,6 +234,7 @@ export default function Dashboard() {
         .filter((item) => clave !== "planillas" || String(item.numero_planilla || "").trim().toUpperCase() === "R013/1")
         .sort((a, b) => Number(b[configuracion.id] || 0) - Number(a[configuracion.id] || 0))
         .slice(0, 4);
+
       setUltimos((actuales) => ({ ...actuales, [clave]: recientes }));
     } catch (requestError) {
       console.error(requestError);
@@ -107,23 +247,99 @@ export default function Dashboard() {
   const itemActivo = resumen.find((item) => item.clave === seccionActiva);
   const configuracionActiva = secciones[seccionActiva];
 
-  const renderPanel = (clase) => seccionActiva && (
+  const porcentajeAvance = panelControl.paresSolicitados > 0
+    ? Math.min(100, Math.round((panelControl.paresProducidos / panelControl.paresSolicitados) * 100))
+    : 0;
+
+  const alertas = [
+    panelControl.ordenesPendientes > 0
+      ? {
+          tipo: "warning",
+          titulo: "Órdenes pendientes",
+          detalle: `${panelControl.ordenesPendientes} orden/es todavía necesitan avanzar.`,
+        }
+      : {
+          tipo: "success",
+          titulo: "Órdenes al día",
+          detalle: "No hay órdenes pendientes.",
+        },
+    panelControl.planillasProceso > 0
+      ? {
+          tipo: "info",
+          titulo: "Planillas en proceso",
+          detalle: `${panelControl.planillasProceso} planilla/s siguen en producción.`,
+        }
+      : {
+          tipo: "success",
+          titulo: "Planillas controladas",
+          detalle: "No hay planillas en proceso.",
+        },
+    panelControl.lotesPendientes > 0
+      ? {
+          tipo: "warning",
+          titulo: "Material pendiente",
+          detalle: `${panelControl.lotesPendientes} lote/s tienen ${panelControl.unidadesPendientes} unidades pendientes.`,
+        }
+      : {
+          tipo: "success",
+          titulo: "Recepciones completas",
+          detalle: "No hay materiales pendientes de recepción.",
+        },
+  ];
+
+  const renderPanel = (clase) => seccionActiva && configuracionActiva && (
     <div className={`dashboard-recientes ${clase}`}>
       <div className="dashboard-recientes-header">
-        <div><span>Actividad reciente</span><h2>{["ordenes", "planillas"].includes(seccionActiva) ? "Últimas" : "Últimos"} {itemActivo?.titulo.toLowerCase()}</h2></div>
-        <Link className="ui-btn ui-btn-primary dashboard-ver-todos" to={configuracionActiva.ruta}>Ver todos →</Link>
+        <div>
+          <span>Actividad reciente</span>
+          <h2>{["ordenes", "planillas"].includes(seccionActiva) ? "Últimas" : "Últimos"} {itemActivo?.titulo.toLowerCase()}</h2>
+        </div>
+        <Link className="ui-btn ui-btn-primary dashboard-ver-todos" to={configuracionActiva.ruta}>
+          Ver todos →
+        </Link>
       </div>
+
       {cargando === seccionActiva && <p className="dashboard-mensaje">Cargando últimos registros…</p>}
       {errorDetalle && <p className="dashboard-error">{errorDetalle}</p>}
-      {!cargando && !errorDetalle && ultimos[seccionActiva]?.length === 0 && <p className="dashboard-mensaje">Todavía no hay registros cargados.</p>}
+      {!cargando && !errorDetalle && ultimos[seccionActiva]?.length === 0 && (
+        <p className="dashboard-mensaje">Todavía no hay registros cargados.</p>
+      )}
+
       {!cargando && ultimos[seccionActiva]?.length > 0 && (
         <div className="dashboard-table-wrap">
           <table className="dashboard-table">
-            <thead><tr>{configuracionActiva.columnas.map((columna) => <th key={columna}>{columna}</th>)}{configuracionActiva.accion && <th>Acción</th>}</tr></thead>
-            <tbody>{ultimos[seccionActiva].map((registro, index) => {
-              const rutaDetalle = configuracionActiva.detalleRuta?.(registro);
-              return <tr key={registro[configuracionActiva.id] || index} className={rutaDetalle ? "dashboard-fila-navegable" : ""} tabIndex={rutaDetalle ? 0 : undefined} onClick={() => rutaDetalle && navigate(rutaDetalle)} onKeyDown={(event) => { if (rutaDetalle && (event.key === "Enter" || event.key === " ")) navigate(rutaDetalle); }}>{configuracionActiva.celdas(registro).map((celda, cellIndex) => <td key={cellIndex}>{celda}</td>)}{configuracionActiva.accion && <td><span className="dashboard-row-action">{configuracionActiva.accion}</span></td>}</tr>;
-            })}</tbody>
+            <thead>
+              <tr>
+                {configuracionActiva.columnas.map((columna) => <th key={columna}>{columna}</th>)}
+                {configuracionActiva.accion && <th>Acción</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {ultimos[seccionActiva].map((registro, index) => {
+                const rutaDetalle = configuracionActiva.detalleRuta?.(registro);
+
+                return (
+                  <tr
+                    key={registro[configuracionActiva.id] || index}
+                    className={rutaDetalle ? "dashboard-fila-navegable" : ""}
+                    tabIndex={rutaDetalle ? 0 : undefined}
+                    onClick={() => rutaDetalle && navigate(rutaDetalle)}
+                    onKeyDown={(event) => {
+                      if (rutaDetalle && (event.key === "Enter" || event.key === " ")) {
+                        navigate(rutaDetalle);
+                      }
+                    }}
+                  >
+                    {configuracionActiva.celdas(registro).map((celda, cellIndex) => (
+                      <td key={cellIndex}>{celda}</td>
+                    ))}
+                    {configuracionActiva.accion && (
+                      <td><span className="dashboard-row-action">{configuracionActiva.accion}</span></td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
           </table>
         </div>
       )}
@@ -136,14 +352,21 @@ export default function Dashboard() {
         <h1>Resumen general</h1>
         <p>Estado general de la producción y trazabilidad.</p>
       </div>
+
       {error && <p className="dashboard-error">{error}</p>}
 
       <div className="dashboard-cards">
         {resumen.map((item) => {
           const activa = seccionActiva === item.clave;
+
           return (
             <Fragment key={item.clave}>
-              <button className={`dashboard-card ${activa ? "dashboard-card-active" : ""}`} type="button" onClick={() => alternarDetalle(item.clave)} aria-expanded={activa}>
+              <button
+                className={`dashboard-card ${activa ? "dashboard-card-active" : ""}`}
+                type="button"
+                onClick={() => alternarDetalle(item.clave)}
+                aria-expanded={activa}
+              >
                 <span>{item.titulo}</span>
                 <h2>{item.valor}</h2>
                 <p>{item.detalle}</p>
@@ -156,6 +379,68 @@ export default function Dashboard() {
       </div>
 
       {renderPanel("dashboard-recientes-desktop")}
+
+      <div className="dashboard-paneles">
+        <section className="dashboard-panel dashboard-panel-alertas">
+          <div className="dashboard-panel-header">
+            <span>Control rápido</span>
+            <h2>Alertas del sistema</h2>
+            <p>Indicadores principales para revisar antes de seguir cargando producción.</p>
+          </div>
+
+          {cargandoPanel ? (
+            <p className="dashboard-mensaje dashboard-mensaje-simple">Calculando indicadores…</p>
+          ) : (
+            <div className="dashboard-alertas-lista">
+              {alertas.map((alerta) => (
+                <article className={`dashboard-alerta dashboard-alerta-${alerta.tipo}`} key={alerta.titulo}>
+                  <div className="dashboard-alerta-icono" aria-hidden="true" />
+                  <div>
+                    <h3>{alerta.titulo}</h3>
+                    <p>{alerta.detalle}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {errorPanel && <p className="dashboard-error dashboard-error-simple">{errorPanel}</p>}
+        </section>
+
+        <section className="dashboard-panel dashboard-panel-produccion">
+          <div className="dashboard-panel-header">
+            <span>Producción</span>
+            <h2>Avance general</h2>
+            <p>Relación entre pares solicitados y pares cargados en producción diaria.</p>
+          </div>
+
+          <div className="dashboard-avance">
+            <strong>{porcentajeAvance}%</strong>
+            <div className="dashboard-progress" aria-label={`Avance general ${porcentajeAvance}%`}>
+              <span style={{ width: `${porcentajeAvance}%` }} />
+            </div>
+          </div>
+
+          <div className="dashboard-metricas">
+            <div>
+              <strong>{panelControl.paresProducidos}</strong>
+              <span>Pares producidos</span>
+            </div>
+            <div>
+              <strong>{panelControl.paresSolicitados}</strong>
+              <span>Pares solicitados</span>
+            </div>
+            <div>
+              <strong>{panelControl.produccionesHoy}</strong>
+              <span>Producciones hoy</span>
+            </div>
+            <div>
+              <strong>{panelControl.produccionesRegistradas}</strong>
+              <span>Líneas cargadas</span>
+            </div>
+          </div>
+        </section>
+      </div>
     </section>
   );
 }

@@ -1,3 +1,4 @@
+import Selector from "../components/Selector";
 import SelectorMaterial from "../components/SelectorMaterial";
 import SeparadorListado from "../components/SeparadorListado";
 import { Fragment, useEffect, useRef, useState } from "react";
@@ -997,7 +998,7 @@ export default function Planillas() {
           <h2>{editando ? "Editar planilla" : "Nueva planilla"}</h2>
 
           <form onSubmit={guardarPlanilla} className="form-planilla">
-            <select
+            <Selector
               name="orden_fabricacion_id_orden"
               value={planillaForm.orden_fabricacion_id_orden}
               onChange={manejarCambio}
@@ -1010,7 +1011,7 @@ export default function Planillas() {
                   {orden.numero_orden} - {orden.producto || "Producto"}
                 </option>
               ))}
-            </select>
+            </Selector>
 
             <input
               type="date"
@@ -1020,7 +1021,7 @@ export default function Planillas() {
               required
             />
 
-            <select
+            <Selector
               name="tipo_planilla"
               value={planillaForm.tipo_planilla}
               onChange={manejarCambio}
@@ -1031,7 +1032,7 @@ export default function Planillas() {
               {planillaForm.tipo_planilla && !["Corte y Aparado", "Calzado e Inyección", "Planilla de Calzado, Inyección e Inspección final"].includes(planillaForm.tipo_planilla) && (
                 <option value={planillaForm.tipo_planilla}>{planillaForm.tipo_planilla} · formato anterior</option>
               )}
-            </select>
+            </Selector>
 
             <div className="ui-form-actions">
               <button type="submit" className="ui-btn ui-btn-primary">
@@ -1099,16 +1100,16 @@ export default function Planillas() {
             <div className="planilla-variante-titulo"><div><strong>Carga de producción</strong><span>Completá la configuración y las cantidades por talle.</span></div><div className="planilla-articulo-variante"><span>Artículo resultante</span><strong>{articuloVariante || "Completá la configuración"}</strong></div></div>
             <label className="planilla-fecha-produccion">Fecha de producción<input type="date" value={varianteForm.fecha ?? planillaSeleccionada.fecha ?? ""} onChange={(e) => setVarianteForm({ ...varianteForm, fecha: e.target.value })} required /></label>
             <div className="planilla-variante-grid">
-              <label>Inyectora<div className="planilla-selector-con-alta"><select value={varianteForm.maquinas_id_maquina} onChange={(e) => setVarianteForm({ ...varianteForm, maquinas_id_maquina: e.target.value })} required><option value="">Seleccione inyectora</option>{maquinas.map((maquina) => <option key={maquina.id_maquina} value={maquina.id_maquina}>{maquina.nombre_maquina || maquina.maquina}</option>)}</select><button type="button" className="planilla-alta-maquina" onClick={() => setMostrarAltaMaquina(true)}>+</button></div></label>
-              <label>Tipo de puntera<div className="planilla-selector-con-alta"><select value={varianteForm.punteras_id_puntera} onChange={(e) => setVarianteForm({ ...varianteForm, punteras_id_puntera: e.target.value })}><option value="">Seleccione puntera</option>{punteras.map((puntera) => <option key={puntera.id_puntera} value={puntera.id_puntera}>{puntera.codigo_puntera} - {puntera.nombre_puntera}</option>)}</select><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("puntera")}>+</button></div></label>
-              <label>Adicional (opcional)<div className="planilla-selector-con-alta"><select value={varianteForm.adicionales_id_adicional} onChange={(e) => setVarianteForm({ ...varianteForm, adicionales_id_adicional: e.target.value })}><option value="">Sin adicional</option>{adicionales.map((adicional) => <option key={adicional.id_adicional} value={adicional.id_adicional}>{adicional.codigo_adicional} - {adicional.nombre_adicional}</option>)}</select><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("adicional")}>+</button></div></label>
+              <label>Inyectora<div className="planilla-selector-con-alta"><Selector value={varianteForm.maquinas_id_maquina} onChange={(e) => setVarianteForm({ ...varianteForm, maquinas_id_maquina: e.target.value })} required><option value="">Seleccione inyectora</option>{maquinas.map((maquina) => <option key={maquina.id_maquina} value={maquina.id_maquina}>{maquina.nombre_maquina || maquina.maquina}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setMostrarAltaMaquina(true)}>+</button></div></label>
+              <label>Tipo de puntera<div className="planilla-selector-con-alta"><Selector value={varianteForm.punteras_id_puntera} onChange={(e) => setVarianteForm({ ...varianteForm, punteras_id_puntera: e.target.value })}><option value="">Seleccione puntera</option>{punteras.map((puntera) => <option key={puntera.id_puntera} value={puntera.id_puntera}>{puntera.codigo_puntera} - {puntera.nombre_puntera}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("puntera")}>+</button></div></label>
+              <label>Adicional (opcional)<div className="planilla-selector-con-alta"><Selector value={varianteForm.adicionales_id_adicional} onChange={(e) => setVarianteForm({ ...varianteForm, adicionales_id_adicional: e.target.value })}><option value="">Sin adicional</option>{adicionales.map((adicional) => <option key={adicional.id_adicional} value={adicional.id_adicional}>{adicional.codigo_adicional} - {adicional.nombre_adicional}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("adicional")}>+</button></div></label>
             </div>
             <div className="planilla-seccion-variante"><div className="planilla-seccion-variante-titulo"><strong>Operarios</strong><span>Podés asignar más de uno por etapa.</span></div><div className="planilla-operarios-variante">
               {[{ campo: "operarios_calzado", titulo: "Operarios de calzado" }, { campo: "operarios_puntera", titulo: "Operarios de puntera" }, { campo: "operarios_inyeccion", titulo: "Operarios de inyección" }, { campo: "operarios_inspeccion_final", titulo: "Operarios de inspección final" }].map((grupo) => <div key={grupo.campo}><span>{grupo.titulo}</span>{varianteForm[grupo.campo].map((nombre, indice) => <div key={indice}><input value={nombre} onChange={(e) => cambiarOperarioVariante(grupo.campo, indice, e.target.value)} required={grupo.campo !== "operarios_inspeccion_final"}/>{varianteForm[grupo.campo].length > 1 && <button type="button" onClick={() => quitarOperarioVariante(grupo.campo, indice)}>×</button>}</div>)}<button type="button" className="planilla-agregar-inline" onClick={() => agregarOperarioVariante(grupo.campo)}>+ Agregar operario</button></div>)}
             </div></div>
             <div className="planilla-seccion-variante planilla-seccion-materiales"><div className="planilla-seccion-variante-titulo"><strong>Materiales utilizados</strong><span>Seleccionados por material, remito y proveedor.</span></div><div className="planilla-materiales-principales"><label>Material/remito de puntera<div className="planilla-material-selector"><SelectorMaterial opciones={lotes.map(etiquetaLote)} type="search" value={varianteForm.busqueda_puntera} onChange={(e) => cambiarMaterialVariante("lote_puntera_id", e.target.value)} placeholder="Material, remito o proveedor" pattern={varianteForm.lote_puntera_id ? undefined : "(?!)"}/><button type="button" onClick={() => cargarMaterialNuevo({ tipo: "puntera" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label><label>PU utilizado<div className="planilla-material-selector"><SelectorMaterial opciones={lotes.map(etiquetaLote)} type="search" value={varianteForm.busqueda_pu} onChange={(e) => cambiarMaterialVariante("lote_pu_id", e.target.value)} placeholder="Material, remito o proveedor" pattern={varianteForm.lote_pu_id ? undefined : "(?!)"}/><button type="button" onClick={() => cargarMaterialNuevo({ tipo: "pu" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label></div><div className="planilla-variante-materiales">{varianteForm.materiales_extra.map((material, indice) => <div key={indice}><SelectorMaterial opciones={lotes.map(etiquetaLote)} type="search" value={material.busqueda} onChange={(e) => cambiarMaterialExtra(indice, e.target.value)} placeholder="Material, remito o proveedor" pattern={material.lote_id ? undefined : "(?!)"}/><button type="button" className="planilla-alta-material" onClick={() => cargarMaterialNuevo({ tipo: "extra", extra: indice })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button><button type="button" onClick={() => setVarianteForm((actual) => ({ ...actual, materiales_extra: actual.materiales_extra.filter((_, posicion) => posicion !== indice) }))}>×</button></div>)}<button type="button" className="ui-btn ui-btn-secondary" onClick={() => setVarianteForm((actual) => ({ ...actual, materiales_extra: [...actual.materiales_extra, { busqueda: "", lote_id: "" }] }))}>+ Agregar material</button></div></div>
             <fieldset className="produccion-inspeccion"><legend>Inspección final</legend><div className="produccion-inspeccion-opciones">{["Pendiente", "Conforme", "No conforme"].map((estado) => <label key={estado} className="inspeccion-opcion"><input type="radio" name="inspeccion-planilla" value={estado} checked={varianteForm.estado_inspeccion === estado} onChange={(e) => setVarianteForm({ ...varianteForm, estado_inspeccion: e.target.value })}/><span>{estado === "Pendiente" ? "Pendiente de inspección" : estado}</span></label>)}</div>{varianteForm.estado_inspeccion === "No conforme" && <label className="produccion-observacion">Observación de la no conformidad<textarea value={varianteForm.observacion_inspeccion} onChange={(e) => setVarianteForm({ ...varianteForm, observacion_inspeccion: e.target.value })} required rows="2" /></label>}</fieldset>
-            <datalist id="materiales-variante-planilla">{lotes.map((lote) => <option key={lote.id_lote || lote.id_lote_materiales} value={etiquetaLote(lote)}/>)}</datalist>
+
           </div>}
 
           {(!esPlanillaInyeccion || produccionActivaAbierta) && <div className="ui-table-card planilla-talles-comparacion">
@@ -1195,7 +1196,7 @@ export default function Planillas() {
           {!esPlanillaInyeccion && seccionAbierta === "operarios" && <div className="planilla-acordeon-contenido">
 
           <form onSubmit={agregarOperario} className="form-planilla">
-            <select
+            <Selector
               name="etapa"
               value={operarioForm.etapa}
               onChange={manejarCambioOperario}
@@ -1205,7 +1206,7 @@ export default function Planillas() {
               {etapasDePlanilla(planillaSeleccionada).map((etapa) => (
                 <option key={etapa} value={etapa}>{etapa}</option>
               ))}
-            </select>
+            </Selector>
 
             <input
               type="text"
@@ -1272,7 +1273,7 @@ export default function Planillas() {
             <div className="materiales-selectores">
               {materialesForm.map((idSeleccionado, index) => (
                 <div className="material-selector-fila" key={index}>
-                  <select
+                  <Selector
                     value={idSeleccionado}
                     onChange={(event) => manejarCambioUsoMaterial(index, event.target.value)}
                     aria-label={`Material ${index + 1}`}
@@ -1285,7 +1286,7 @@ export default function Planillas() {
                         Remito {lote.numero_remito || "-"} - {lote.nombre_proveedor || lote.proveedor || "Proveedor"} - {lote.material || "Material"} {lote.color ? `(${lote.color})` : ""}
                       </option>;
                     })}
-                  </select>
+                  </Selector>
                   {idSeleccionado && <button type="button" className="material-selector-quitar" title="Quitar material" aria-label="Quitar material" onClick={() => quitarSelectorMaterial(index)}>×</button>}
                 </div>
               ))}

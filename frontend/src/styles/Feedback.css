@@ -1,6 +1,6 @@
 .feedback-toast {
   position: fixed;
-  top: 22px;
+  bottom: calc(clamp(90px, 13vh, 130px) + env(safe-area-inset-bottom, 0px));
   right: 22px;
   z-index: 9999;
   width: min(420px, calc(100vw - 44px));
@@ -61,7 +61,7 @@
 @keyframes feedbackToastIn {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -200,7 +200,7 @@
 
 @media (max-width: 700px) {
   .feedback-toast {
-    top: 14px;
+    bottom: calc(clamp(70px, 13vh, 100px) + env(safe-area-inset-bottom, 0px));
     right: 14px;
   }
 

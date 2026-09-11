@@ -80,3 +80,5 @@
     width: 100%;
   }
 }
+
+.productos .catalogo-selector-row:has(button[aria-label="Editar modelo seleccionado"]) { grid-template-columns: minmax(0, 1fr) 42px 42px; }

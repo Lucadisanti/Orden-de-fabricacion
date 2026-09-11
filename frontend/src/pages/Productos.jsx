@@ -28,6 +28,7 @@ export default function Productos() {
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
   const [catalogoModal, setCatalogoModal] = useState(null);
+  const [guardandoModelo, setGuardandoModelo] = useState(false);
   const [cargando, setCargando] = useState(true);
   const formRef = useRef(null);
 
@@ -52,7 +53,15 @@ export default function Productos() {
 
   const guardarCatalogo = async ({ codigo, nombre }) => {
     try {
-      if (catalogoModal === "modelo") {
+      if (catalogoModal === "editar-modelo") {
+        setGuardandoModelo(true);
+        await axios.put(`${API_URL}/catalogos/modelos-calzado/${modelo.id_modelo}`, { codigo_modelo: codigo, nombre_modelo: nombre });
+        await cargar();
+        setForm(actual => ({ ...actual, nombre_producto: nombre }));
+        setCatalogoModal(null);
+        setToast({ type: "success", title: "Modelo actualizado", message: "El nombre y los articulos asociados quedaron actualizados." });
+        return;
+      } else if (catalogoModal === "modelo") {
         const respuesta = await axios.post(`${API_URL}/catalogos/modelos-calzado`, { codigo_modelo: codigo, nombre_modelo: nombre });
         await cargar();
         setForm((actual) => ({ ...actual, modelos_calzado_id_modelo: String(respuesta.data.id_modelo), nombre_producto: nombre }));
@@ -87,10 +96,10 @@ export default function Productos() {
   return <section className="productos">
     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
     <ConfirmModal open={Boolean(confirmacion)} {...confirmacion} onCancel={() => setConfirmacion(null)} onConfirm={confirmacion?.onConfirm} />
-    <CatalogModal key={catalogoModal || "cerrado"} open={Boolean(catalogoModal)} title={catalogoModal === "modelo" ? "Agregar modelo de calzado" : "Agregar color"} codeLength={catalogoModal === "modelo" ? 3 : 2} onConfirm={guardarCatalogo} onCancel={() => setCatalogoModal(null)} />
+    <CatalogModal key={catalogoModal || "cerrado"} initialCode={catalogoModal === "editar-modelo" ? modelo?.codigo_modelo : ""} initialName={catalogoModal === "editar-modelo" ? modelo?.nombre_modelo : ""} confirmText={catalogoModal === "editar-modelo" ? "Guardar cambios" : "Agregar"} busy={guardandoModelo} description={catalogoModal === "editar-modelo" ? "Este cambio actualiza todos los productos y articulos asociados al modelo, incluso los usados en ordenes y producciones." : undefined} open={Boolean(catalogoModal)} title={catalogoModal === "editar-modelo" ? "Editar modelo de calzado" : catalogoModal === "modelo" ? "Agregar modelo de calzado" : "Agregar color"} codeLength={catalogoModal === "color" ? 2 : 3} onConfirm={guardarCatalogo} onCancel={() => !guardandoModelo && setCatalogoModal(null)} />
     <div className="ui-page-header ui-page-header-row"><div><h1>Productos</h1><p>Productos base definidos por modelo y color fijo.</p></div><button className="ui-btn ui-btn-primary" onClick={abrirNuevo}>+ Nuevo producto</button></div>
     {mostrar && <div className="ui-form-card" ref={formRef}><h2>{idEditando ? "Editar producto base" : "Nuevo producto base"}</h2><form className="form-producto" onSubmit={guardar}>
-      <label>Modelo de calzado<div className="catalogo-selector-row"><Selector required value={form.modelos_calzado_id_modelo} onChange={(e) => { const elegido = modelos.find((x) => String(x.id_modelo) === e.target.value); setForm({ ...form, modelos_calzado_id_modelo: e.target.value, nombre_producto: elegido?.nombre_modelo || "" }); }}><option value="">Seleccione modelo</option>{modelos.map((x) => <option key={x.id_modelo} value={x.id_modelo}>{x.codigo_modelo} - {x.nombre_modelo}</option>)}</Selector><button type="button" className="catalogo-icon-btn" title="Agregar modelo" aria-label="Agregar modelo" onClick={() => setCatalogoModal("modelo")}>+</button></div></label>
+      <label>Modelo de calzado<div className="catalogo-selector-row"><Selector required value={form.modelos_calzado_id_modelo} onChange={(e) => { const elegido = modelos.find((x) => String(x.id_modelo) === e.target.value); setForm({ ...form, modelos_calzado_id_modelo: e.target.value, nombre_producto: elegido?.nombre_modelo || "" }); }}><option value="">Seleccione modelo</option>{modelos.map((x) => <option key={x.id_modelo} value={x.id_modelo}>{x.codigo_modelo} - {x.nombre_modelo}</option>)}</Selector><button type="button" className="catalogo-icon-btn" title="Agregar modelo" aria-label="Agregar modelo" onClick={() => setCatalogoModal("modelo")}>+</button>{modelo && <button type="button" className="catalogo-icon-btn" title="Editar modelo seleccionado" aria-label="Editar modelo seleccionado" onClick={() => setCatalogoModal("editar-modelo")}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z M14 5l5 5" /></svg></button>}</div></label>
       <label>Color fijo<div className="catalogo-selector-row"><Selector required value={form.colores_id_color} onChange={(e) => setForm({ ...form, colores_id_color: e.target.value })}><option value="">Seleccione color</option>{colores.filter((x) => x.codigo_color).map((x) => <option key={x.id_color} value={x.id_color}>{x.codigo_color} - {x.color}</option>)}</Selector><button type="button" className="catalogo-icon-btn" title="Agregar color" aria-label="Agregar color" onClick={() => setCatalogoModal("color")}>+</button></div></label>
       <div className="articulo-preview"><span>Código base</span><strong>{codigoBase || "Seleccioná modelo y color"}</strong><small>La puntera y los adicionales completarán el artículo en la orden.</small></div>
       <div className="ui-form-actions"><button className="ui-btn ui-btn-primary">Guardar</button><button type="button" className="ui-btn ui-btn-secondary" onClick={cancelar}>Cancelar</button></div>

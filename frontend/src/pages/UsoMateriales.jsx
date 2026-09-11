@@ -4,7 +4,9 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { obtenerMensajeError } from "../utils/errorMessages";
@@ -17,6 +19,9 @@ export default function UsoMateriales() {
   const [planillas, setPlanillas] = useState([]);
   const [lotes, setLotes] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const envioEnCurso = useRef(false);
+  const versionFormulario = useRef(0);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
@@ -46,6 +51,7 @@ export default function UsoMateriales() {
 
 
   async function cargarDatos() {
+    setCargando(true);
     try {
       const [usosRes, planillasRes, lotesRes] = await Promise.all([
         axios.get("/api/uso-materiales/"),
@@ -56,10 +62,11 @@ export default function UsoMateriales() {
       setUsos(usosRes.data);
       setPlanillas(planillasRes.data);
       setLotes(lotesRes.data);
-      setCargando(false);
+      setError("");
     } catch (error) {
       console.error(error);
       setError("No se pudieron cargar los usos de materiales.");
+    } finally {
       setCargando(false);
     }
   }
@@ -84,6 +91,7 @@ export default function UsoMateriales() {
   };
 
   const abrirFormularioNuevo = () => {
+    versionFormulario.current += 1;
     setEditando(false);
     setIdEditando(null);
     setForm({
@@ -96,6 +104,7 @@ export default function UsoMateriales() {
   };
 
   const iniciarEdicion = (uso) => {
+    versionFormulario.current += 1;
     setEditando(true);
     setIdEditando(uso.id_uso);
 
@@ -115,6 +124,7 @@ export default function UsoMateriales() {
 
   const guardarUsoMaterial = async (e) => {
     e.preventDefault();
+    if (envioEnCurso.current) return;
 
     const datos = {
       lote_materiales_id_lote: Number(form.lote_materiales_id_lote),
@@ -123,6 +133,10 @@ export default function UsoMateriales() {
       ),
       cantidad_usada: Number(form.cantidad_usada),
     };
+
+    envioEnCurso.current = true;
+    setGuardando(true);
+    const versionEnviada = versionFormulario.current;
 
     try {
       if (editando) {
@@ -138,19 +152,25 @@ export default function UsoMateriales() {
         mostrarToast("success", "Uso registrado", "El material utilizado se registró correctamente.");
       }
 
-      setForm({
-        lote_materiales_id_lote: "",
-        planilla_produccion_id_planilla: "",
-        cantidad_usada: "",
-      });
+      // Una respuesta anterior no debe cerrar otro formulario recién abierto.
+      if (versionFormulario.current === versionEnviada) {
+        setForm({
+          lote_materiales_id_lote: "",
+          planilla_produccion_id_planilla: "",
+          cantidad_usada: "",
+        });
 
-      setEditando(false);
-      setIdEditando(null);
-      setMostrarFormulario(false);
+        setEditando(false);
+        setIdEditando(null);
+        setMostrarFormulario(false);
+      }
       cargarDatos();
     } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "uso de material"));
+    } finally {
+      envioEnCurso.current = false;
+      setGuardando(false);
     }
   };
 
@@ -186,6 +206,8 @@ export default function UsoMateriales() {
     return formatearFecha(planilla?.fecha);
   };
 
+  const textoBusqueda = busqueda.trim();
+
   const usosFiltrados = usos.filter((uso) => {
   const texto = `
     ${uso.numero_planilla || ""}
@@ -198,8 +220,12 @@ export default function UsoMateriales() {
 
   const planillaParametro = searchParams.get("planilla");
   const coincidePlanilla = !planillaParametro || (uso.numero_planilla || uso.planilla || "").toLowerCase() === planillaParametro.toLowerCase();
-  return texto.includes(busqueda.toLowerCase()) && coincidePlanilla;
+  return texto.includes(textoBusqueda.toLowerCase()) && coincidePlanilla;
   });
+
+  const hayBusqueda = textoBusqueda.length > 0;
+  const sinResultados = hayBusqueda && usosFiltrados.length === 0;
+  const sinUsos = !hayBusqueda && usos.length === 0;
 
   const usosOrdenados = filaAbierta
     ? [...usosFiltrados].sort((a, b) => Number(String(b.id_uso) === String(filaAbierta)) - Number(String(a.id_uso) === String(filaAbierta)))
@@ -284,25 +310,29 @@ export default function UsoMateriales() {
               ))}
             </Selector>
 
-            <input
-              type="number"
-              step="0.01"
-              name="cantidad_usada"
-              placeholder="Cantidad usada"
-              value={form.cantidad_usada}
-              onChange={manejarCambio}
-              required
-            />
+            <label>
+              <span>Cantidad usada</span>
+              <input
+                type="number"
+                step="0.01"
+                name="cantidad_usada"
+                placeholder="Cantidad usada"
+                value={form.cantidad_usada}
+                onChange={manejarCambio}
+                required
+              />
+            </label>
 
             <div className="ui-form-actions">
-              <button type="submit" className="ui-btn ui-btn-primary">
-                {editando ? "Actualizar" : "Guardar"}
+              <button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>
+                {guardando ? (editando ? "Actualizando..." : "Guardando...") : (editando ? "Actualizar" : "Guardar")}
               </button>
 
               <button
                 type="button"
                 className="ui-btn ui-btn-secondary"
                 onClick={() => {
+                  versionFormulario.current += 1;
                   setMostrarFormulario(false);
                   setEditando(false);
                   setIdEditando(null);
@@ -317,21 +347,29 @@ export default function UsoMateriales() {
 
       {(mostrarFormulario) && <SeparadorListado titulo="Usos de materiales registrados" descripcion="Consultá los usos de materiales guardados." />}
 
-      {cargando && <p>Cargando usos de materiales...</p>}
+      {cargando && !error && <p>Cargando usos de materiales...</p>}
 
-      {error && <p>{error}</p>}
+      {error && <RetryMessage message={error} onRetry={cargarDatos} retrying={cargando} />}
 
       {!cargando && !error && (
         <>
-        <div className="ui-search-bar">
-          <input
-            className="ui-input"
-            type="text"
-            placeholder="Buscar por planilla, orden, remito, proveedor, material o color..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </div>
+        <ClearableSearch
+          placeholder="Buscar por planilla, orden, remito, proveedor, material o color..."
+          value={busqueda}
+          onChange={setBusqueda}
+        />
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron usos de materiales con “{textoBusqueda}”.</strong>
+            <span>Probá con otra planilla, orden, remito, proveedor, material o color.</span>
+          </div>
+        ) : sinUsos ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay usos de materiales cargados.</strong>
+            <span>Registrá un uso para vincular materiales con una planilla de producción.</span>
+          </div>
+        ) : (
+          <>
         <div ref={listadoRef} className="ui-table-card listado-desplegable">
           <table className="ui-data-table ui-listado-ajustado"><colgroup>{[12,22,22,12,14,18].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
@@ -417,6 +455,8 @@ export default function UsoMateriales() {
           </table>
         </div>
         <Pagination {...paginacionUsos} />
+          </>
+        )}
         </>
       )}
     </section>

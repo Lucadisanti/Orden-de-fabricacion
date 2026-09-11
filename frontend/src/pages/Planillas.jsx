@@ -9,6 +9,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import CatalogModal from "../components/CatalogModal";
 import SortControls from "../components/SortControls";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
@@ -928,10 +929,15 @@ export default function Planillas() {
   };
 
 
-    const planillasFiltradas = planillas.filter((planilla) => {
-    const esR013DeOrden = planilla.numero_planilla?.toUpperCase() === "R013"
-      || planilla.tipo_planilla === "Corte y Aparado";
-    if (esR013DeOrden) return false;
+    const textoBusqueda = busqueda.trim();
+
+    const planillasVisibles = planillas.filter((planilla) => {
+      const esR013DeOrden = planilla.numero_planilla?.toUpperCase() === "R013"
+        || planilla.tipo_planilla === "Corte y Aparado";
+      return !esR013DeOrden;
+    });
+
+    const planillasFiltradas = planillasVisibles.filter((planilla) => {
     const texto = `
       ${planilla.numero_planilla || ""}
       ${planilla.numero_orden || planilla.orden || ""}
@@ -942,8 +948,12 @@ export default function Planillas() {
       ${planilla.estado || ""}
     `.toLowerCase();
 
-    return texto.includes(busqueda.toLowerCase());
+    return texto.includes(textoBusqueda.toLowerCase());
     });
+
+    const hayBusqueda = textoBusqueda.length > 0;
+    const sinResultados = hayBusqueda && planillasFiltradas.length === 0;
+    const sinPlanillas = !hayBusqueda && planillasVisibles.length === 0;
 
     const planillasConOrden = ordenarRegistros(planillasFiltradas, (planilla) => ({
       fecha: planilla.fecha,
@@ -1013,13 +1023,16 @@ export default function Planillas() {
               ))}
             </Selector>
 
-            <input
-              type="date"
-              name="fecha"
-              value={planillaForm.fecha}
-              onChange={manejarCambio}
-              required
-            />
+            <label>
+              <span>Fecha</span>
+              <input
+                type="date"
+                name="fecha"
+                value={planillaForm.fecha}
+                onChange={manejarCambio}
+                required
+              />
+            </label>
 
             <Selector
               name="tipo_planilla"
@@ -1105,7 +1118,7 @@ export default function Planillas() {
               <label>Adicional (opcional)<div className="planilla-selector-con-alta"><Selector value={varianteForm.adicionales_id_adicional} onChange={(e) => setVarianteForm({ ...varianteForm, adicionales_id_adicional: e.target.value })}><option value="">Sin adicional</option>{adicionales.map((adicional) => <option key={adicional.id_adicional} value={adicional.id_adicional}>{adicional.codigo_adicional} - {adicional.nombre_adicional}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("adicional")}>+</button></div></label>
             </div>
             <div className="planilla-seccion-variante"><div className="planilla-seccion-variante-titulo"><strong>Operarios</strong><span>Podés asignar más de uno por etapa.</span></div><div className="planilla-operarios-variante">
-              {[{ campo: "operarios_calzado", titulo: "Operarios de calzado" }, { campo: "operarios_puntera", titulo: "Operarios de puntera" }, { campo: "operarios_inyeccion", titulo: "Operarios de inyección" }, { campo: "operarios_inspeccion_final", titulo: "Operarios de inspección final" }].map((grupo) => <div key={grupo.campo}><span>{grupo.titulo}</span>{varianteForm[grupo.campo].map((nombre, indice) => <div key={indice}><input value={nombre} onChange={(e) => cambiarOperarioVariante(grupo.campo, indice, e.target.value)} required={grupo.campo !== "operarios_inspeccion_final"}/>{varianteForm[grupo.campo].length > 1 && <button type="button" onClick={() => quitarOperarioVariante(grupo.campo, indice)}>×</button>}</div>)}<button type="button" className="planilla-agregar-inline" onClick={() => agregarOperarioVariante(grupo.campo)}>+ Agregar operario</button></div>)}
+              {[{ campo: "operarios_calzado", titulo: "Operarios de calzado" }, { campo: "operarios_puntera", titulo: "Operarios de puntera" }, { campo: "operarios_inyeccion", titulo: "Operarios de inyección" }, { campo: "operarios_inspeccion_final", titulo: "Operarios de inspección final" }].map((grupo) => <div key={grupo.campo}><span>{grupo.titulo}</span>{varianteForm[grupo.campo].map((nombre, indice) => <div key={indice}><label><span>Nombre del operario {indice + 1}</span><input value={nombre} onChange={(e) => cambiarOperarioVariante(grupo.campo, indice, e.target.value)} required={grupo.campo !== "operarios_inspeccion_final"}/></label>{varianteForm[grupo.campo].length > 1 && <button type="button" onClick={() => quitarOperarioVariante(grupo.campo, indice)}>×</button>}</div>)}<button type="button" className="planilla-agregar-inline" onClick={() => agregarOperarioVariante(grupo.campo)}>+ Agregar operario</button></div>)}
             </div></div>
             <div className="planilla-seccion-variante planilla-seccion-materiales"><div className="planilla-seccion-variante-titulo"><strong>Materiales utilizados</strong><span>Seleccionados por material, remito y proveedor.</span></div><div className="planilla-materiales-principales"><label>Material/remito de puntera<div className="planilla-material-selector"><SelectorMaterial opciones={lotes.map(etiquetaLote)} type="search" value={varianteForm.busqueda_puntera} onChange={(e) => cambiarMaterialVariante("lote_puntera_id", e.target.value)} placeholder="Material, remito o proveedor" pattern={varianteForm.lote_puntera_id ? undefined : "(?!)"}/><button type="button" onClick={() => cargarMaterialNuevo({ tipo: "puntera" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label><label>PU utilizado<div className="planilla-material-selector"><SelectorMaterial opciones={lotes.map(etiquetaLote)} type="search" value={varianteForm.busqueda_pu} onChange={(e) => cambiarMaterialVariante("lote_pu_id", e.target.value)} placeholder="Material, remito o proveedor" pattern={varianteForm.lote_pu_id ? undefined : "(?!)"}/><button type="button" onClick={() => cargarMaterialNuevo({ tipo: "pu" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label></div><div className="planilla-variante-materiales">{varianteForm.materiales_extra.map((material, indice) => <div key={indice}><SelectorMaterial opciones={lotes.map(etiquetaLote)} type="search" value={material.busqueda} onChange={(e) => cambiarMaterialExtra(indice, e.target.value)} placeholder="Material, remito o proveedor" pattern={material.lote_id ? undefined : "(?!)"}/><button type="button" className="planilla-alta-material" onClick={() => cargarMaterialNuevo({ tipo: "extra", extra: indice })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button><button type="button" onClick={() => setVarianteForm((actual) => ({ ...actual, materiales_extra: actual.materiales_extra.filter((_, posicion) => posicion !== indice) }))}>×</button></div>)}<button type="button" className="ui-btn ui-btn-secondary" onClick={() => setVarianteForm((actual) => ({ ...actual, materiales_extra: [...actual.materiales_extra, { busqueda: "", lote_id: "" }] }))}>+ Agregar material</button></div></div>
             <fieldset className="produccion-inspeccion"><legend>Inspección final</legend><div className="produccion-inspeccion-opciones">{["Pendiente", "Conforme", "No conforme"].map((estado) => <label key={estado} className="inspeccion-opcion"><input type="radio" name="inspeccion-planilla" value={estado} checked={varianteForm.estado_inspeccion === estado} onChange={(e) => setVarianteForm({ ...varianteForm, estado_inspeccion: e.target.value })}/><span>{estado === "Pendiente" ? "Pendiente de inspección" : estado}</span></label>)}</div>{varianteForm.estado_inspeccion === "No conforme" && <label className="produccion-observacion">Observación de la no conformidad<textarea value={varianteForm.observacion_inspeccion} onChange={(e) => setVarianteForm({ ...varianteForm, observacion_inspeccion: e.target.value })} required rows="2" /></label>}</fieldset>
@@ -1208,14 +1221,17 @@ export default function Planillas() {
               ))}
             </Selector>
 
-            <input
-              type="text"
-              name="nombre_operario"
-              placeholder="Nombre del operario"
-              value={operarioForm.nombre_operario}
-              onChange={manejarCambioOperario}
-              required
-            />
+            <label>
+              <span>Nombre del operario</span>
+              <input
+                type="text"
+                name="nombre_operario"
+                placeholder="Nombre del operario"
+                value={operarioForm.nombre_operario}
+                onChange={manejarCambioOperario}
+                required
+              />
+            </label>
 
             <div className="ui-form-actions">
               <button type="submit" className="ui-btn ui-btn-primary">
@@ -1351,21 +1367,29 @@ export default function Planillas() {
       {!cargando && !error && (
         <>
         <div className="ui-list-tools">
-          <div className="ui-search-bar">
-            <input
-              className="ui-input"
-              type="text"
-              placeholder="Buscar por producto, máquina, fecha o estado..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
+          <ClearableSearch
+            placeholder="Buscar por producto, máquina, fecha o estado..."
+            value={busqueda}
+            onChange={setBusqueda}
+          />
           <SortControls opciones={[
             { value: "fecha", label: "Fecha" },
             { value: "producto", label: "Producto" },
             { value: "maquina", label: "Máquina" },
           ]} {...ordenListado} />
         </div>
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron planillas con “{textoBusqueda}”.</strong>
+            <span>Probá con otro producto, máquina, fecha o estado.</span>
+          </div>
+        ) : sinPlanillas ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay planillas de producción cargadas.</strong>
+            <span>Creá una planilla R013/1 para empezar a registrar producción.</span>
+          </div>
+        ) : (
+          <>
         <div ref={listadoRef} className={`ui-table-card planillas-listado-card ${filaDetalleAbierta ? "detalle-visible" : ""}`}>
           <table className="ui-data-table ui-listado-ajustado"><colgroup>{[9,10,13,13,16,12,12,15].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
@@ -1487,6 +1511,8 @@ export default function Planillas() {
           </table>
         </div>
         <Pagination {...paginacionPlanillas} />
+          </>
+        )}
         </>
       )}
     </section>

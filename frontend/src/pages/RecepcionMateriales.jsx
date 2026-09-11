@@ -7,10 +7,12 @@ import CatalogModal from "../components/CatalogModal";
 import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import SortControls from "../components/SortControls";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/RecepcionMateriales.css";
@@ -29,6 +31,11 @@ export default function RecepcionMateriales() {
   const [searchParams] = useSearchParams();
   const volverA = searchParams.get("volver");
   const formularioRef = useRef(null);
+  const [guardando, setGuardando] = useState(false);
+  const envioEnCurso = useRef(false);
+  const versionFormulario = useRef(0);
+  // Invalida respuestas pendientes al salir de la pantalla.
+  useEffect(() => () => { versionFormulario.current += 1; }, []);
   const listadoRef = useRef(null);
   const [proveedores, setProveedores] = useState([]);
   const [materiales, setMateriales] = useState([]);
@@ -76,6 +83,7 @@ export default function RecepcionMateriales() {
   };
 
   const abrirFormularioNuevo = () => {
+    versionFormulario.current += 1;
     setEditando(false);
     setRecepcionEditando(null);
     setForm(formularioVacio);
@@ -87,6 +95,7 @@ export default function RecepcionMateriales() {
   const fechaParaInput = (fecha) => (fecha ? String(fecha).slice(0, 10) : "");
 
   const iniciarEdicion = (lote) => {
+    versionFormulario.current += 1;
     const lotesDelRemito = lotes.filter(
       (item) => String(item.remitos_id_remito) === String(lote.remitos_id_remito),
     );
@@ -114,6 +123,7 @@ export default function RecepcionMateriales() {
 
 
   async function cargarDatos() {
+    setCargando(true);
     try {
       const [provRes, matRes, colRes, lotesRes] = await Promise.all([
         axios.get("/api/proveedores/"),
@@ -126,10 +136,11 @@ export default function RecepcionMateriales() {
       setMateriales(matRes.data);
       setColores(colRes.data);
       setLotes(lotesRes.data);
-      setCargando(false);
+      setError("");
     } catch (error) {
       console.error(error);
       setError("No se pudieron cargar los datos.");
+    } finally {
       setCargando(false);
     }
   }
@@ -259,14 +270,22 @@ export default function RecepcionMateriales() {
 
   const guardarRecepcion = async (e) => {
     e.preventDefault();
-
+    if (envioEnCurso.current) return;
+    const numeroRemito = form.numero_remito.trim();
+    if (!numeroRemito) {
+      mostrarToast("warning", "Número de remito requerido", "Ingresá un número de remito que no contenga solo espacios.");
+      return;
+    }
+    envioEnCurso.current = true;
+    setGuardando(true);
+    const versionEnviada = versionFormulario.current;
     try {
       const datosRemito = {
-        numero_remito: form.numero_remito,
+        numero_remito: numeroRemito,
         fecha_solicitud: form.fecha_solicitud,
         fecha_entrega: form.fecha_entrega || null,
         estado_recepcion: form.estado_recepcion,
-        recibido_por: form.recibido_por,
+        recibido_por: form.recibido_por.trim(),
         proveedores_id_proveedor: Number(form.proveedores_id_proveedor),
         materiales: lineas.map((linea) => ({
           id_lote: linea.id_lote,
@@ -274,7 +293,7 @@ export default function RecepcionMateriales() {
           colores_id_color: linea.colores_id_color ? Number(linea.colores_id_color) : null,
           cantidad_solicitada: Number(linea.cantidad_solicitada),
           cantidad_recibida: Number(linea.cantidad_recibida),
-          observaciones: linea.observaciones,
+          observaciones: linea.observaciones.trim(),
         })),
       };
 
@@ -284,24 +303,30 @@ export default function RecepcionMateriales() {
       } else {
         const respuesta = await axios.post("/api/remitos/", datosRemito);
         mostrarToast("success", "Recepción registrada", "El remito y sus materiales se guardaron correctamente.");
-        if (volverA) {
+        if (volverA && versionFormulario.current === versionEnviada) {
           const lotesRes = await axios.get("/api/lotes/");
           const creados = lotesRes.data.filter((lote) => String(lote.remitos_id_remito) === String(respuesta.data.id_remito));
+          if (versionFormulario.current !== versionEnviada) { cargarDatos(); return; }
           sessionStorage.setItem("alta-material-resultado", JSON.stringify({ lotes: creados }));
           navigate(`/${volverA}?materialCreado=1`);
           return;
         }
       }
 
-      setForm(formularioVacio);
-      setLineas([crearLineaVacia()]);
-      setEditando(false);
-      setRecepcionEditando(null);
-      setMostrarFormulario(false);
+      if (versionFormulario.current === versionEnviada) {
+        setForm(formularioVacio);
+        setLineas([crearLineaVacia()]);
+        setEditando(false);
+        setRecepcionEditando(null);
+        setMostrarFormulario(false);
+      }
       cargarDatos();
     } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "recepción"));
+    } finally {
+      envioEnCurso.current = false;
+      setGuardando(false);
     }
   };
 
@@ -358,6 +383,8 @@ export default function RecepcionMateriales() {
     return grupos;
   }, {}));
 
+  const textoBusqueda = busqueda.trim();
+
   const recepcionesFiltradas = recepciones.filter((recepcion) => {
     const textoMateriales = recepcion.materiales
       .map((lote) => `${lote.material || ""} ${lote.color || ""}`)
@@ -369,8 +396,12 @@ export default function RecepcionMateriales() {
       ${recepcion.estado_recepcion || ""}
       ${recepcion.recibido_por || ""}
     `.toLowerCase();
-    return texto.includes(busqueda.toLowerCase());
+    return texto.includes(textoBusqueda.toLowerCase());
   });
+
+  const hayBusqueda = textoBusqueda.length > 0;
+  const sinResultados = hayBusqueda && recepcionesFiltradas.length === 0;
+  const sinRecepciones = !hayBusqueda && recepciones.length === 0;
 
   const obtenerValorOrdenRecepcion = (recepcion) => ({
     fecha: recepcion.fecha_entrega || recepcion.fecha_solicitud,
@@ -545,14 +576,15 @@ export default function RecepcionMateriales() {
           </div>
 
           <div className="ui-form-actions">
-              <button type="submit" className="ui-btn ui-btn-primary">
-                {editando ? "Actualizar recepción" : "Guardar recepción"}
+              <button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>
+                {guardando ? (editando ? "Actualizando..." : "Guardando...") : (editando ? "Actualizar recepción" : "Guardar recepción")}
               </button>
 
               <button
                 type="button"
                 className="ui-btn ui-btn-secondary"
                 onClick={() => {
+                  versionFormulario.current += 1;
                   if (volverA) {
                     navigate(`/${volverA}?materialCancelado=1`);
                     return;
@@ -574,22 +606,18 @@ export default function RecepcionMateriales() {
 
       {(mostrarFormulario) && <SeparadorListado titulo="Recepciones registradas" descripcion="Consultá las recepciones de materiales guardadas." />}
 
-      {cargando && <p>Cargando recepciones...</p>}
+      {cargando && !error && <p>Cargando recepciones...</p>}
 
-      {error && <p>{error}</p>}
+      {error && <RetryMessage message={error} onRetry={cargarDatos} retrying={cargando} />}
 
       {!cargando && !error && (
         <>
         <div className="ui-list-tools">
-          <div className="ui-search-bar">
-            <input
-              className="ui-input"
-              type="text"
-              placeholder="Buscar por proveedor, material, color, remito, estado o recibido por..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
+          <ClearableSearch
+            placeholder="Buscar por proveedor, material, color, remito, estado o recibido por..."
+            value={busqueda}
+            onChange={setBusqueda}
+          />
           <SortControls
             opciones={[
               { value: "fecha", label: "Fecha" },
@@ -600,6 +628,18 @@ export default function RecepcionMateriales() {
             {...orden}
           />
         </div>
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron recepciones con “{textoBusqueda}”.</strong>
+            <span>Probá con otro proveedor, material, color, remito o estado.</span>
+          </div>
+        ) : sinRecepciones ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay recepciones cargadas.</strong>
+            <span>Creá una recepción para empezar a registrar remitos y materiales.</span>
+          </div>
+        ) : (
+          <>
         <div ref={listadoRef} className="ui-table-card recepcion-listado-desplegable">
           <table className="ui-data-table ui-listado-ajustado"><colgroup>{[10,20,20,12,10,12,16].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
@@ -703,6 +743,8 @@ export default function RecepcionMateriales() {
           </table>
         </div>
         <Pagination {...paginacionRecepciones} />
+          </>
+        )}
         </>
       )}
     </section>

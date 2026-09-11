@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
 import CatalogModal from "../components/CatalogModal";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { obtenerMensajeError } from "../utils/errorMessages";
@@ -30,13 +32,21 @@ export default function Productos() {
   const [catalogoModal, setCatalogoModal] = useState(null);
   const [guardandoModelo, setGuardandoModelo] = useState(false);
   const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const envioEnCurso = useRef(false);
+  const versionFormulario = useRef(0);
+  // Invalida respuestas pendientes al salir de la pantalla.
+  useEffect(() => () => { versionFormulario.current += 1; }, []);
   const formRef = useRef(null);
 
   const cargar = async () => {
+    setCargando(true);
     try {
       const [p, m, c] = await Promise.all([axios.get(`${API_URL}/productos/`), axios.get(`${API_URL}/catalogos/modelos-calzado`), axios.get(`${API_URL}/colores/`)]);
       setProductos(p.data); setModelos(m.data); setColores(c.data);
-    } catch (error) { console.error(error); setToast({ type: "error", title: "No se pudo cargar", message: "Revisá la conexión con el servidor." }); }
+      setErrorCarga("");
+    } catch (error) { console.error(error); setErrorCarga("No se pudieron cargar los productos y sus opciones. Revisá la conexión con el servidor."); }
     finally { setCargando(false); }
   };
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -47,9 +57,9 @@ export default function Productos() {
   const modelo = modelos.find((x) => String(x.id_modelo) === String(form.modelos_calzado_id_modelo));
   const color = colores.find((x) => String(x.id_color) === String(form.colores_id_color));
   const codigoBase = `${modelo?.codigo_modelo || ""}${color?.codigo_color || ""}`;
-  const abrirNuevo = () => { setForm(vacio()); setIdEditando(null); setMostrar(true); setTimeout(() => formRef.current?.scrollIntoView(), 50); };
-  const editar = (producto) => { setForm({ modelos_calzado_id_modelo: producto.modelos_calzado_id_modelo || "", nombre_producto: producto.nombre_producto || "", colores_id_color: producto.colores_id_color || "" }); setIdEditando(producto.id_producto); setMostrar(true); };
-  const cancelar = () => { setMostrar(false); if (desdeOrden) navigate("/ordenes?producto=cancelado"); };
+  const abrirNuevo = () => { versionFormulario.current += 1; setForm(vacio()); setIdEditando(null); setMostrar(true); setTimeout(() => formRef.current?.scrollIntoView(), 50); };
+  const editar = (producto) => { versionFormulario.current += 1; setForm({ modelos_calzado_id_modelo: producto.modelos_calzado_id_modelo || "", nombre_producto: producto.nombre_producto || "", colores_id_color: producto.colores_id_color || "" }); setIdEditando(producto.id_producto); setMostrar(true); };
+  const cancelar = () => { versionFormulario.current += 1; setMostrar(false); if (desdeOrden) navigate("/ordenes?producto=cancelado"); };
 
   const guardarCatalogo = async ({ codigo, nombre }) => {
     try {
@@ -79,18 +89,34 @@ export default function Productos() {
 
   const guardar = async (event) => {
     event.preventDefault();
+    if (envioEnCurso.current) return;
     const datos = { ...form, modelos_calzado_id_modelo: Number(form.modelos_calzado_id_modelo), colores_id_color: Number(form.colores_id_color), articulo_producto: codigoBase };
+    envioEnCurso.current = true;
+    setGuardando(true);
+    const versionEnviada = versionFormulario.current;
     try {
       if (idEditando) await axios.put(`${API_URL}/productos/${idEditando}`, datos);
       else {
         const respuesta = await axios.post(`${API_URL}/productos/`, datos);
-        if (desdeOrden) { navigate(`/ordenes?producto=${respuesta.data.id_producto}`); return; }
+        if (desdeOrden && versionFormulario.current === versionEnviada) { navigate(`/ordenes?producto=${respuesta.data.id_producto}`); return; }
       }
-      setToast({ type: "success", title: "Producto guardado", message: "Modelo y color fijo quedaron registrados." }); setMostrar(false); setForm(vacio()); setIdEditando(null); cargar();
+      setToast({ type: "success", title: "Producto guardado", message: "Modelo y color fijo quedaron registrados." }); if (versionFormulario.current === versionEnviada) { setMostrar(false); setForm(vacio()); setIdEditando(null); } cargar();
     } catch (error) { setToast({ type: "error", title: "No se pudo guardar", message: obtenerMensajeError(error, "producto") }); }
+    finally { envioEnCurso.current = false; setGuardando(false); }
   };
   const eliminar = (id) => setConfirmacion({ title: "Eliminar producto", message: "Se eliminará el producto si no tiene órdenes asociadas.", confirmText: "Eliminar", danger: true, onConfirm: async () => { setConfirmacion(null); try { await axios.delete(`${API_URL}/productos/${id}`); cargar(); } catch (error) { setToast({ type: "error", title: "No se pudo eliminar", message: obtenerMensajeError(error, "producto") }); } } });
-  const filtrados = productos.filter((p) => `${p.nombre_producto} ${p.color} ${p.articulo_producto}`.toLowerCase().includes(busqueda.toLowerCase()));
+  const textoBusqueda = busqueda.trim();
+
+  const filtrados = productos.filter((p) =>
+    `${p.nombre_producto} ${p.color} ${p.articulo_producto}`
+      .toLowerCase()
+      .includes(textoBusqueda.toLowerCase())
+  );
+
+  const hayBusqueda = textoBusqueda.length > 0;
+  const sinResultados = hayBusqueda && filtrados.length === 0;
+  const sinProductos = !hayBusqueda && productos.length === 0;
+
   const paginacion = usePagination(filtrados);
 
   return <section className="productos">
@@ -102,10 +128,68 @@ export default function Productos() {
       <label>Modelo de calzado<div className="catalogo-selector-row"><Selector required value={form.modelos_calzado_id_modelo} onChange={(e) => { const elegido = modelos.find((x) => String(x.id_modelo) === e.target.value); setForm({ ...form, modelos_calzado_id_modelo: e.target.value, nombre_producto: elegido?.nombre_modelo || "" }); }}><option value="">Seleccione modelo</option>{modelos.map((x) => <option key={x.id_modelo} value={x.id_modelo}>{x.codigo_modelo} - {x.nombre_modelo}</option>)}</Selector><button type="button" className="catalogo-icon-btn" title="Agregar modelo" aria-label="Agregar modelo" onClick={() => setCatalogoModal("modelo")}>+</button>{modelo && <button type="button" className="catalogo-icon-btn" title="Editar modelo seleccionado" aria-label="Editar modelo seleccionado" onClick={() => setCatalogoModal("editar-modelo")}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z M14 5l5 5" /></svg></button>}</div></label>
       <label>Color fijo<div className="catalogo-selector-row"><Selector required value={form.colores_id_color} onChange={(e) => setForm({ ...form, colores_id_color: e.target.value })}><option value="">Seleccione color</option>{colores.filter((x) => x.codigo_color).map((x) => <option key={x.id_color} value={x.id_color}>{x.codigo_color} - {x.color}</option>)}</Selector><button type="button" className="catalogo-icon-btn" title="Agregar color" aria-label="Agregar color" onClick={() => setCatalogoModal("color")}>+</button></div></label>
       <div className="articulo-preview"><span>Código base</span><strong>{codigoBase || "Seleccioná modelo y color"}</strong><small>La puntera y los adicionales completarán el artículo en la orden.</small></div>
-      <div className="ui-form-actions"><button className="ui-btn ui-btn-primary">Guardar</button><button type="button" className="ui-btn ui-btn-secondary" onClick={cancelar}>Cancelar</button></div>
+      <div className="ui-form-actions"><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? (idEditando ? "Actualizando..." : "Guardando...") : (idEditando ? "Actualizar" : "Guardar")}</button><button type="button" className="ui-btn ui-btn-secondary" onClick={cancelar}>Cancelar</button></div>
     </form></div>}
       {(mostrar) && <SeparadorListado titulo="Productos registrados" descripcion="Consultá los productos guardados." />}
 
-    {cargando ? <p>Cargando productos...</p> : <><div className="ui-search-bar"><input className="ui-input" placeholder="Buscar producto o color..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} /></div><div className="ui-table-card"><table className="ui-data-table ui-listado-ajustado"><colgroup>{[36,22,20,22].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup><thead><tr><th>Producto</th><th>Color fijo</th><th>Código base</th><th>Acciones</th></tr></thead><tbody>{paginacion.pageItems.map((p) => <tr key={p.id_producto}><td>{p.nombre_producto}</td><td>{p.color || "-"}</td><td>{String(p.articulo_producto || "").replace(/^\s*BASE\s*[-\u2010-\u2015]\s*/i, "")}</td><td><button className="ui-btn ui-btn-secondary" onClick={() => editar(p)}>Editar</button> <button className="ui-btn ui-btn-danger" onClick={() => eliminar(p.id_producto)}>Eliminar</button></td></tr>)}</tbody></table></div><Pagination {...paginacion} /></>}
+    {errorCarga ? (
+      <RetryMessage message={errorCarga} onRetry={cargar} retrying={cargando} />
+    ) : cargando ? (
+      <p>Cargando productos...</p>
+    ) : (
+      <>
+        <ClearableSearch
+          placeholder="Buscar producto o color..."
+          value={busqueda}
+          onChange={setBusqueda}
+        />
+
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron productos con “{textoBusqueda}”.</strong>
+            <span>Probá con otro nombre, color o código base.</span>
+          </div>
+        ) : sinProductos ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay productos cargados.</strong>
+            <span>Creá un producto base para empezar a cargar órdenes.</span>
+          </div>
+        ) : (
+          <>
+            <div className="ui-table-card">
+              <table className="ui-data-table ui-listado-ajustado"><colgroup>{[36,22,20,22].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Color fijo</th>
+                    <th>Código base</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginacion.pageItems.map((p) => (
+                    <tr key={p.id_producto}>
+                      <td>{p.nombre_producto}</td>
+                      <td>{p.color || "-"}</td>
+                      <td>{String(p.articulo_producto || "").replace(/^\s*BASE\s*[-\u2010-\u2015]\s*/i, "")}</td>
+                      <td>
+                        <button className="ui-btn ui-btn-secondary" onClick={() => editar(p)}>
+                          Editar
+                        </button>{" "}
+                        <button className="ui-btn ui-btn-danger" onClick={() => eliminar(p.id_producto)}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <Pagination {...paginacion} />
+          </>
+        )}
+      </>
+    )}
   </section>;
 }

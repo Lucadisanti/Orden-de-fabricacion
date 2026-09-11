@@ -2,7 +2,9 @@ import SeparadorListado from "../components/SeparadorListado";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
@@ -13,6 +15,9 @@ const API_URL = "/api";
 export default function Proveedores() {
   const [proveedores, setProveedores] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const envioEnCurso = useRef(false);
+  const versionFormulario = useRef(0);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
@@ -45,18 +50,18 @@ export default function Proveedores() {
 
   const mostrarToast = (type, title, message) => setToast({ type, title, message });
 
-  function cargarProveedores() {
-    axios
-      .get(`${API_URL}/proveedores/`)
-      .then((response) => {
-        setProveedores(response.data);
-        setCargando(false);
-      })
-      .catch((error) => {
-        console.error(error);
-        setError("No se pudieron cargar los proveedores.");
-        setCargando(false);
-      });
+  async function cargarProveedores() {
+    setCargando(true);
+    try {
+      const response = await axios.get(`${API_URL}/proveedores/`);
+      setProveedores(response.data);
+      setError("");
+    } catch (error) {
+      console.error(error);
+      setError("No se pudieron cargar los proveedores.");
+    } finally {
+      setCargando(false);
+    }
   }
 
   const manejarCambio = (e) => {
@@ -64,6 +69,7 @@ export default function Proveedores() {
   };
 
   const abrirFormularioNuevo = () => {
+    versionFormulario.current += 1;
     setEditando(false);
     setIdEditando(null);
     setProveedorForm({ nombre_proveedor: "", cuit: "", telefono: "", email: "" });
@@ -72,6 +78,7 @@ export default function Proveedores() {
   };
 
   const iniciarEdicion = (proveedor) => {
+    versionFormulario.current += 1;
     setEditando(true);
     setIdEditando(proveedor.id_proveedor);
     setProveedorForm({
@@ -86,10 +93,16 @@ export default function Proveedores() {
 
   const guardarProveedor = async (e) => {
     e.preventDefault();
+    if (envioEnCurso.current) return;
 
     const nombre = proveedorForm.nombre_proveedor.trim();
     const cuit = proveedorForm.cuit.trim();
     const email = proveedorForm.email.trim();
+
+    if (!nombre) {
+      mostrarToast("warning", "Falta el nombre", "Ingresá el nombre del proveedor.");
+      return;
+    }
 
     const repetido = proveedores.some(
       (proveedor) =>
@@ -115,6 +128,10 @@ export default function Proveedores() {
       email,
     };
 
+    envioEnCurso.current = true;
+    setGuardando(true);
+    const versionEnviada = versionFormulario.current;
+
     try {
       if (editando) {
         await axios.put(`${API_URL}/proveedores/${idEditando}`, datos);
@@ -124,14 +141,20 @@ export default function Proveedores() {
         mostrarToast("success", "Proveedor creado", "El proveedor se agregó correctamente.");
       }
 
-      setProveedorForm({ nombre_proveedor: "", cuit: "", telefono: "", email: "" });
-      setEditando(false);
-      setIdEditando(null);
-      setMostrarFormulario(false);
+      // Una respuesta anterior no debe cerrar otro formulario recién abierto.
+      if (versionFormulario.current === versionEnviada) {
+        setProveedorForm({ nombre_proveedor: "", cuit: "", telefono: "", email: "" });
+        setEditando(false);
+        setIdEditando(null);
+        setMostrarFormulario(false);
+      }
       cargarProveedores();
     } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "proveedor"));
+    } finally {
+      envioEnCurso.current = false;
+      setGuardando(false);
     }
   };
 
@@ -173,6 +196,8 @@ export default function Proveedores() {
     });
   };
 
+  const textoBusqueda = busqueda.trim();
+
   const proveedoresFiltrados = proveedores.filter((proveedor) => {
     const texto = `
       ${proveedor.nombre_proveedor || ""}
@@ -181,8 +206,13 @@ export default function Proveedores() {
       ${proveedor.email || ""}
     `.toLowerCase();
 
-    return texto.includes(busqueda.toLowerCase());
+    return texto.includes(textoBusqueda.toLowerCase());
   });
+
+  const hayBusqueda = textoBusqueda.length > 0;
+  const sinResultados = hayBusqueda && proveedoresFiltrados.length === 0;
+  const sinProveedores = !hayBusqueda && proveedores.length === 0;
+
   const paginacionProveedores = usePagination(proveedoresFiltrados);
 
   return (
@@ -215,32 +245,45 @@ export default function Proveedores() {
           <h2>{editando ? "Editar proveedor" : "Nuevo proveedor"}</h2>
 
           <form onSubmit={guardarProveedor} className="form-proveedor">
-            <input
-              type="text"
-              name="nombre_proveedor"
-              placeholder="Nombre del proveedor"
-              value={proveedorForm.nombre_proveedor}
-              onChange={manejarCambio}
-              required
-            />
-            <input type="text" name="cuit" placeholder="CUIT" value={proveedorForm.cuit} onChange={manejarCambio} />
-            <input
-              type="text"
-              name="telefono"
-              placeholder="Teléfono"
-              value={proveedorForm.telefono}
-              onChange={manejarCambio}
-            />
-            <input type="email" name="email" placeholder="Email" value={proveedorForm.email} onChange={manejarCambio} />
+            <label>
+              <span>Nombre del proveedor</span>
+              <input
+                type="text"
+                name="nombre_proveedor"
+                placeholder="Nombre del proveedor"
+                value={proveedorForm.nombre_proveedor}
+                onChange={manejarCambio}
+                required
+              />
+            </label>
+            <label>
+              <span>CUIT</span>
+              <input type="text" name="cuit" placeholder="CUIT" value={proveedorForm.cuit} onChange={manejarCambio} />
+            </label>
+            <label>
+              <span>Teléfono</span>
+              <input
+                type="text"
+                name="telefono"
+                placeholder="Teléfono"
+                value={proveedorForm.telefono}
+                onChange={manejarCambio}
+              />
+            </label>
+            <label>
+              <span>Email</span>
+              <input type="email" name="email" placeholder="Email" value={proveedorForm.email} onChange={manejarCambio} />
+            </label>
 
             <div className="ui-form-actions">
-              <button type="submit" className="ui-btn ui-btn-primary">
-                {editando ? "Actualizar" : "Guardar"}
+              <button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>
+                {guardando ? (editando ? "Actualizando..." : "Guardando...") : (editando ? "Actualizar" : "Guardar")}
               </button>
               <button
                 type="button"
                 className="ui-btn ui-btn-secondary"
                 onClick={() => {
+                  versionFormulario.current += 1;
                   setMostrarFormulario(false);
                   setEditando(false);
                   setIdEditando(null);
@@ -255,53 +298,63 @@ export default function Proveedores() {
 
       {(mostrarFormulario) && <SeparadorListado titulo="Proveedores registrados" descripcion="Consultá los proveedores guardados." />}
 
-      {cargando && <p>Cargando proveedores...</p>}
-      {error && <p>{error}</p>}
+      {cargando && !error && <p>Cargando proveedores...</p>}
+      {error && <RetryMessage message={error} onRetry={cargarProveedores} retrying={cargando} />}
 
       {!cargando && !error && (
         <>
-        <div className="ui-search-bar">
-          <input
-            className="ui-input"
-            type="text"
-            placeholder="Buscar por proveedor, CUIT, teléfono o email..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </div>
-        <div className="ui-table-card">
-          <table className="ui-data-table ui-listado-ajustado"><colgroup>{[23,17,16,26,18].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
-            <thead>
-              <tr>
-                <th>Proveedor</th>
-                <th>CUIT</th>
-                <th>Teléfono</th>
-                <th>Email</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
+        <ClearableSearch
+          placeholder="Buscar por proveedor, CUIT, teléfono o email..."
+          value={busqueda}
+          onChange={setBusqueda}
+        />
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron proveedores con “{textoBusqueda}”.</strong>
+            <span>Probá con otro nombre, CUIT, teléfono o email.</span>
+          </div>
+        ) : sinProveedores ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay proveedores cargados.</strong>
+            <span>Creá un proveedor para poder registrar recepciones de materiales.</span>
+          </div>
+        ) : (
+          <>
+            <div className="ui-table-card">
+              <table className="ui-data-table ui-listado-ajustado"><colgroup>{[23,17,16,26,18].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
+                <thead>
+                  <tr>
+                    <th>Proveedor</th>
+                    <th>CUIT</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
 
-            <tbody>
-              {paginacionProveedores.pageItems.map((proveedor) => (
-                <tr key={proveedor.id_proveedor}>
-                  <td>{proveedor.nombre_proveedor}</td>
-                  <td>{proveedor.cuit || "-"}</td>
-                  <td>{proveedor.telefono || "-"}</td>
-                  <td>{proveedor.email || "-"}</td>
-                  <td>
-                    <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(proveedor)}>
-                      Editar
-                    </button>
-                    <button className="ui-btn ui-btn-danger" onClick={() => eliminarProveedor(proveedor.id_proveedor)}>
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <Pagination {...paginacionProveedores} />
+                <tbody>
+                  {paginacionProveedores.pageItems.map((proveedor) => (
+                    <tr key={proveedor.id_proveedor}>
+                      <td>{proveedor.nombre_proveedor}</td>
+                      <td>{proveedor.cuit || "-"}</td>
+                      <td>{proveedor.telefono || "-"}</td>
+                      <td>{proveedor.email || "-"}</td>
+                      <td>
+                        <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(proveedor)}>
+                          Editar
+                        </button>
+                        <button className="ui-btn ui-btn-danger" onClick={() => eliminarProveedor(proveedor.id_proveedor)}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination {...paginacionProveedores} />
+          </>
+        )}
         </>
       )}
     </section>

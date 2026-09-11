@@ -2,7 +2,9 @@ import SeparadorListado from "../components/SeparadorListado";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
+import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
@@ -13,6 +15,9 @@ const API_URL = "/api";
 export default function Materiales() {
   const [materiales, setMateriales] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const envioEnCurso = useRef(false);
+  const versionFormulario = useRef(0);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
@@ -42,18 +47,18 @@ export default function Materiales() {
     setToast({ type, title, message });
   };
 
-  function cargarMateriales() {
-    axios
-      .get(`${API_URL}/materiales/`)
-      .then((response) => {
-        setMateriales(response.data);
-        setCargando(false);
-      })
-      .catch((error) => {
-        console.error(error);
-        setError("No se pudieron cargar los materiales.");
-        setCargando(false);
-      });
+  async function cargarMateriales() {
+    setCargando(true);
+    try {
+      const response = await axios.get(`${API_URL}/materiales/`);
+      setMateriales(response.data);
+      setError("");
+    } catch (error) {
+      console.error(error);
+      setError("No se pudieron cargar los materiales.");
+    } finally {
+      setCargando(false);
+    }
   }
 
   const manejarCambio = (e) => {
@@ -61,6 +66,7 @@ export default function Materiales() {
   };
 
   const abrirFormularioNuevo = () => {
+    versionFormulario.current += 1;
     setEditando(false);
     setIdEditando(null);
     setMaterialForm({ material: "" });
@@ -69,6 +75,7 @@ export default function Materiales() {
   };
 
   const iniciarEdicion = (material) => {
+    versionFormulario.current += 1;
     setEditando(true);
     setIdEditando(material.id_material);
     setMaterialForm({ material: material.material });
@@ -78,8 +85,14 @@ export default function Materiales() {
 
   const guardarMaterial = async (e) => {
     e.preventDefault();
+    if (envioEnCurso.current) return;
 
     const nombreMaterial = materialForm.material.trim();
+
+    if (!nombreMaterial) {
+      mostrarToast("warning", "Falta el nombre", "Ingresá el nombre del material.");
+      return;
+    }
 
     const repetido = materiales.some(
       (material) =>
@@ -96,6 +109,10 @@ export default function Materiales() {
       return;
     }
 
+    envioEnCurso.current = true;
+    setGuardando(true);
+    const versionEnviada = versionFormulario.current;
+
     try {
       const datos = { material: nombreMaterial };
 
@@ -107,14 +124,20 @@ export default function Materiales() {
         mostrarToast("success", "Material creado", "El material se agregó correctamente.");
       }
 
-      setMaterialForm({ material: "" });
-      setEditando(false);
-      setIdEditando(null);
-      setMostrarFormulario(false);
+      // Una respuesta anterior no debe cerrar otro formulario recién abierto.
+      if (versionFormulario.current === versionEnviada) {
+        setMaterialForm({ material: "" });
+        setEditando(false);
+        setIdEditando(null);
+        setMostrarFormulario(false);
+      }
       cargarMateriales();
     } catch (error) {
       console.error(error);
       mostrarToast("error", "No se pudo guardar", obtenerMensajeError(error, "material"));
+    } finally {
+      envioEnCurso.current = false;
+      setGuardando(false);
     }
   };
 
@@ -156,11 +179,18 @@ export default function Materiales() {
     });
   };
 
+  const textoBusqueda = busqueda.trim();
+
   const materialesFiltrados = materiales.filter((material) =>
-  (material.material || "")
-    .toLowerCase()
-    .includes(busqueda.toLowerCase())
+    (material.material || "")
+      .toLowerCase()
+      .includes(textoBusqueda.toLowerCase())
   );
+
+  const hayBusqueda = textoBusqueda.length > 0;
+  const sinResultados = hayBusqueda && materialesFiltrados.length === 0;
+  const sinMateriales = !hayBusqueda && materiales.length === 0;
+
   const paginacionMateriales = usePagination(materialesFiltrados);
 
   return (
@@ -193,24 +223,28 @@ export default function Materiales() {
           <h2>{editando ? "Editar material" : "Nuevo material"}</h2>
 
           <form onSubmit={guardarMaterial} className="form-producto">
-            <input
-              type="text"
-              name="material"
-              placeholder="Nombre del material"
-              value={materialForm.material}
-              onChange={manejarCambio}
-              required
-            />
+            <label>
+              <span>Nombre del material</span>
+              <input
+                type="text"
+                name="material"
+                placeholder="Nombre del material"
+                value={materialForm.material}
+                onChange={manejarCambio}
+                required
+              />
+            </label>
 
             <div className="ui-form-actions">
-              <button type="submit" className="ui-btn ui-btn-primary">
-                {editando ? "Actualizar" : "Guardar"}
+              <button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>
+                {guardando ? (editando ? "Actualizando..." : "Guardando...") : (editando ? "Actualizar" : "Guardar")}
               </button>
 
               <button
                 type="button"
                 className="ui-btn ui-btn-secondary"
                 onClick={() => {
+                  versionFormulario.current += 1;
                   setMostrarFormulario(false);
                   setEditando(false);
                   setIdEditando(null);
@@ -225,47 +259,57 @@ export default function Materiales() {
 
       {(mostrarFormulario) && <SeparadorListado titulo="Materiales registrados" descripcion="Consultá los materiales guardados." />}
 
-      {cargando && <p>Cargando materiales...</p>}
-      {error && <p>{error}</p>}
+      {cargando && !error && <p>Cargando materiales...</p>}
+      {error && <RetryMessage message={error} onRetry={cargarMateriales} retrying={cargando} />}
 
       {!cargando && !error && (
         <>
-        <div className="ui-search-bar">
-          <input
-            className="ui-input"
-            type="text"
-            placeholder="Buscar material..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </div>
-        <div className="ui-table-card">
-          <table className="ui-data-table ui-listado-ajustado"><colgroup>{[75,25].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
-            <thead>
-              <tr>
-                <th>Material</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
+        <ClearableSearch
+          placeholder="Buscar material..."
+          value={busqueda}
+          onChange={setBusqueda}
+        />
+        {sinResultados ? (
+          <div className="ui-empty-state">
+            <strong>No se encontraron materiales con “{textoBusqueda}”.</strong>
+            <span>Probá con otro nombre de material.</span>
+          </div>
+        ) : sinMateriales ? (
+          <div className="ui-empty-state">
+            <strong>Todavía no hay materiales cargados.</strong>
+            <span>Creá un material para poder usarlo en recepciones y producción.</span>
+          </div>
+        ) : (
+          <>
+            <div className="ui-table-card">
+              <table className="ui-data-table ui-listado-ajustado"><colgroup>{[75,25].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
+                <thead>
+                  <tr>
+                    <th>Material</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
 
-            <tbody>
-              {paginacionMateriales.pageItems.map((material) => (
-                <tr key={material.id_material}>
-                  <td>{material.material}</td>
-                  <td>
-                    <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(material)}>
-                      Editar
-                    </button>
-                    <button className="ui-btn ui-btn-danger" onClick={() => eliminarMaterial(material.id_material)}>
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <Pagination {...paginacionMateriales} />
+                <tbody>
+                  {paginacionMateriales.pageItems.map((material) => (
+                    <tr key={material.id_material}>
+                      <td>{material.material}</td>
+                      <td>
+                        <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(material)}>
+                          Editar
+                        </button>
+                        <button className="ui-btn ui-btn-danger" onClick={() => eliminarMaterial(material.id_material)}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination {...paginacionMateriales} />
+          </>
+        )}
         </>
       )}
     </section>

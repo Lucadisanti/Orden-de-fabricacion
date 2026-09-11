@@ -3,3 +3,16 @@
   flex-direction: column;
   gap: 15px;
 }
+
+.proveedores .form-proveedor > label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.proveedores .form-proveedor > label > span {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+}

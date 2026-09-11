@@ -12,7 +12,7 @@ function renderDashboard() {
 }
 
 describe("Inicio", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.resetAllMocks(); axios.get.mockResolvedValue({ data: [] }); });
 
   it("muestra el resumen general y las tarjetas principales", async () => {
     axios.get.mockResolvedValueOnce({ data: { productos: 3, proveedores: 2, ordenes: 4, planillas: 5 } });
@@ -50,6 +50,10 @@ describe("Inicio", () => {
   it("despliega los últimos productos y ofrece ver todos", async () => {
     axios.get
       .mockResolvedValueOnce({ data: { productos: 2, proveedores: 0, ordenes: 0, planillas: 0 } })
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: [] })
       .mockResolvedValueOnce({ data: [
         { id_producto: 1, articulo_producto: "A-1", nombre_producto: "Bota", color: "Negro" },
         { id_producto: 2, articulo_producto: "A-2", nombre_producto: "Zapato", color: "Marrón" },

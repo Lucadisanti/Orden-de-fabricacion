@@ -4,3 +4,13 @@
 .selector-material-menu > [role="option"] { padding: 11px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 400; line-height: 1.4; white-space: normal; overflow-wrap: break-word; }
 .selector-material-menu > [role="option"]:is(:hover, .activo) { background: var(--hover-row, #d7e8ff); color: var(--text-main); box-shadow: inset 3px 0 0 var(--primary); }
 .selector-material-vacio { padding: 12px; font-size: 14px; color: var(--text-muted); }
+
+.selector-unificado { min-width: 0; width: 100%; }
+.main-content .selector-unificado > .selector-control { width: 100%; min-width: 0; height: 44px; margin: 0; border: 1px solid var(--border); border-radius: 11px; background: var(--bg-card); color: var(--text-main); padding: 10px 30px 10px 12px; font: inherit; font-size: 14px; cursor: pointer; text-overflow: ellipsis; caret-color: transparent; }
+.main-content .selector-unificado > .selector-control::placeholder { color: var(--text-main); opacity: 1; }
+.selector-flecha { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-muted); }
+.selector-material-menu > [aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+.selector-material-menu > [role="option"][aria-selected="true"] { font-weight: 700; }
+.ui-filter-select .selector-unificado { width: 190px; max-width: 100%; }
+.ui-pagination-size .selector-unificado { width: 70px; }
+.selector-control:disabled { opacity: .5; cursor: not-allowed; }

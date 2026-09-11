@@ -1,3 +1,4 @@
+import Selector from "./Selector";
 export default function Pagination({ page, pageSize, totalPages, totalItems, setPage, setPageSize }) {
   const start = totalItems ? (page - 1) * pageSize + 1 : 0;
   const end = Math.min(page * pageSize, totalItems);
@@ -14,6 +15,6 @@ export default function Pagination({ page, pageSize, totalPages, totalItems, set
       </span>)}
       <button type="button" className="ui-pagination-arrow" disabled={page === totalPages} onClick={() => setPage(page + 1)} aria-label="Página siguiente">→</button>
     </div>
-    <label className="ui-pagination-size"><span>Filas</span><select value={pageSize} onChange={(event) => setPageSize(event.target.value)}><option value="5">5</option><option value="10">10</option><option value="15">15</option></select></label>
+    <label className="ui-pagination-size"><span>Filas</span><Selector value={pageSize} onChange={(event) => setPageSize(event.target.value)}><option value="5">5</option><option value="10">10</option><option value="15">15</option></Selector></label>
   </nav>;
 }

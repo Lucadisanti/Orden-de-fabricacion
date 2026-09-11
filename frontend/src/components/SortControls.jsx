@@ -1,3 +1,4 @@
+import Selector from "./Selector";
 import "../styles/SortControls.css";
 
 export default function SortControls({ opciones, campo, setCampo, direccion, setDireccion }) {
@@ -5,11 +6,11 @@ export default function SortControls({ opciones, campo, setCampo, direccion, set
     <div className="ui-sort-controls">
       <label className="ui-filter-select">
         <span>Ordenar por</span>
-        <select value={campo} onChange={(e) => setCampo(e.target.value)}>
+        <Selector value={campo} onChange={(e) => setCampo(e.target.value)}>
           {opciones.map((opcion) => (
             <option key={opcion.value} value={opcion.value}>{opcion.label}</option>
           ))}
-        </select>
+        </Selector>
       </label>
       <button
         type="button"

@@ -1,3 +1,4 @@
+import Selector from "../components/Selector";
 import SeparadorListado from "../components/SeparadorListado";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -245,7 +246,7 @@ export default function UsoMateriales() {
           <h2>{editando ? "Editar uso de material" : "Nuevo uso de material"}</h2>
 
           <form onSubmit={guardarUsoMaterial} className="form-uso-material">
-            <select
+            <Selector
               name="planilla_produccion_id_planilla"
               value={form.planilla_produccion_id_planilla}
               onChange={manejarCambio}
@@ -259,9 +260,9 @@ export default function UsoMateriales() {
                   {planilla.numero_orden || planilla.orden || "-"}
                 </option>
               ))}
-            </select>
+            </Selector>
 
-            <select
+            <Selector
               name="lote_materiales_id_lote"
               value={form.lote_materiales_id_lote}
               onChange={manejarCambio}
@@ -281,7 +282,7 @@ export default function UsoMateriales() {
                   {lote.cantidad_recibida ?? "-"}
                 </option>
               ))}
-            </select>
+            </Selector>
 
             <input
               type="number"

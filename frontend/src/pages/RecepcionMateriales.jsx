@@ -1,3 +1,4 @@
+import Selector from "../components/Selector";
 import SeparadorListado from "../components/SeparadorListado";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -441,12 +442,12 @@ export default function RecepcionMateriales() {
             <label className="recepcion-campo">
               <span>Proveedor</span>
               <div className="recepcion-selector-row">
-                <select name="proveedores_id_proveedor" value={form.proveedores_id_proveedor} onChange={manejarCambio} required>
+                <Selector name="proveedores_id_proveedor" value={form.proveedores_id_proveedor} onChange={manejarCambio} required>
                   <option value="">Seleccione proveedor</option>
                   {proveedores.map((proveedor) => (
                     <option key={proveedor.id_proveedor} value={proveedor.id_proveedor}>{proveedor.nombre_proveedor}</option>
                   ))}
-                </select>
+                </Selector>
                 <button type="button" className="recepcion-agregar-btn" onClick={() => setAltaRapida("proveedor")} title="Crear proveedor" aria-label="Crear proveedor">+</button>
               </div>
             </label>
@@ -490,12 +491,12 @@ export default function RecepcionMateriales() {
                 <label className="recepcion-campo">
                   <span>Material</span>
                   <div className="recepcion-selector-row">
-                    <select value={linea.materiales_id_material} onChange={(e) => actualizarLinea(indice, "materiales_id_material", e.target.value)} required>
+                    <Selector value={linea.materiales_id_material} onChange={(e) => actualizarLinea(indice, "materiales_id_material", e.target.value)} required>
                       <option value="">Seleccione material</option>
                       {materiales.map((material) => (
                         <option key={material.id_material} value={material.id_material}>{material.material}</option>
                       ))}
-                    </select>
+                    </Selector>
                     <button type="button" className="recepcion-agregar-btn" onClick={() => { setLineaAltaRapida(indice); setAltaRapida("material"); }} title="Crear material" aria-label="Crear material">+</button>
                   </div>
                 </label>
@@ -503,14 +504,14 @@ export default function RecepcionMateriales() {
                 <label className="recepcion-campo">
                   <span>Color (opcional)</span>
                   <div className="recepcion-selector-row">
-                    <select value={linea.colores_id_color} onChange={(e) => actualizarLinea(indice, "colores_id_color", e.target.value)}>
+                    <Selector value={linea.colores_id_color} onChange={(e) => actualizarLinea(indice, "colores_id_color", e.target.value)}>
                       <option value="">Sin color</option>
                       {colores.map((color) => (
                         <option key={color.id_color} value={color.id_color}>
                           {color.codigo_color ? `${color.codigo_color} - ${color.color}` : color.color}
                         </option>
                       ))}
-                    </select>
+                    </Selector>
                     <button type="button" className="recepcion-agregar-btn" onClick={() => { setLineaAltaRapida(indice); setAltaRapida("color"); }} title="Crear color" aria-label="Crear color">+</button>
                   </div>
                 </label>

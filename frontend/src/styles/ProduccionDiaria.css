@@ -96,6 +96,7 @@
 .produccion-detalle-cabecera div { padding: 9px 12px; border-radius: 9px; background: var(--primary-soft, #eff6ff); }
 .produccion-detalle-cabecera span, .produccion-detalle-cabecera strong { display: block; }
 .produccion-detalle-cabecera span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.produccion-abrir-planilla { align-self: flex-end; }
 .produccion-detalle-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px 16px; }
 .produccion-detalle-etapas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .produccion-detalle-etapa { display: flex; flex-direction: column; gap: 9px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-page, #f8fafc); }

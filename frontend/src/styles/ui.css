@@ -455,7 +455,7 @@
   outline: none;
 }
 .produccion-inspeccion .inspeccion-opcion:has(input[type="radio"]:focus-visible) {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--inspeccion-color, var(--primary));
   outline-offset: 3px;
 }
 

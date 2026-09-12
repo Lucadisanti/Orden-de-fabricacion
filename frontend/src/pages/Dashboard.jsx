@@ -97,12 +97,12 @@ const secciones = {
     id: "id_orden",
     accion: "Ver orden →",
     detalleRuta: (item) => `/ordenes?seleccion=${item.id_orden}`,
-    columnas: ["N.º de orden", "Producto", "Color", "Fecha", "Estado"],
+    columnas: ["Fecha", "N.º de orden", "Producto", "Color", "Estado"],
     celdas: (item) => [
+      formatearFecha(item.fecha),
       item.numero_orden || "-",
       item.producto || item.nombre_producto || "-",
       item.color || "-",
-      formatearFecha(item.fecha),
       <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>,
     ],
   },
@@ -112,13 +112,13 @@ const secciones = {
     id: "id_planilla",
     accion: "Abrir detalle →",
     detalleRuta: (item) => `/planillas?seleccion=${item.id_planilla}`,
-    columnas: ["N.º de planilla", "Orden", "Producto", "Color", "Fecha", "Estado"],
+    columnas: ["Fecha", "N.º de planilla", "Orden", "Producto", "Color", "Estado"],
     celdas: (item) => [
+      formatearFecha(item.fecha),
       item.numero_planilla || "-",
       item.numero_orden || item.orden || "-",
       item.producto || item.nombre_producto || "-",
       item.color || "-",
-      formatearFecha(item.fecha),
       <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>,
     ],
   },
@@ -414,7 +414,7 @@ export default function Dashboard() {
           <div className="dashboard-panel-header">
             <span>Producción</span>
             <h2>Avance general</h2>
-            <p>Relación entre pares solicitados y pares cargados en producción diaria.</p>
+            <p>Relación entre pares cortados y pares cargados en producción diaria.</p>
           </div>
 
           <div className="dashboard-avance">
@@ -431,7 +431,7 @@ export default function Dashboard() {
             </div>
             <div>
               <strong>{panelControl.paresSolicitados}</strong>
-              <span>Pares solicitados</span>
+              <span>Pares cortados</span>
             </div>
             <div>
               <strong>{panelControl.produccionesHoy}</strong>

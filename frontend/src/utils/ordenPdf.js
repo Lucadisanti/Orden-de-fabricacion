@@ -5,7 +5,7 @@ import { formatearFecha } from "./dateFormat.js";
 export function crearOrdenPdf({ orden, talles, materiales, logo }) {
   const pdf = new jsPDF({ unit: "mm", format: "a4" });
   const margen = 14;
-  const valor = (v) => String(v ?? "").trim() || "Sin cargar";
+  const valor = (v) => String(v ?? "").trim();
   const cabecera = () => {
     pdf.setFillColor(11, 22, 40); pdf.rect(0, 0, 210, 30, "F");
     if (logo) pdf.addImage(logo, "PNG", margen, 6, 33, 14);
@@ -28,15 +28,15 @@ export function crearOrdenPdf({ orden, talles, materiales, logo }) {
   const estado = String(orden.estado || "").toLowerCase();
   const estadoLegible = estado.includes("producci") || estado.includes("proceso") ? "En producción" : estado.includes("finaliz") ? "Finalizada" : "Pendiente";
   tabla("Datos de la orden", [["Producto", "Color", "Estado"]], [[valor(orden.producto), valor(orden.color), estadoLegible]]);
-  tabla("Corte y aparado", [["Fecha de corte", "Fecha de aparado"],], [[formatearFecha(orden.fecha, "Sin cargar"), formatearFecha(orden.fecha_aparado, "Sin cargar")]]);
+  tabla("Corte y aparado", [["Fecha de corte", "Fecha de aparado"],], [[formatearFecha(orden.fecha, ""), formatearFecha(orden.fecha_aparado, "")]]);
   tabla("Responsables", [["Operario de corte", "Taller de aparado"]], [[valor(orden.operario_corte), valor(orden.operario_aparado)]]);
   const cantidades = talles.filter((t) => Number(t.cantidad_pares) > 0).sort((a, b) => Number(a.talle) - Number(b.talle));
   tabla(`Pares solicitados: ${cantidades.reduce((s, t) => s + Number(t.cantidad_pares), 0)} pares`,
     [cantidades.length ? cantidades.map((t) => `T${t.talle}`) : ["Talles"]],
-    [cantidades.length ? cantidades.map((t) => String(t.cantidad_pares)) : ["Sin cantidades cargadas"]]);
+    [cantidades.length ? cantidades.map((t) => String(t.cantidad_pares)) : [""]]);
   tabla("Materiales de la orden", [["Número de remito", "Proveedor", "Material", "Color"]], materiales.length
     ? materiales.map((m) => [valor(m.numero_remito), valor(m.nombre_proveedor || m.proveedor), valor(m.material), valor(m.color)])
-    : [["-", "-", "Sin materiales cargados", "-"]]);
+    : [["", "", "", ""]]);
   for (let p = 1; p <= pdf.getNumberOfPages(); p++) {
     pdf.setPage(p); pdf.setDrawColor(206, 218, 233); pdf.line(margen, 283, 196, 283);
     pdf.setFont("helvetica", "normal"); pdf.setFontSize(8); pdf.setTextColor(90, 105, 124);

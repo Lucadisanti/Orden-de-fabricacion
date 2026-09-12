@@ -24,3 +24,16 @@ it("sugiere nombres guardados y permite escribir uno nuevo", async () => {
   await user.click(input); await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
   expect(input).toBeEnabled();
 });
+
+it("limpia sugerencias sin cambiar el nombre escrito", async () => {
+  axios.get.mockResolvedValue({data:{personas:["Ana"], talleres:[]}});
+  axios.delete.mockResolvedValue({data:{}});
+  const cambio = vi.fn(); const user = userEvent.setup();
+  render(<NombreSugerido aria-label="Controlador" value="Ana" onChange={cambio} />);
+  await user.click(screen.getByRole("combobox"));
+  await user.click(await screen.findByRole("button",{name:"Limpiar sugerencias"}));
+  await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
+  expect(axios.delete).toHaveBeenCalledWith("/api/sugerencias/nombres?tipo=personas");
+  expect(screen.getByRole("combobox")).toHaveValue("Ana");
+  expect(cambio).not.toHaveBeenCalled();
+});

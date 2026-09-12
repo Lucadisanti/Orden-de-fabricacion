@@ -379,7 +379,7 @@ export default function Trazabilidad() {
         valor(produccion.maquina),
         valor(produccion.tipo_puntera),
         valor(produccion.adicionales || "Sin adicional"),
-        `${valor(produccion.estado_inspeccion || "Pendiente")}${produccion.observacion_inspeccion ? `\n${produccion.observacion_inspeccion}` : ""}`,
+        `${valor(produccion.estado_inspeccion || "Pendiente")}${produccion.estado_inspeccion === "No conforme" ? `\nPares defectuosos: ${produccion.pares_defectuosos ?? "Sin desglose"}` : ""}${produccion.observacion_inspeccion ? `\n${produccion.observacion_inspeccion}` : ""}`,
         jornada.operarios_calzado.join(", ") || "-",
         jornada.operarios_puntera.join(", ") || "-",
         jornada.operarios_inyeccion.join(", ") || "-",
@@ -656,7 +656,7 @@ export default function Trazabilidad() {
                                     <div><span>{inyectora.maquina}</span><h4>{inyectora.articulo || "Artículo anterior"}</h4><small><strong>Puntera:</strong> {inyectora.tipo_puntera || "Sin especificar"} · <strong>Adicional:</strong> {inyectora.adicionales || "No"}</small></div>
                                     <div className="trazabilidad-inspeccion-veredicto">
                                       <strong className={`trazabilidad-inspeccion-estado ${inyectora.estado_inspeccion === "Conforme" ? "conforme" : inyectora.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{inyectora.estado_inspeccion || "Pendiente"}</strong>
-                                      {inyectora.estado_inspeccion === "No conforme" && inyectora.observacion_inspeccion && <p>{inyectora.observacion_inspeccion}</p>}
+                                      {inyectora.estado_inspeccion === "No conforme" && <p>Pares defectuosos: {inyectora.pares_defectuosos ?? "Sin desglose"}</p>}{inyectora.estado_inspeccion === "No conforme" && inyectora.observacion_inspeccion && <p>{inyectora.observacion_inspeccion}</p>}
                                     </div>
                                   </div>
                                   {inyectora.jornadas.map((jornada) => <div className="trazabilidad-jornada" key={jornada.fecha}>

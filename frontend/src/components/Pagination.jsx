@@ -1,7 +1,8 @@
 import Selector from "./Selector";
 export default function Pagination({ page, pageSize, totalPages, totalItems, setPage, setPageSize }) {
-  const start = totalItems ? (page - 1) * pageSize + 1 : 0;
-  const end = Math.min(page * pageSize, totalItems);
+  const mostrarTodo = pageSize === "all";
+  const start = totalItems ? (mostrarTodo ? 1 : (page - 1) * pageSize + 1) : 0;
+  const end = mostrarTodo ? totalItems : Math.min(page * pageSize, totalItems);
   const pages = Array.from({ length: totalPages }, (_, index) => index + 1)
     .filter((number) => number === 1 || number === totalPages || Math.abs(number - page) <= 1);
 
@@ -15,6 +16,6 @@ export default function Pagination({ page, pageSize, totalPages, totalItems, set
       </span>)}
       <button type="button" className="ui-pagination-arrow" disabled={page === totalPages} onClick={() => setPage(page + 1)} aria-label="Página siguiente">→</button>
     </div>
-    <label className="ui-pagination-size"><span>Filas</span><Selector value={pageSize} onChange={(event) => setPageSize(event.target.value)}><option value="5">5</option><option value="10">10</option><option value="15">15</option></Selector></label>
+    <label className="ui-pagination-size"><span>Filas</span><Selector value={pageSize} onChange={(event) => setPageSize(event.target.value)}><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="all">Ver todo</option></Selector></label>
   </nav>;
 }

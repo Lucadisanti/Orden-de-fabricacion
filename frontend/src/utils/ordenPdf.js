@@ -34,9 +34,9 @@ export function crearOrdenPdf({ orden, talles, materiales, logo }) {
   tabla(`Pares solicitados: ${cantidades.reduce((s, t) => s + Number(t.cantidad_pares), 0)} pares`,
     [cantidades.length ? cantidades.map((t) => `T${t.talle}`) : ["Talles"]],
     [cantidades.length ? cantidades.map((t) => String(t.cantidad_pares)) : ["Sin cantidades cargadas"]]);
-  tabla("Materiales de la orden", [["Material", "Color", "Remito", "Proveedor"]], materiales.length
-    ? materiales.map((m) => [valor(m.material), valor(m.color), valor(m.numero_remito), valor(m.nombre_proveedor || m.proveedor)])
-    : [["Sin materiales cargados", "-", "-", "-"]]);
+  tabla("Materiales de la orden", [["Número de remito", "Proveedor", "Material", "Color"]], materiales.length
+    ? materiales.map((m) => [valor(m.numero_remito), valor(m.nombre_proveedor || m.proveedor), valor(m.material), valor(m.color)])
+    : [["-", "-", "Sin materiales cargados", "-"]]);
   for (let p = 1; p <= pdf.getNumberOfPages(); p++) {
     pdf.setPage(p); pdf.setDrawColor(206, 218, 233); pdf.line(margen, 283, 196, 283);
     pdf.setFont("helvetica", "normal"); pdf.setFontSize(8); pdf.setTextColor(90, 105, 124);

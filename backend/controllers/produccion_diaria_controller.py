@@ -60,6 +60,11 @@ def _asegurar_esquema_variantes(cursor):
         AND COLUMN_NAME='observacion_inspeccion'""")
     if not cursor.fetchone():
         cursor.execute("ALTER TABLE produccion_diaria_linea ADD observacion_inspeccion TEXT NULL AFTER estado_inspeccion")
+    cursor.execute("""SELECT 1 FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='produccion_diaria_linea'
+        AND COLUMN_NAME='pares_defectuosos'""")
+    if not cursor.fetchone():
+        cursor.execute("ALTER TABLE produccion_diaria_linea ADD pares_defectuosos INT NULL AFTER observacion_inspeccion")
     cursor.execute("""SELECT CHARACTER_MAXIMUM_LENGTH AS longitud FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='planilla_produccion' AND COLUMN_NAME='tipo_planilla'""")
     tipo_planilla = cursor.fetchone()
@@ -91,7 +96,7 @@ def listar_producciones_diarias():
             SELECT pdl.id_linea, ofab.id_orden, ofab.numero_orden, prod.modelos_calzado_id_modelo AS id_modelo,
                    COALESCE(pv.articulo_producto, prod.articulo_producto) AS articulo,
                    prod.nombre_producto AS producto, col.color AS color,
-                   m.nombre_maquina AS inyectora, pd.fecha, pdl.estado_inspeccion,
+                   m.nombre_maquina AS inyectora, pd.fecha, pdl.estado_inspeccion, pdl.pares_defectuosos,
                    COALESCE(SUM(dpdl.cantidad_pares), 0) AS total_pares
             FROM produccion_diaria pd
             INNER JOIN produccion_diaria_bloque pdb
@@ -104,7 +109,7 @@ def listar_producciones_diarias():
             LEFT JOIN producto_variante pv ON pv.id_variante = pdl.producto_variante_id_variante
             LEFT JOIN detalle_produccion_diaria dpdl ON dpdl.linea_id = pdl.id_linea
             GROUP BY pdl.id_linea, ofab.id_orden, ofab.numero_orden, prod.modelos_calzado_id_modelo, pv.articulo_producto, prod.articulo_producto,
-                     prod.nombre_producto, col.color, m.nombre_maquina, pd.fecha, pdl.estado_inspeccion
+                     prod.nombre_producto, col.color, m.nombre_maquina, pd.fecha, pdl.estado_inspeccion, pdl.pares_defectuosos
             ORDER BY pd.fecha DESC, pd.id_produccion_diaria DESC, pdl.id_linea DESC
             """
         )
@@ -189,7 +194,7 @@ def detalle_linea_produccion(id_linea):
         cursor.execute("""
           SELECT pdl.id_linea,pd.fecha,ofab.numero_orden,prod.nombre_producto AS producto,
                  COALESCE(pv.articulo_producto,prod.articulo_producto) AS articulo,
-                 pdl.estado_inspeccion,pdl.observacion_inspeccion,
+                 pdl.estado_inspeccion, pdl.pares_defectuosos,pdl.observacion_inspeccion,
                  pt.nombre_puntera,pd.operario_calzado,pd.operario_puntera,pd.operario_inspeccion_final,
                  pdb.operario_inyeccion,m.nombre_maquina AS inyectora,
                  mp.material AS material_puntera,cp.color AS color_puntera,rp.numero_remito AS remito_puntera,
@@ -246,7 +251,7 @@ def desglose_por_planilla(id_planilla):
             """
             SELECT pdl.id_linea, pd.fecha, m.nombre_maquina AS maquina,pdb.maquinas_id_maquina,
                    pdl.lote_puntera_id, pdl.lote_pu_id, pv.punteras_id_puntera,
-                   pdl.estado_inspeccion, pdl.observacion_inspeccion,
+                   pdl.estado_inspeccion, pdl.pares_defectuosos, pdl.observacion_inspeccion,
                    pd.operario_calzado, pd.operario_puntera, pd.operario_inspeccion_final, pdb.operario_inyeccion,
                    dpd.talle, dpd.cantidad_pares,
                    pv.articulo_producto, pt.nombre_puntera,
@@ -317,6 +322,7 @@ def desglose_por_planilla(id_planilla):
                     "adicionales": fila["adicionales_variante"],
                     "estado_inspeccion": fila["estado_inspeccion"] or "Pendiente",
                     "observacion_inspeccion": fila["observacion_inspeccion"] or "",
+                    "pares_defectuosos": fila["pares_defectuosos"],
                     "materiales_extra": extras_por_linea.get(fila["id_linea"], []),
                     "jornadas": {},
                     "total_pares": 0,
@@ -429,6 +435,7 @@ def actualizar_linea_produccion(id_linea):
         extras = linea.get("materiales_extra") or []
         talles = [(str(item.get("talle")), int(item.get("cantidad_pares") or 0)) for item in linea.get("talles") or []]
         talles = [(talle, cantidad) for talle, cantidad in talles if cantidad > 0]
+        pares_defectuosos = validar_pares_defectuosos(linea, sum(cantidad for _, cantidad in talles))
         if not fecha or not all((calzado, puntera, inyeccion, talles)):
             raise ValueError("Completá la fecha, los operarios y al menos una cantidad.")
     except (TypeError, ValueError) as error:
@@ -469,7 +476,7 @@ def actualizar_linea_produccion(id_linea):
             cursor.execute("UPDATE produccion_diaria_bloque SET maquinas_id_maquina=%s,operario_inyeccion=%s WHERE id_bloque=%s", (id_maquina, " | ".join(inyeccion), actual["bloque_id"]))
 
         id_variante = _obtener_o_crear_variante(cursor, actual["orden_fabricacion_id_orden"], id_tipo_puntera, adicionales)
-        cursor.execute("UPDATE produccion_diaria_linea SET producto_variante_id_variante=%s,lote_puntera_id=%s,lote_pu_id=%s,estado_inspeccion=%s,observacion_inspeccion=%s WHERE id_linea=%s", (id_variante, id_lote_puntera, id_lote_pu, estado_inspeccion, observacion_inspeccion or None, id_linea))
+        cursor.execute("UPDATE produccion_diaria_linea SET producto_variante_id_variante=%s,lote_puntera_id=%s,lote_pu_id=%s,estado_inspeccion=%s,observacion_inspeccion=%s,pares_defectuosos=%s WHERE id_linea=%s", (id_variante, id_lote_puntera, id_lote_pu, estado_inspeccion, observacion_inspeccion or None, pares_defectuosos, id_linea))
         cursor.execute("DELETE FROM detalle_produccion_diaria WHERE linea_id=%s", (id_linea,))
         cursor.executemany("INSERT INTO detalle_produccion_diaria (linea_id,talle,cantidad_pares) VALUES (%s,%s,%s)", [(id_linea, talle, cantidad) for talle, cantidad in talles])
         for talle in set(anteriores) | set(nuevos):
@@ -553,9 +560,10 @@ def crear_produccion_diaria():
                     if int(material.get("lote_id") or 0) <= 0: raise ValueError("Cada material adicional debe tener un remito seleccionado.")
                 talles = [(str(item.get("talle")), int(item.get("cantidad_pares") or 0)) for item in linea.get("talles") or []]
                 talles = [(talle, cantidad) for talle, cantidad in talles if cantidad > 0]
+                pares_defectuosos = validar_pares_defectuosos(linea, sum(cantidad for _, cantidad in talles))
                 if id_orden <= 0 or id_tipo_puntera <= 0 or not talles:
                     raise ValueError("Cada orden debe incluir talles y tipo de puntera.")
-                lineas.append((id_orden, id_tipo_puntera, id_puntera, id_pu, adicionales_linea, materiales_extra, talles, estado_inspeccion, observacion_inspeccion))
+                lineas.append((id_orden, id_tipo_puntera, id_puntera, id_pu, adicionales_linea, materiales_extra, talles, estado_inspeccion, observacion_inspeccion, pares_defectuosos))
             if not lineas:
                 raise ValueError("Cada inyectora debe tener al menos una orden.")
             lineas_validas.append((id_maquina, operarios_inyeccion, lineas))
@@ -571,7 +579,7 @@ def crear_produccion_diaria():
 
         solicitado = {}
         for _, _, lineas in lineas_validas:
-            for id_orden, _, _, _, _, _, talles, _, _ in lineas:
+            for id_orden, _, _, _, _, _, talles, _, _, _ in lineas:
                 for talle, cantidad in talles:
                     clave = (id_orden, talle)
                     solicitado[clave] = solicitado.get(clave, 0) + cantidad
@@ -610,7 +618,7 @@ def crear_produccion_diaria():
             )
             id_bloque = cursor.lastrowid
 
-            for id_orden, id_tipo_puntera, id_puntera, id_pu, adicionales_linea, materiales_extra, talles, estado_inspeccion, observacion_inspeccion in lineas:
+            for id_orden, id_tipo_puntera, id_puntera, id_pu, adicionales_linea, materiales_extra, talles, estado_inspeccion, observacion_inspeccion, pares_defectuosos in lineas:
                 id_variante = _obtener_o_crear_variante(cursor, id_orden, id_tipo_puntera, adicionales_linea)
                 cursor.execute(
                     """
@@ -643,10 +651,10 @@ def crear_produccion_diaria():
                 cursor.execute(
                     """
                     INSERT INTO produccion_diaria_linea
-                      (bloque_id, orden_fabricacion_id_orden, producto_variante_id_variante, planilla_produccion_id_planilla, lote_puntera_id, lote_pu_id, estado_inspeccion, observacion_inspeccion)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                      (bloque_id, orden_fabricacion_id_orden, producto_variante_id_variante, planilla_produccion_id_planilla, lote_puntera_id, lote_pu_id, estado_inspeccion, observacion_inspeccion, pares_defectuosos)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
-                    (id_bloque, id_orden, id_variante, id_planilla, id_puntera, id_pu, estado_inspeccion, observacion_inspeccion or None),
+                    (id_bloque, id_orden, id_variante, id_planilla, id_puntera, id_pu, estado_inspeccion, observacion_inspeccion or None, pares_defectuosos),
                 )
                 id_linea = cursor.lastrowid
 
@@ -756,3 +764,15 @@ def crear_produccion_diaria():
             cursor.close()
         if conn:
             conn.close()
+
+
+def validar_pares_defectuosos(linea, total):
+    if (linea.get("estado_inspeccion") or "").strip() != "No conforme":
+        return 0
+    valor = linea.get("pares_defectuosos")
+    if isinstance(valor, bool) or valor is None or not str(valor).isdigit():
+        raise ValueError("Indicá una cantidad entera de pares defectuosos.")
+    cantidad = int(valor)
+    if cantidad < 1 or cantidad > total:
+        raise ValueError("Los pares defectuosos deben estar entre 1 y el total producido.")
+    return cantidad

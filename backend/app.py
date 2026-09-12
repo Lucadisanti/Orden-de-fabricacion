@@ -17,8 +17,14 @@ from routes.dashboard_routes import dashboard_bp
 from routes.catalogos_routes import catalogos_bp
 from routes.produccion_diaria_routes import produccion_diaria_bp
 
+from routes.recepcion_cortes_routes import recepcion_cortes_bp
+
+from routes.sugerencias_routes import sugerencias_bp
+
 app = Flask(__name__)
 CORS(app, origins=os.getenv("CORS_ORIGINS", "http://127.0.0.1:5173").split(","))
+app.register_blueprint(sugerencias_bp, url_prefix="/api/sugerencias")
+app.register_blueprint(recepcion_cortes_bp, url_prefix="/api/recepcion-cortes")
 
 app.register_blueprint(productos_bp, url_prefix="/api/productos")
 app.register_blueprint(colores_bp, url_prefix="/api/colores")

@@ -1,3 +1,4 @@
+import NombreSugerido from "../components/NombreSugerido";
 import Selector from "../components/Selector";
 import SeparadorListado from "../components/SeparadorListado";
 import { Fragment, useEffect, useRef, useState } from "react";
@@ -485,7 +486,7 @@ export default function RecepcionMateriales() {
 
             <label className="recepcion-campo">
               <span>Recibido por</span>
-              <input type="text" name="recibido_por" placeholder="Nombre de quien recibe" value={form.recibido_por} onChange={manejarCambio} />
+              <NombreSugerido type="text" name="recibido_por" placeholder="Nombre de quien recibe" value={form.recibido_por} onChange={manejarCambio} />
             </label>
 
             <label className="recepcion-campo">

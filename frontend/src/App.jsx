@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+import RecepcionCortes from "./pages/RecepcionCortes";
 import Sidebar from "./components/Sidebar";
 
 import Dashboard from "./pages/Dashboard";
@@ -36,6 +37,7 @@ function App() {
             <Route path="/recepcion-materiales" element={<RecepcionMateriales />}/>
             <Route path="/materiales" element={<Materiales />} />
             <Route path="/ordenes" element={<Ordenes />} />
+            <Route path="/recepcion-cortes" element={<RecepcionCortes />} />
             <Route path="/planillas" element={<Planillas />} />
             <Route path="/produccion-diaria" element={<ProduccionDiaria />} />
             <Route path="/uso-materiales" element={<UsoMateriales />} />

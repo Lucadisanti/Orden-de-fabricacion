@@ -12,7 +12,7 @@ const normalizar = valor => String(valor || "").normalize("NFD").replace(/[\u030
 export default function NombreSugerido({ tipo = "personas", value = "", onChange, ...props }) {
   const anchor = useRef(null), id = useId();
   const [opciones, setOpciones] = useState([]), [abierto, setAbierto] = useState(false), [activo, setActivo] = useState(-1);
-  const visibles = opciones.filter(n => normalizar(n).includes(normalizar(value)));
+  const visibles = opciones.slice(0, 5).filter(n => normalizar(n).includes(normalizar(value)));
   const elegir = nombre => { onChange({target:{value:nombre,name:props.name}}); setAbierto(false); setActivo(-1); };
   return <div className="selector-material nombre-sugerido">
     <input {...props} ref={anchor} value={value} autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={abierto && visibles.length > 0} aria-controls={id} aria-activedescendant={abierto && visibles[activo] ? `${id}-${activo}` : undefined}

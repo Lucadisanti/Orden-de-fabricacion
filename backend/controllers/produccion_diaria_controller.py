@@ -93,7 +93,7 @@ def listar_producciones_diarias():
         _asegurar_esquema_variantes(cursor)
         cursor.execute(
             """
-            SELECT pdl.id_linea, ofab.id_orden, ofab.numero_orden, prod.modelos_calzado_id_modelo AS id_modelo,
+            SELECT pdl.id_linea, pdl.planilla_produccion_id_planilla AS id_planilla, ofab.id_orden, ofab.numero_orden, prod.modelos_calzado_id_modelo AS id_modelo,
                    COALESCE(pv.articulo_producto, prod.articulo_producto) AS articulo,
                    prod.nombre_producto AS producto, col.color AS color,
                    m.nombre_maquina AS inyectora, pd.fecha, pdl.estado_inspeccion, pdl.pares_defectuosos,
@@ -108,7 +108,7 @@ def listar_producciones_diarias():
             LEFT JOIN colores col ON col.id_color = prod.colores_id_color
             LEFT JOIN producto_variante pv ON pv.id_variante = pdl.producto_variante_id_variante
             LEFT JOIN detalle_produccion_diaria dpdl ON dpdl.linea_id = pdl.id_linea
-            GROUP BY pdl.id_linea, ofab.id_orden, ofab.numero_orden, prod.modelos_calzado_id_modelo, pv.articulo_producto, prod.articulo_producto,
+            GROUP BY pdl.id_linea, pdl.planilla_produccion_id_planilla, ofab.id_orden, ofab.numero_orden, prod.modelos_calzado_id_modelo, pv.articulo_producto, prod.articulo_producto,
                      prod.nombre_producto, col.color, m.nombre_maquina, pd.fecha, pdl.estado_inspeccion, pdl.pares_defectuosos
             ORDER BY pd.fecha DESC, pd.id_produccion_diaria DESC, pdl.id_linea DESC
             """

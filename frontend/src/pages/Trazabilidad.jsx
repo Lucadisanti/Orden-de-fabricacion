@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import SortControls from "../components/SortControls";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
@@ -48,6 +49,7 @@ export default function Trazabilidad() {
   };
 
   async function cargarOrdenes() {
+    setCargando(true);
     try {
       const [res, produccionesRes] = await Promise.all([
         axios.get(`${API_URL}/ordenes/`),
@@ -76,10 +78,11 @@ export default function Trazabilidad() {
         }));
       });
       setOrdenes(filasPorArticulo);
-      setCargando(false);
+      setError("");
     } catch (error) {
       console.error(error);
       setError("No se pudieron cargar las órdenes.");
+    } finally {
       setCargando(false);
     }
   }
@@ -435,10 +438,10 @@ export default function Trazabilidad() {
         </p>
       </div>
 
-      {cargando && <p>Cargando órdenes...</p>}
-      {error && <p>{error}</p>}
+      {cargando && !error && <p>Cargando órdenes...</p>}
+      {error && <RetryMessage message={error} onRetry={cargarOrdenes} retrying={cargando} />}
 
-      {!cargando && !error && (
+      {((!cargando && !error) || ordenSeleccionada) && (
         <div className="ui-grid-2">
           <div className={`trazabilidad-columna-listado ${ordenSeleccionada ? "oculto-movil" : ""}`}>
             <div className="ui-list-tools">

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import "../styles/SortControls.css";
 
 export function useNativeTableSorting(selector, orden, campos) {
   useEffect(() => {

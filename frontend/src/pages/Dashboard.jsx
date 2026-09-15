@@ -23,7 +23,7 @@ const panelInicial = {
   unidadesPendientes: 0,
   paresSolicitados: 0,
   paresProducidos: 0,
-  produccionesRegistradas: 0,
+  modelosProducidosHoy: 0,
   produccionesHoy: 0,
 };
 
@@ -98,12 +98,12 @@ const secciones = {
     id: "id_orden",
     accion: "Ver orden →",
     detalleRuta: (item) => `/ordenes?seleccion=${item.id_orden}`,
-    columnas: ["N.º de orden", "Producto", "Color", "Fecha", "Estado"],
+    columnas: ["Fecha", "N.º de orden", "Producto", "Color", "Estado"],
     celdas: (item) => [
+      formatearFecha(item.fecha),
       item.numero_orden || "-",
       item.producto || item.nombre_producto || "-",
       item.color || "-",
-      formatearFecha(item.fecha),
       <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>,
     ],
   },
@@ -113,13 +113,13 @@ const secciones = {
     id: "id_planilla",
     accion: "Abrir detalle →",
     detalleRuta: (item) => `/planillas?seleccion=${item.id_planilla}`,
-    columnas: ["N.º de planilla", "Orden", "Producto", "Color", "Fecha", "Estado"],
+    columnas: ["Fecha", "N.º de planilla", "Orden", "Producto", "Color", "Estado"],
     celdas: (item) => [
+      formatearFecha(item.fecha),
       item.numero_planilla || "-",
       item.numero_orden || item.orden || "-",
       item.producto || item.nombre_producto || "-",
       item.color || "-",
-      formatearFecha(item.fecha),
       <span className={`ui-status-badge ${claseEstado(item.estado)}`}>{estadoLegible(item.estado)}</span>,
     ],
   },
@@ -203,12 +203,15 @@ export default function Dashboard() {
       setPanelControl({
         ordenesPendientes: ordenes.filter((orden) => estaPendiente(orden.estado)).length,
         ordenesProceso: ordenes.filter((orden) => estaEnProceso(orden.estado)).length,
-        planillasProceso: planillas.filter((planilla) => estaEnProceso(planilla.estado)).length,
+        planillasProceso: planillas.filter((planilla) => String(planilla.numero_planilla).trim().toUpperCase() === "R013/1" && estaEnProceso(planilla.estado)).length,
         lotesPendientes: lotes.filter((lote) => comoNumero(lote.pendiente) > 0).length,
         unidadesPendientes: lotes.reduce((total, lote) => total + comoNumero(lote.pendiente), 0),
         paresSolicitados: ordenes.reduce((total, orden) => total + comoNumero(orden.total_pares), 0),
         paresProducidos: producciones.reduce((total, produccion) => total + comoNumero(produccion.total_pares), 0),
-        produccionesRegistradas: producciones.length,
+        modelosProducidosHoy: new Set(producciones
+          .filter((produccion) => normalizarFechaISO(produccion.fecha) === hoy && comoNumero(produccion.total_pares) > 0)
+          .map((produccion) => produccion.id_modelo != null ? String(produccion.id_modelo) : String(produccion.producto || "").trim().toLowerCase())
+          .filter(Boolean)).size,
         produccionesHoy: producciones.filter((produccion) => normalizarFechaISO(produccion.fecha) === hoy).length,
       });
 
@@ -432,7 +435,7 @@ export default function Dashboard() {
           <div className="dashboard-panel-header">
             <span>Producción</span>
             <h2>Avance general</h2>
-            <p>Relación entre pares solicitados y pares cargados en producción diaria.</p>
+            <p>Relación entre pares cortados y pares cargados en producción diaria.</p>
           </div>
 
           <div className="dashboard-avance">
@@ -449,15 +452,15 @@ export default function Dashboard() {
             </div>
             <div>
               <strong>{panelControl.paresSolicitados}</strong>
-              <span>Pares solicitados</span>
+              <span>Pares cortados</span>
             </div>
             <div>
               <strong>{panelControl.produccionesHoy}</strong>
               <span>Producciones hoy</span>
             </div>
             <div>
-              <strong>{panelControl.produccionesRegistradas}</strong>
-              <span>Líneas cargadas</span>
+              <strong>{panelControl.modelosProducidosHoy}</strong>
+              <span>Modelos producidos hoy</span>
             </div>
           </div>
         </section>

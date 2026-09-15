@@ -137,6 +137,10 @@
 }
 
 .ui-btn {
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: normal;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -396,6 +400,9 @@
 }
 
 .ui-data-table td:last-child .ui-btn {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
   min-height: 34px;
   padding: 8px 12px;
   border-radius: 9px;
@@ -448,7 +455,7 @@
   outline: none;
 }
 .produccion-inspeccion .inspeccion-opcion:has(input[type="radio"]:focus-visible) {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--inspeccion-color, var(--primary));
   outline-offset: 3px;
 }
 
@@ -749,8 +756,66 @@ input[type="number"]::-webkit-outer-spin-button {
 :root[data-theme="noche"] .ui-pagination-number-wrap i { color: #71839c; }
 @media (max-width: 700px) { .ui-pagination { grid-template-columns: 1fr auto; } .ui-pagination-pages { grid-column: 1 / -1; grid-row: 1; justify-self: center; } .ui-pagination-summary { grid-row: 2; } .ui-pagination-size { grid-row: 2; } }
 
+/* Keep table actions readable when the viewport or browser zoom reduces space. */
+.ui-table-card > .ui-listado-ajustado > thead > tr > th {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.ui-table-card > .ui-listado-ajustado > tbody > tr > td:last-child > .ui-btn {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  margin: 3px 0 3px 4px;
+}
+@media (max-width: 1400px) {
+  .main-content .ui-table-card > .ui-listado-ajustado > thead > tr > th,
+  .main-content .ui-table-card > .ui-listado-ajustado > tbody > tr > td {
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+  .main-content .ui-table-card > .ui-listado-ajustado > tbody > tr > td:last-child > .ui-btn {
+    padding: 8px 7px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 1100px) {
+  .main-content .ui-table-card > .ui-listado-ajustado {
+    table-layout: auto;
+    min-width: 680px;
+  }
+  .main-content .ui-table-card > .ui-listado-ajustado > tbody > tr > td {
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+  .main-content .ui-table-card > .ui-listado-ajustado > tbody > tr > td:last-child {
+    min-width: 80px;
+  }
+}
 
-/* Buscador con botón para limpiar */
+/* Adapt to available content width, including a visible sidebar. */
+.main-content > section { container-type: inline-size; }
+.main-content :is(form, .ui-form-card) :is(label, input, select, textarea) { min-width: 0; max-width: 100%; }
+.main-content :is(button, label) { overflow-wrap: normal; word-break: normal; }
+.main-content .ui-table-card > .ui-listado-ajustado { table-layout: auto; }
+.main-content .ui-table-card > .ui-listado-ajustado > :is(thead, tbody) > tr > :is(th, td),
+.main-content .dashboard-table :is(th, td),
+.main-content .trazabilidad-ordenes-table :is(th, td) { overflow-wrap: normal; word-break: normal; }
+@container (max-width: 1050px) {
+  .main-content .produccion-cabecera { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .main-content .produccion-talles > div { grid-template-columns: repeat(auto-fit, minmax(65px, 1fr)); }
+  .main-content .planilla-operarios-variante { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 700px) {
+  .main-content :is(.orden-datos-grid, .produccion-linea-datos, .produccion-linea-materiales, .planilla-variante-grid, .planilla-materiales-principales, .planilla-variante-materiales) { grid-template-columns: minmax(0, 1fr); }
+  .main-content .produccion-linea-materiales .produccion-sector-materiales { padding-top: 0; }
+  .main-content :is(.ui-form-actions, .produccion-acciones) { flex-wrap: wrap; gap: 12px; }
+}
+@container (max-width: 440px) {
+  .main-content :is(.produccion-cabecera, .produccion-inyectora-grid, .planilla-operarios-variante) { grid-template-columns: minmax(0, 1fr); }
+}
+
+
+
 .ui-search-clearable .ui-input {
   padding-right: 48px;
 }
@@ -790,6 +855,9 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .ui-retry-message {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -801,10 +869,32 @@ input[type="number"]::-webkit-outer-spin-button {
   border-radius: 12px;
   background: var(--bg-card);
   color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: left;
 }
 
-.ui-retry-message > div { min-width: 0; overflow-wrap: anywhere; }
-.ui-retry-message p { margin: 0; color: var(--text-muted); }
+.ui-retry-message > div {
+  flex: 1 1 18rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+.ui-retry-message strong { font-size: 14px; font-weight: 700; color: var(--text-main); }
+.ui-retry-message p { margin: 0; font-size: 14px; font-weight: 400; color: var(--text-muted); }
+.ui-retry-message > .ui-btn {
+  flex: 0 0 auto;
+  align-self: center;
+  width: auto;
+  min-height: 36px;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .ui-retry-message .ui-btn:disabled { opacity: .6; cursor: wait; }
 
 .ui-empty-state {

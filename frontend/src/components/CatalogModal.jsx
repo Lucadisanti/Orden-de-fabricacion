@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "../styles/Feedback.css";
 
-export default function CatalogModal({ open, title, codeLength, initialCode = "", initialName = "", onConfirm, onCancel }) {
+export default function CatalogModal({ open, title, codeLength, initialCode = "", initialName = "", confirmText = "Agregar", description, busy = false, onConfirm, onCancel }) {
   const [codigo, setCodigo] = useState(initialCode);
   const [nombre, setNombre] = useState(initialName);
 
@@ -16,6 +16,7 @@ export default function CatalogModal({ open, title, codeLength, initialCode = ""
   return <div className="feedback-modal-backdrop">
     <div className="feedback-modal-card">
       <h2>{title}</h2>
+      {description && <p>{description}</p>}
       <form onSubmit={submit}>
         <label>Código</label>
         <input autoFocus inputMode="numeric" pattern={`[0-9]{${codeLength}}`} maxLength={codeLength}
@@ -26,7 +27,7 @@ export default function CatalogModal({ open, title, codeLength, initialCode = ""
           onChange={(event) => setNombre(event.target.value)} required />
         <div className="feedback-modal-actions">
           <button type="button" className="ui-btn ui-btn-secondary" onClick={onCancel}>Cancelar</button>
-          <button type="submit" className="ui-btn ui-btn-primary">Agregar</button>
+          <button type="submit" className="ui-btn ui-btn-primary" disabled={busy}>{busy ? "Guardando..." : confirmText}</button>
         </div>
       </form>
     </div>

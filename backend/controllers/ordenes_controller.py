@@ -92,10 +92,8 @@ def listar_talles_orden(id_orden): return responder_lista("sp_listar_talles_orde
 
 
 def _guardar_orden(id_orden=None):
-    data = request.json or {}; talles = _normalizar_talles(data.get("talles")); materiales = _normalizar_materiales(data.get("materiales"))
+    data = request.json or {}; talles = _normalizar_talles(data.get("talles"))
     if not talles: return jsonify({"error": "Debe cargar al menos un talle con cantidad."}), 400
-    if not str(data.get("operario_corte") or "").strip(): return jsonify({"error": "Debe indicar el operario de corte."}), 400
-    if not materiales: return jsonify({"error": "Debe seleccionar al menos un material utilizado."}), 400
     fecha_aparado = data.get("fecha_aparado") or None
     try:
         if fecha_aparado: fecha_aparado = date.fromisoformat(fecha_aparado).isoformat()

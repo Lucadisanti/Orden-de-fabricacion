@@ -7,9 +7,9 @@ const enlaces = [
   ["/", "Inicio"],
   ["/recepcion-materiales", "Recepción Materiales"],
   ["/ordenes", "Órdenes R013"],
+  ["/recepcion-cortes", "Planillas R018/1"],
   ["/planillas", "Planillas R013/1"],
   ["/produccion-diaria", "Producción diaria"],
-  ["/uso-materiales", "Uso Materiales"],
   ["/trazabilidad", "Trazabilidad"],
   ["/estadisticas", "Estadísticas"],
 ];
@@ -18,6 +18,7 @@ const enlacesDatosGenerales = [
   ["/productos", "Productos"],
   ["/proveedores", "Proveedores"],
   ["/materiales", "Materiales"],
+  ["/uso-materiales", "Uso de materiales"],
 ];
 
 export default function Sidebar() {

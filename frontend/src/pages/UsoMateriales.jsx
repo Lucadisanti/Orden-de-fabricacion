@@ -1,3 +1,4 @@
+import Selector from "../components/Selector";
 import SeparadorListado from "../components/SeparadorListado";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -271,49 +272,43 @@ export default function UsoMateriales() {
           <h2>{editando ? "Editar uso de material" : "Nuevo uso de material"}</h2>
 
           <form onSubmit={guardarUsoMaterial} className="form-uso-material">
-            <label>
-              <span>Planilla</span>
-              <select
-                name="planilla_produccion_id_planilla"
-                value={form.planilla_produccion_id_planilla}
-                onChange={manejarCambio}
-                required
-              >
-                <option value="">Seleccione planilla</option>
+            <Selector
+              name="planilla_produccion_id_planilla"
+              value={form.planilla_produccion_id_planilla}
+              onChange={manejarCambio}
+              required
+            >
+              <option value="">Seleccione planilla</option>
 
-                {planillas.map((planilla) => (
-                  <option key={planilla.id_planilla} value={planilla.id_planilla}>
-                    {planilla.numero_planilla} - Orden{" "}
-                    {planilla.numero_orden || planilla.orden || "-"}
-                  </option>
-                ))}
-              </select>
-            </label>
+              {planillas.map((planilla) => (
+                <option key={planilla.id_planilla} value={planilla.id_planilla}>
+                  {planilla.numero_planilla} - Orden{" "}
+                  {planilla.numero_orden || planilla.orden || "-"}
+                </option>
+              ))}
+            </Selector>
 
-            <label>
-              <span>Material recibido</span>
-              <select
-                name="lote_materiales_id_lote"
-                value={form.lote_materiales_id_lote}
-                onChange={manejarCambio}
-                required
-              >
-                <option value="">Seleccione material recibido</option>
+            <Selector
+              name="lote_materiales_id_lote"
+              value={form.lote_materiales_id_lote}
+              onChange={manejarCambio}
+              required
+            >
+              <option value="">Seleccione material recibido</option>
 
-                {lotes.map((lote) => (
-                  <option
-                    key={lote.id_lote_materiales || lote.id_lote}
-                    value={lote.id_lote_materiales || lote.id_lote}
-                  >
-                    Remito {lote.numero_remito || "-"} -{" "}
-                    {lote.nombre_proveedor || lote.proveedor || "Proveedor"} -{" "}
-                    {lote.material || "Material"}{" "}
-                    {lote.color ? `(${lote.color})` : ""} - Recibido:{" "}
-                    {lote.cantidad_recibida ?? "-"}
-                  </option>
-                ))}
-              </select>
-            </label>
+              {lotes.map((lote) => (
+                <option
+                  key={lote.id_lote_materiales || lote.id_lote}
+                  value={lote.id_lote_materiales || lote.id_lote}
+                >
+                  Remito {lote.numero_remito || "-"} -{" "}
+                  {lote.nombre_proveedor || lote.proveedor || "Proveedor"} -{" "}
+                  {lote.material || "Material"}{" "}
+                  {lote.color ? `(${lote.color})` : ""} - Recibido:{" "}
+                  {lote.cantidad_recibida ?? "-"}
+                </option>
+              ))}
+            </Selector>
 
             <label>
               <span>Cantidad usada</span>

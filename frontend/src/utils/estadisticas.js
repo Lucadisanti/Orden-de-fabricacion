@@ -8,13 +8,22 @@ export function resumirEstadisticas(producciones, ordenes, desde, hasta) {
     filas.forEach((p) => { const nombre = clave(p); grupos.set(nombre, (grupos.get(nombre) || 0) + Number(p.total_pares || 0)); });
     return [...grupos].map(([nombre, pares]) => ({ nombre, pares }));
   };
+  const inspeccion = new Map();
+  const sumar = (estado, pares) => inspeccion.set(estado, (inspeccion.get(estado) || 0) + pares);
+  filas.forEach((p) => {
+    const total = Number(p.total_pares || 0);
+    const defectuosos = Number(p.pares_defectuosos);
+    if (p.estado_inspeccion !== "No conforme") sumar(p.estado_inspeccion || "Pendiente", total);
+    else if (p.pares_defectuosos == null || p.pares_defectuosos === "" || !Number.isInteger(defectuosos) || defectuosos < 1 || defectuosos > total) sumar("Sin desglose", total);
+    else { sumar("No conforme", defectuosos); sumar("Conforme", total - defectuosos); }
+  });
   return {
     total: filas.reduce((s, p) => s + Number(p.total_pares || 0), 0),
     ordenes: new Set(filas.map((p) => p.id_orden)).size,
     dias: agrupar((p) => p.fecha.slice(0, 10)).sort((a, b) => a.nombre.localeCompare(b.nombre)),
     maquinas: agrupar((p) => p.inyectora || "Sin inyectora").sort((a, b) => b.pares - a.pares),
     productos: agrupar((p) => `${p.producto || "Sin producto"} · ${p.color || "Sin color"}`).sort((a, b) => b.pares - a.pares),
-    inspeccion: agrupar((p) => p.estado_inspeccion || "Pendiente"),
+    inspeccion: [...inspeccion].map(([nombre, pares]) => ({ nombre, pares })),
     corte: ordenes.filter((o) => dentro(o.fecha)).length,
     aparado: ordenes.filter((o) => dentro(o.fecha_aparado)).length,
     sinCorte: ordenes.filter((o) => !o.fecha).length,

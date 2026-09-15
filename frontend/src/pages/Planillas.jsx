@@ -1,3 +1,7 @@
+import ParesDefectuosos from "../components/ParesDefectuosos";
+import NombreSugerido from "../components/NombreSugerido";
+import Selector from "../components/Selector";
+import SelectorMaterial from "../components/SelectorMaterial";
 import SeparadorListado from "../components/SeparadorListado";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -71,7 +75,7 @@ export default function Planillas() {
   const [tallesForm, setTallesForm] = useState(crearTallesIniciales());
   const [corrigiendoRealizados, setCorrigiendoRealizados] = useState(false);
   const [correccionesRealizados, setCorreccionesRealizados] = useState({});
-  const [varianteForm, setVarianteForm] = useState({ maquinas_id_maquina: "", operarios_calzado: [""], operarios_puntera: [""], operarios_inyeccion: [""], operarios_inspeccion_final: [""], estado_inspeccion: "Pendiente", observacion_inspeccion: "", punteras_id_puntera: "", adicionales_id_adicional: "", lote_puntera_id: "", lote_pu_id: "", busqueda_puntera: "", busqueda_pu: "", materiales_extra: [] });
+  const [varianteForm, setVarianteForm] = useState({ maquinas_id_maquina: "", operarios_calzado: [""], operarios_puntera: [""], operarios_inyeccion: [""], operarios_inspeccion_final: [""], estado_inspeccion: "Pendiente", observacion_inspeccion: "", pares_defectuosos: "", punteras_id_puntera: "", adicionales_id_adicional: "", lote_puntera_id: "", lote_pu_id: "", busqueda_puntera: "", busqueda_pu: "", materiales_extra: [] });
   const [variantesPendientes, setVariantesPendientes] = useState([]);
   const [produccionActivaAbierta, setProduccionActivaAbierta] = useState(false);
   const [numeroProduccionActiva, setNumeroProduccionActiva] = useState(1);
@@ -485,7 +489,7 @@ export default function Planillas() {
     setVariantesPendientes([]);
     setNumeroProduccionActiva(1);
     setProduccionActivaAbierta(false);
-    setVarianteForm({ maquinas_id_maquina: "", operarios_calzado: [""], operarios_puntera: [""], operarios_inyeccion: [""], operarios_inspeccion_final: [""], estado_inspeccion: "Pendiente", observacion_inspeccion: "", punteras_id_puntera: "", adicionales_id_adicional: "", lote_puntera_id: "", lote_pu_id: "", busqueda_puntera: "", busqueda_pu: "", materiales_extra: [] });
+    setVarianteForm({ maquinas_id_maquina: "", operarios_calzado: [""], operarios_puntera: [""], operarios_inyeccion: [""], operarios_inspeccion_final: [""], estado_inspeccion: "Pendiente", observacion_inspeccion: "", pares_defectuosos: "", punteras_id_puntera: "", adicionales_id_adicional: "", lote_puntera_id: "", lote_pu_id: "", busqueda_puntera: "", busqueda_pu: "", materiales_extra: [] });
     setTallesForm(crearTallesIniciales());
     setCorrigiendoRealizados(false);
     setCorreccionesRealizados({});
@@ -527,7 +531,7 @@ export default function Planillas() {
           operarios_inyeccion: jornada.operarios_inyeccion?.length ? jornada.operarios_inyeccion : [""],
           operarios_inspeccion_final: jornada.operarios_inspeccion_final?.filter(Boolean).length ? jornada.operarios_inspeccion_final : [""],
           estado_inspeccion: linea.estado_inspeccion || "Pendiente",
-          observacion_inspeccion: linea.observacion_inspeccion || "",
+          observacion_inspeccion: linea.observacion_inspeccion || "", pares_defectuosos: linea.pares_defectuosos ?? "",
           punteras_id_puntera: String(linea.punteras_id_puntera || ""),
           adicionales_id_adicional: String(linea.adicionales_ids || "").split(",")[0] || "",
           lote_puntera_id: String(linea.lote_puntera_id || ""),
@@ -688,7 +692,7 @@ export default function Planillas() {
   const cambiarMaterialExtra = (indice, busqueda) => { const lote = lotes.find((item) => etiquetaLote(item).toLowerCase() === busqueda.trim().toLowerCase()); setVarianteForm((actual) => ({ ...actual, materiales_extra: actual.materiales_extra.map((material, posicion) => posicion === indice ? { busqueda, lote_id: lote ? String(lote.id_lote || lote.id_lote_materiales) : "" } : material) })); };
   const ordenVariante = ordenesDisponibles.find((orden) => Number(orden.id_orden) === Number(planillaSeleccionada?.orden_fabricacion_id_orden));
   const articuloVariante = `${ordenVariante?.codigo_modelo || ""}${punteras.find((puntera) => String(puntera.id_puntera) === String(varianteForm.punteras_id_puntera))?.codigo_puntera || ""}${adicionales.find((adicional) => String(adicional.id_adicional) === String(varianteForm.adicionales_id_adicional))?.codigo_adicional || ""}${ordenVariante?.codigo_color || ""}`;
-  const reiniciarVariante = () => setVarianteForm({ maquinas_id_maquina: "", operarios_calzado: [""], operarios_puntera: [""], operarios_inyeccion: [""], operarios_inspeccion_final: [""], estado_inspeccion: "Pendiente", observacion_inspeccion: "", punteras_id_puntera: "", adicionales_id_adicional: "", lote_puntera_id: "", lote_pu_id: "", busqueda_puntera: "", busqueda_pu: "", materiales_extra: [] });
+  const reiniciarVariante = () => setVarianteForm({ maquinas_id_maquina: "", operarios_calzado: [""], operarios_puntera: [""], operarios_inyeccion: [""], operarios_inspeccion_final: [""], estado_inspeccion: "Pendiente", observacion_inspeccion: "", pares_defectuosos: "", punteras_id_puntera: "", adicionales_id_adicional: "", lote_puntera_id: "", lote_pu_id: "", busqueda_puntera: "", busqueda_pu: "", materiales_extra: [] });
   const varianteCompleta = (variante) => variante.maquinas_id_maquina && variante.operarios_calzado.every((n) => n.trim()) && variante.operarios_puntera.every((n) => n.trim()) && variante.operarios_inyeccion.every((n) => n.trim()) && variante.punteras_id_puntera && variante.materiales_extra.every((m) => m.lote_id || !m.busqueda.trim()) && (variante.estado_inspeccion !== "No conforme" || variante.observacion_inspeccion?.trim());
   const varianteTieneDatos = (variante, talles = []) => Boolean(variante.maquinas_id_maquina || variante.punteras_id_puntera || variante.lote_puntera_id || variante.lote_pu_id || variante.adicionales_id_adicional || variante.materiales_extra.length || talles.length || [...variante.operarios_calzado, ...variante.operarios_puntera, ...variante.operarios_inyeccion, ...variante.operarios_inspeccion_final].some((nombre) => nombre.trim()));
   const numerosProduccionesContraidas = variantesPendientes.map((item, indice) => item.numero || indice + 1);
@@ -712,7 +716,7 @@ export default function Planillas() {
     const numeroSeleccionado = seleccionada.numero || indice + 1;
     const conservarActual = varianteTieneDatos(varianteForm, tallesActuales);
     setVariantesPendientes((actuales) => { const siguientes = [...actuales]; siguientes.splice(indice, 1); if (conservarActual) siguientes.splice(indice, 0, { ...varianteForm, talles: tallesActuales, articulo: articuloVariante, numero: numeroProduccionVisible }); return siguientes; });
-    setVarianteForm({ id_linea: seleccionada.id_linea, fecha: seleccionada.fecha, modificada: Boolean(seleccionada.id_linea), talles_originales: seleccionada.talles_originales || seleccionada.talles, maquinas_id_maquina: seleccionada.maquinas_id_maquina, operarios_calzado: seleccionada.operarios_calzado, operarios_puntera: seleccionada.operarios_puntera, operarios_inyeccion: seleccionada.operarios_inyeccion, operarios_inspeccion_final: seleccionada.operarios_inspeccion_final || [""], estado_inspeccion: seleccionada.estado_inspeccion || "Pendiente", observacion_inspeccion: seleccionada.observacion_inspeccion || "", punteras_id_puntera: seleccionada.punteras_id_puntera, adicionales_id_adicional: seleccionada.adicionales_id_adicional, lote_puntera_id: seleccionada.lote_puntera_id, lote_pu_id: seleccionada.lote_pu_id, busqueda_puntera: seleccionada.busqueda_puntera, busqueda_pu: seleccionada.busqueda_pu, materiales_extra: seleccionada.materiales_extra });
+    setVarianteForm({ id_linea: seleccionada.id_linea, fecha: seleccionada.fecha, modificada: Boolean(seleccionada.id_linea), talles_originales: seleccionada.talles_originales || seleccionada.talles, maquinas_id_maquina: seleccionada.maquinas_id_maquina, operarios_calzado: seleccionada.operarios_calzado, operarios_puntera: seleccionada.operarios_puntera, operarios_inyeccion: seleccionada.operarios_inyeccion, operarios_inspeccion_final: seleccionada.operarios_inspeccion_final || [""], estado_inspeccion: seleccionada.estado_inspeccion || "Pendiente", observacion_inspeccion: seleccionada.observacion_inspeccion || "", pares_defectuosos: seleccionada.pares_defectuosos ?? "", punteras_id_puntera: seleccionada.punteras_id_puntera, adicionales_id_adicional: seleccionada.adicionales_id_adicional, lote_puntera_id: seleccionada.lote_puntera_id, lote_pu_id: seleccionada.lote_pu_id, busqueda_puntera: seleccionada.busqueda_puntera, busqueda_pu: seleccionada.busqueda_pu, materiales_extra: seleccionada.materiales_extra });
     setTallesForm(Object.fromEntries(tallesDisponibles.map((talle) => [talle, seleccionada.talles.find((item) => Number(item.talle) === talle)?.cantidad || ""])));
     setNumeroProduccionActiva(numeroSeleccionado);
     setProduccionActivaAbierta(true);
@@ -766,10 +770,14 @@ export default function Planillas() {
     try {
       if (esPlanillaInyeccion) {
         const variantesAGuardar = [...variantesPendientes, ...(incluirCargaActual ? [{ ...varianteForm, talles: tallesConCantidad }] : [])];
+        if (variantesAGuardar.some((v) => (!v.id_linea || v.modificada) && v.estado_inspeccion === "No conforme" && (!Number.isInteger(Number(v.pares_defectuosos)) || Number(v.pares_defectuosos) < 1 || Number(v.pares_defectuosos) > v.talles.reduce((sum, t) => sum + Number(t.cantidad), 0)))) {
+          mostrarToast("warning", "Revisá los pares defectuosos", "La cantidad debe estar entre 1 y el total de cada producción.");
+          return;
+        }
         const datosLinea = (variante) => ({
           punteras_id_puntera: Number(variante.punteras_id_puntera), lote_puntera_id: Number(variante.lote_puntera_id) || null, lote_pu_id: Number(variante.lote_pu_id) || null,
           adicionales: variante.adicionales_id_adicional ? [Number(variante.adicionales_id_adicional)] : [], materiales_extra: variante.materiales_extra.filter((material) => material.lote_id).map((material) => ({ lote_id: Number(material.lote_id) })),
-          estado_inspeccion: variante.estado_inspeccion || "Pendiente", observacion_inspeccion: variante.estado_inspeccion === "No conforme" ? (variante.observacion_inspeccion || "").trim() : "",
+          pares_defectuosos: variante.estado_inspeccion === "No conforme" ? Number(variante.pares_defectuosos) : 0, estado_inspeccion: variante.estado_inspeccion || "Pendiente", observacion_inspeccion: variante.estado_inspeccion === "No conforme" ? (variante.observacion_inspeccion || "").trim() : "",
           talles: variante.talles.map((item) => ({ talle: String(item.talle), cantidad_pares: item.cantidad })),
         });
         for (const variante of variantesAGuardar.filter((item) => item.id_linea && item.modificada)) {
@@ -1009,23 +1017,20 @@ export default function Planillas() {
           <h2>{editando ? "Editar planilla" : "Nueva planilla"}</h2>
 
           <form onSubmit={guardarPlanilla} className="form-planilla">
-            <label>
-              <span>Orden</span>
-              <select
-                name="orden_fabricacion_id_orden"
-                value={planillaForm.orden_fabricacion_id_orden}
-                onChange={manejarCambio}
-                required
-              >
-                <option value="">Seleccione orden</option>
+            <Selector
+              name="orden_fabricacion_id_orden"
+              value={planillaForm.orden_fabricacion_id_orden}
+              onChange={manejarCambio}
+              required
+            >
+              <option value="">Seleccione orden</option>
 
-                {ordenes.map((orden) => (
-                  <option key={orden.id_orden} value={orden.id_orden}>
-                    {orden.numero_orden} - {orden.producto || "Producto"}
-                  </option>
-                ))}
-              </select>
-            </label>
+              {ordenes.map((orden) => (
+                <option key={orden.id_orden} value={orden.id_orden}>
+                  {orden.numero_orden} - {orden.producto || "Producto"}
+                </option>
+              ))}
+            </Selector>
 
             <label>
               <span>Fecha</span>
@@ -1038,21 +1043,18 @@ export default function Planillas() {
               />
             </label>
 
-            <label>
-              <span>Tipo</span>
-              <select
-                name="tipo_planilla"
-                value={planillaForm.tipo_planilla}
-                onChange={manejarCambio}
-                required
-              >
-                <option value="">Seleccione tipo de planilla</option>
-                <option value="Planilla de Calzado, Inyección e Inspección final">R013/1 · Planilla de Calzado, Inyección e Inspección final</option>
-                {planillaForm.tipo_planilla && !["Corte y Aparado", "Calzado e Inyección", "Planilla de Calzado, Inyección e Inspección final"].includes(planillaForm.tipo_planilla) && (
-                  <option value={planillaForm.tipo_planilla}>{planillaForm.tipo_planilla} · formato anterior</option>
-                )}
-              </select>
-            </label>
+            <Selector
+              name="tipo_planilla"
+              value={planillaForm.tipo_planilla}
+              onChange={manejarCambio}
+              required
+            >
+              <option value="">Seleccione tipo de planilla</option>
+              <option value="Planilla de Calzado, Inyección e Inspección final">R013/1 · Planilla de Calzado, Inyección e Inspección final</option>
+              {planillaForm.tipo_planilla && !["Corte y Aparado", "Calzado e Inyección", "Planilla de Calzado, Inyección e Inspección final"].includes(planillaForm.tipo_planilla) && (
+                <option value={planillaForm.tipo_planilla}>{planillaForm.tipo_planilla} · formato anterior</option>
+              )}
+            </Selector>
 
             <div className="ui-form-actions">
               <button type="submit" className="ui-btn ui-btn-primary">
@@ -1118,18 +1120,18 @@ export default function Planillas() {
 
           {esPlanillaInyeccion && produccionActivaAbierta && <div className="planilla-variante-editor">
             <div className="planilla-variante-titulo"><div><strong>Carga de producción</strong><span>Completá la configuración y las cantidades por talle.</span></div><div className="planilla-articulo-variante"><span>Artículo resultante</span><strong>{articuloVariante || "Completá la configuración"}</strong></div></div>
-            <label className="planilla-fecha-produccion">Fecha de producción<input type="date" value={varianteForm.fecha ?? planillaSeleccionada.fecha ?? ""} onChange={(e) => setVarianteForm({ ...varianteForm, fecha: e.target.value })} required /></label>
             <div className="planilla-variante-grid">
-              <label>Inyectora<div className="planilla-selector-con-alta"><select value={varianteForm.maquinas_id_maquina} onChange={(e) => setVarianteForm({ ...varianteForm, maquinas_id_maquina: e.target.value })} required><option value="">Seleccione inyectora</option>{maquinas.map((maquina) => <option key={maquina.id_maquina} value={maquina.id_maquina}>{maquina.nombre_maquina || maquina.maquina}</option>)}</select><button type="button" className="planilla-alta-maquina" onClick={() => setMostrarAltaMaquina(true)}>+</button></div></label>
-              <label>Tipo de puntera<div className="planilla-selector-con-alta"><select value={varianteForm.punteras_id_puntera} onChange={(e) => setVarianteForm({ ...varianteForm, punteras_id_puntera: e.target.value })}><option value="">Seleccione puntera</option>{punteras.map((puntera) => <option key={puntera.id_puntera} value={puntera.id_puntera}>{puntera.codigo_puntera} - {puntera.nombre_puntera}</option>)}</select><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("puntera")}>+</button></div></label>
-              <label>Adicional (opcional)<div className="planilla-selector-con-alta"><select value={varianteForm.adicionales_id_adicional} onChange={(e) => setVarianteForm({ ...varianteForm, adicionales_id_adicional: e.target.value })}><option value="">Sin adicional</option>{adicionales.map((adicional) => <option key={adicional.id_adicional} value={adicional.id_adicional}>{adicional.codigo_adicional} - {adicional.nombre_adicional}</option>)}</select><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("adicional")}>+</button></div></label>
+              <label className="planilla-fecha-produccion">Fecha de producción<input type="date" value={varianteForm.fecha ?? planillaSeleccionada.fecha ?? ""} onChange={(e) => setVarianteForm({ ...varianteForm, fecha: e.target.value })} required /></label>
+              <label>Inyectora<div className="planilla-selector-con-alta"><Selector value={varianteForm.maquinas_id_maquina} onChange={(e) => setVarianteForm({ ...varianteForm, maquinas_id_maquina: e.target.value })} required><option value="">Seleccione inyectora</option>{maquinas.map((maquina) => <option key={maquina.id_maquina} value={maquina.id_maquina}>{maquina.nombre_maquina || maquina.maquina}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setMostrarAltaMaquina(true)}>+</button></div></label>
+              <label>Tipo de puntera<div className="planilla-selector-con-alta"><Selector value={varianteForm.punteras_id_puntera} onChange={(e) => setVarianteForm({ ...varianteForm, punteras_id_puntera: e.target.value })}><option value="">Seleccione puntera</option>{punteras.map((puntera) => <option key={puntera.id_puntera} value={puntera.id_puntera}>{puntera.codigo_puntera} - {puntera.nombre_puntera}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("puntera")}>+</button></div></label>
+              <label>Adicional (opcional)<div className="planilla-selector-con-alta"><Selector value={varianteForm.adicionales_id_adicional} onChange={(e) => setVarianteForm({ ...varianteForm, adicionales_id_adicional: e.target.value })}><option value="">Sin adicional</option>{adicionales.map((adicional) => <option key={adicional.id_adicional} value={adicional.id_adicional}>{adicional.codigo_adicional} - {adicional.nombre_adicional}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("adicional")}>+</button></div></label>
             </div>
             <div className="planilla-seccion-variante"><div className="planilla-seccion-variante-titulo"><strong>Operarios</strong><span>Podés asignar más de uno por etapa.</span></div><div className="planilla-operarios-variante">
-              {[{ campo: "operarios_calzado", titulo: "Operarios de calzado" }, { campo: "operarios_puntera", titulo: "Operarios de puntera" }, { campo: "operarios_inyeccion", titulo: "Operarios de inyección" }, { campo: "operarios_inspeccion_final", titulo: "Operarios de inspección final" }].map((grupo) => <div key={grupo.campo}><span>{grupo.titulo}</span>{varianteForm[grupo.campo].map((nombre, indice) => <div key={indice}><label><span>Nombre del operario {indice + 1}</span><input value={nombre} onChange={(e) => cambiarOperarioVariante(grupo.campo, indice, e.target.value)} required={grupo.campo !== "operarios_inspeccion_final"}/></label>{varianteForm[grupo.campo].length > 1 && <button type="button" onClick={() => quitarOperarioVariante(grupo.campo, indice)}>×</button>}</div>)}<button type="button" className="planilla-agregar-inline" onClick={() => agregarOperarioVariante(grupo.campo)}>+ Agregar operario</button></div>)}
+              {[{ campo: "operarios_calzado", titulo: "Operarios de calzado" }, { campo: "operarios_puntera", titulo: "Operarios de puntera" }, { campo: "operarios_inyeccion", titulo: "Operarios de inyección" }, { campo: "operarios_inspeccion_final", titulo: "Operarios de inspección final" }].map((grupo) => <div key={grupo.campo}><span>{grupo.titulo}</span>{varianteForm[grupo.campo].map((nombre, indice) => <div key={indice}><label><NombreSugerido aria-label={grupo.titulo} value={nombre} onChange={(e) => cambiarOperarioVariante(grupo.campo, indice, e.target.value)} required={grupo.campo !== "operarios_inspeccion_final"}/></label>{varianteForm[grupo.campo].length > 1 && <button type="button" onClick={() => quitarOperarioVariante(grupo.campo, indice)}>×</button>}</div>)}<button type="button" className="planilla-agregar-inline" onClick={() => agregarOperarioVariante(grupo.campo)}>+ Agregar operario</button></div>)}
             </div></div>
-            <div className="planilla-seccion-variante planilla-seccion-materiales"><div className="planilla-seccion-variante-titulo"><strong>Materiales utilizados</strong><span>Seleccionados por material, remito y proveedor.</span></div><div className="planilla-materiales-principales"><label>Material/remito de puntera<div className="planilla-material-selector"><input type="search" list="materiales-variante-planilla" value={varianteForm.busqueda_puntera} onChange={(e) => cambiarMaterialVariante("lote_puntera_id", e.target.value)} placeholder="Material, remito o proveedor" pattern={varianteForm.lote_puntera_id ? undefined : "(?!)"}/><button type="button" onClick={() => cargarMaterialNuevo({ tipo: "puntera" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label><label>PU utilizado<div className="planilla-material-selector"><input type="search" list="materiales-variante-planilla" value={varianteForm.busqueda_pu} onChange={(e) => cambiarMaterialVariante("lote_pu_id", e.target.value)} placeholder="Material, remito o proveedor" pattern={varianteForm.lote_pu_id ? undefined : "(?!)"}/><button type="button" onClick={() => cargarMaterialNuevo({ tipo: "pu" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label></div><div className="planilla-variante-materiales">{varianteForm.materiales_extra.map((material, indice) => <div key={indice}><label><span>Material extra {indice + 1}</span><input type="search" list="materiales-variante-planilla" value={material.busqueda} onChange={(e) => cambiarMaterialExtra(indice, e.target.value)} placeholder="Material, remito o proveedor" pattern={material.lote_id ? undefined : "(?!)"}/></label><button type="button" className="planilla-alta-material" onClick={() => cargarMaterialNuevo({ tipo: "extra", extra: indice })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button><button type="button" onClick={() => setVarianteForm((actual) => ({ ...actual, materiales_extra: actual.materiales_extra.filter((_, posicion) => posicion !== indice) }))}>×</button></div>)}<button type="button" className="ui-btn ui-btn-secondary" onClick={() => setVarianteForm((actual) => ({ ...actual, materiales_extra: [...actual.materiales_extra, { busqueda: "", lote_id: "" }] }))}>+ Agregar material</button></div></div>
-            <fieldset className="produccion-inspeccion"><legend>Inspección final</legend><div className="produccion-inspeccion-opciones">{["Pendiente", "Conforme", "No conforme"].map((estado) => <label key={estado} className="inspeccion-opcion"><input type="radio" name="inspeccion-planilla" value={estado} checked={varianteForm.estado_inspeccion === estado} onChange={(e) => setVarianteForm({ ...varianteForm, estado_inspeccion: e.target.value })}/><span>{estado === "Pendiente" ? "Pendiente de inspección" : estado}</span></label>)}</div>{varianteForm.estado_inspeccion === "No conforme" && <label className="produccion-observacion">Observación de la no conformidad<textarea value={varianteForm.observacion_inspeccion} onChange={(e) => setVarianteForm({ ...varianteForm, observacion_inspeccion: e.target.value })} required rows="2" /></label>}</fieldset>
-            <datalist id="materiales-variante-planilla">{lotes.map((lote) => <option key={lote.id_lote || lote.id_lote_materiales} value={etiquetaLote(lote)}/>)}</datalist>
+            <div className="planilla-seccion-variante planilla-seccion-materiales"><div className="planilla-seccion-variante-titulo"><strong>Materiales utilizados</strong><span>Seleccionados por material, remito y proveedor.</span></div><div className="planilla-materiales-principales"><label>Material/remito de puntera<div className="planilla-material-selector"><SelectorMaterial opciones={lotes.map(etiquetaLote)} type="search" value={varianteForm.busqueda_puntera} onChange={(e) => cambiarMaterialVariante("lote_puntera_id", e.target.value)} placeholder="Material, remito o proveedor" pattern={varianteForm.lote_puntera_id ? undefined : "(?!)"}/><button type="button" onClick={() => cargarMaterialNuevo({ tipo: "puntera" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label><label>PU utilizado<div className="planilla-material-selector"><SelectorMaterial opciones={lotes.map(etiquetaLote)} type="search" value={varianteForm.busqueda_pu} onChange={(e) => cambiarMaterialVariante("lote_pu_id", e.target.value)} placeholder="Material, remito o proveedor" pattern={varianteForm.lote_pu_id ? undefined : "(?!)"}/><button type="button" onClick={() => cargarMaterialNuevo({ tipo: "pu" })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button></div></label></div><div className="planilla-variante-materiales">{varianteForm.materiales_extra.map((material, indice) => <div key={indice}><SelectorMaterial opciones={lotes.map(etiquetaLote)} type="search" value={material.busqueda} onChange={(e) => cambiarMaterialExtra(indice, e.target.value)} placeholder="Material, remito o proveedor" pattern={material.lote_id ? undefined : "(?!)"}/><button type="button" className="planilla-alta-material" onClick={() => cargarMaterialNuevo({ tipo: "extra", extra: indice })} title="Cargar una nueva recepción" aria-label="Cargar una nueva recepción">+</button><button type="button" onClick={() => setVarianteForm((actual) => ({ ...actual, materiales_extra: actual.materiales_extra.filter((_, posicion) => posicion !== indice) }))}>×</button></div>)}<button type="button" className="ui-btn ui-btn-secondary" onClick={() => setVarianteForm((actual) => ({ ...actual, materiales_extra: [...actual.materiales_extra, { busqueda: "", lote_id: "" }] }))}>+ Agregar material</button></div></div>
+            <fieldset className="produccion-inspeccion"><legend>Inspección final</legend><div className="produccion-inspeccion-opciones">{["Pendiente", "Conforme", "No conforme"].map((estado) => <label key={estado} className={`inspeccion-opcion inspeccion-opcion-${estado.toLowerCase().replace(" ", "-")}`}><input type="radio" name="inspeccion-planilla" value={estado} checked={varianteForm.estado_inspeccion === estado} onChange={(e) => setVarianteForm({ ...varianteForm, estado_inspeccion: e.target.value })}/><span>{estado === "Pendiente" ? "Pendiente de inspección" : estado}</span></label>)}</div>{varianteForm.estado_inspeccion === "No conforme" && <ParesDefectuosos value={varianteForm.pares_defectuosos} total={calcularTotalPares()} onChange={(value) => setVarianteForm({ ...varianteForm, pares_defectuosos: value })} />}{varianteForm.estado_inspeccion === "No conforme" && <label className="produccion-observacion">Observación de la no conformidad<textarea value={varianteForm.observacion_inspeccion} onChange={(e) => setVarianteForm({ ...varianteForm, observacion_inspeccion: e.target.value })} required rows="2" /></label>}</fieldset>
+
           </div>}
 
           {(!esPlanillaInyeccion || produccionActivaAbierta) && <div className="ui-table-card planilla-talles-comparacion">
@@ -1216,20 +1218,17 @@ export default function Planillas() {
           {!esPlanillaInyeccion && seccionAbierta === "operarios" && <div className="planilla-acordeon-contenido">
 
           <form onSubmit={agregarOperario} className="form-planilla">
-            <label>
-              <span>Etapa</span>
-              <select
-                name="etapa"
-                value={operarioForm.etapa}
-                onChange={manejarCambioOperario}
-                required
-              >
-                <option value="">Seleccione etapa</option>
-                {etapasDePlanilla(planillaSeleccionada).map((etapa) => (
-                  <option key={etapa} value={etapa}>{etapa}</option>
-                ))}
-              </select>
-            </label>
+            <Selector
+              name="etapa"
+              value={operarioForm.etapa}
+              onChange={manejarCambioOperario}
+              required
+            >
+              <option value="">Seleccione etapa</option>
+              {etapasDePlanilla(planillaSeleccionada).map((etapa) => (
+                <option key={etapa} value={etapa}>{etapa}</option>
+              ))}
+            </Selector>
 
             <label>
               <span>Nombre del operario</span>
@@ -1299,23 +1298,20 @@ export default function Planillas() {
             <div className="materiales-selectores">
               {materialesForm.map((idSeleccionado, index) => (
                 <div className="material-selector-fila" key={index}>
-                  <label>
-                    <span>Material recibido {index + 1}</span>
-                    <select
-                      value={idSeleccionado}
-                      onChange={(event) => manejarCambioUsoMaterial(index, event.target.value)}
-                      aria-label={`Material ${index + 1}`}
-                    >
-                      <option value="">Seleccione material recibido</option>
-                      {lotes.map((lote) => {
-                        const idLote = String(lote.id_lote_materiales || lote.id_lote);
-                        const seleccionadoEnOtraFila = materialesForm.some((valor, posicion) => posicion !== index && valor === idLote);
-                        return <option key={idLote} value={idLote} disabled={seleccionadoEnOtraFila}>
-                          Remito {lote.numero_remito || "-"} - {lote.nombre_proveedor || lote.proveedor || "Proveedor"} - {lote.material || "Material"} {lote.color ? `(${lote.color})` : ""}
-                        </option>;
-                      })}
-                    </select>
-                  </label>
+                  <Selector
+                    value={idSeleccionado}
+                    onChange={(event) => manejarCambioUsoMaterial(index, event.target.value)}
+                    aria-label={`Material ${index + 1}`}
+                  >
+                    <option value="">Seleccione material recibido</option>
+                    {lotes.map((lote) => {
+                      const idLote = String(lote.id_lote_materiales || lote.id_lote);
+                      const seleccionadoEnOtraFila = materialesForm.some((valor, posicion) => posicion !== index && valor === idLote);
+                      return <option key={idLote} value={idLote} disabled={seleccionadoEnOtraFila}>
+                        Remito {lote.numero_remito || "-"} - {lote.nombre_proveedor || lote.proveedor || "Proveedor"} - {lote.material || "Material"} {lote.color ? `(${lote.color})` : ""}
+                      </option>;
+                    })}
+                  </Selector>
                   {idSeleccionado && <button type="button" className="material-selector-quitar" title="Quitar material" aria-label="Quitar material" onClick={() => quitarSelectorMaterial(index)}>×</button>}
                 </div>
               ))}
@@ -1404,15 +1400,14 @@ export default function Planillas() {
         ) : (
           <>
         <div ref={listadoRef} className={`ui-table-card planillas-listado-card ${filaDetalleAbierta ? "detalle-visible" : ""}`}>
-          <table className="ui-data-table ui-listado-ajustado"><colgroup>{[9,10,13,13,16,12,12,15].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
+          <table className="ui-data-table ui-listado-ajustado"><colgroup>{[13,10,15,14,18,13,17].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
               <tr>
+                <th>Fecha</th>
                 <th>Nº Orden</th>
-                <th>Planilla</th>
                 <th>Producto</th>
                 <th>Color</th>
                 <th>Máquina</th>
-                <th>Fecha</th>
                 <th>Estado</th>
                 <th>Acciones</th>
               </tr>
@@ -1429,12 +1424,11 @@ export default function Planillas() {
                 }, {}) || {});
                 return <Fragment key={planilla.id_planilla}>
                 <tr className={abierta ? "planilla-fila-abierta" : ""} onClick={() => alternarResumenPlanilla(planilla)} style={{ cursor: "pointer" }}>
+                  <td>{formatearFecha(planilla.fecha)}</td>
                   <td><span className="planilla-flecha">{abierta ? "▲" : "▼"}</span>{planilla.numero_orden || planilla.orden || "-"}</td>
-                  <td><strong>{planilla.numero_planilla || "-"}</strong></td>
                   <td>{planilla.producto || "-"}</td>
                   <td>{ordenes.find((orden) => Number(orden.id_orden) === Number(planilla.orden_fabricacion_id_orden))?.color || "-"}</td>
                   <td>{mostrarInyectora(planilla)}</td>
-                  <td>{formatearFecha(planilla.fecha)}</td>
                   <td>
                     <span
                       className={`ui-status-badge ${getEstadoClass(
@@ -1462,7 +1456,7 @@ export default function Planillas() {
                 </tr>
 
                 {abierta && <tr className="planilla-detalle-fila">
-                  <td colSpan="8">
+                  <td colSpan="7">
                     <div className="planilla-detalle-compacto">
                       {cargandoResumen === planilla.id_planilla && <p>Cargando detalle completo…</p>}
                       {resumen && <>
@@ -1480,7 +1474,7 @@ export default function Planillas() {
 
                         {resumen.desglose?.length > 0 ? <div className="planilla-desglose-inyectoras">
                           {resumen.desglose.map((linea, indice) => <div className="planilla-desglose-bloque" key={linea.id_linea}>
-                            <div className="planilla-desglose-header"><div><span>Producción {indice + 1} · {linea.maquina}</span><h4>{linea.articulo || "Artículo anterior"}</h4><small>{linea.tipo_puntera || "Puntera sin especificar"}{linea.adicionales ? ` · ${linea.adicionales}` : ""}</small></div><div className="trazabilidad-inspeccion-veredicto"><strong className={`trazabilidad-inspeccion-estado ${linea.estado_inspeccion === "Conforme" ? "conforme" : linea.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{linea.estado_inspeccion || "Pendiente"}</strong>{linea.estado_inspeccion === "No conforme" && linea.observacion_inspeccion && <p>{linea.observacion_inspeccion}</p>}</div></div>
+                            <div className="planilla-desglose-header"><div><span>Producción {indice + 1} · {linea.maquina}</span><h4>{linea.articulo || "Artículo anterior"}</h4><small>{linea.tipo_puntera || "Puntera sin especificar"}{linea.adicionales ? ` · ${linea.adicionales}` : ""}</small></div><div className="trazabilidad-inspeccion-veredicto"><strong className={`trazabilidad-inspeccion-estado ${linea.estado_inspeccion === "Conforme" ? "conforme" : linea.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{linea.estado_inspeccion || "Pendiente"}</strong>{linea.estado_inspeccion === "No conforme" && <p>Pares defectuosos: {linea.pares_defectuosos ?? "Sin desglose"}</p>}{linea.estado_inspeccion === "No conforme" && linea.observacion_inspeccion && <p>{linea.observacion_inspeccion}</p>}</div></div>
                             <div className="planilla-jornadas">
                               {linea.jornadas.map((jornada) => <div className="planilla-jornada" key={jornada.fecha}>
                                 <div className="planilla-jornada-header"><strong>{formatearFecha(jornada.fecha)}</strong><span>{jornada.total_pares} pares</span></div>

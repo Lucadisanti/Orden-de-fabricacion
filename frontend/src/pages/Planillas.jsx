@@ -17,6 +17,7 @@ import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
+import { articuloVisible } from "../utils/articulo";
 import "../styles/Planillas.css";
 
 export default function Planillas() {
@@ -522,7 +523,7 @@ export default function Planillas() {
           fecha: jornada.fecha || planilla.fecha,
           modificada: false,
           numero: indice + 1,
-          articulo: linea.articulo,
+          articulo: articuloVisible(linea.articulo),
           maquinas_id_maquina: String(linea.maquinas_id_maquina || maquinas.find((maquina) => (maquina.nombre_maquina || maquina.maquina) === linea.maquina)?.id_maquina || ""),
           operarios_calzado: jornada.operarios_calzado?.length ? jornada.operarios_calzado : [""],
           operarios_puntera: jornada.operarios_puntera?.length ? jornada.operarios_puntera : [""],
@@ -618,7 +619,7 @@ export default function Planillas() {
           materiales: usosRes.data.filter((uso) =>
             Number(uso.planilla_produccion_id_planilla || uso.id_planilla) === Number(planilla.id_planilla)
           ),
-          desglose: desgloseRes.data,
+          desglose: desgloseRes.data.map((linea) => ({ ...linea, articulo: articuloVisible(linea.articulo) })),
         },
       }));
     } catch (resumenError) {

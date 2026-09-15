@@ -15,6 +15,7 @@ import usePagination from "../hooks/usePagination";
 import { formatearFecha } from "../utils/dateFormat";
 import { fechaLocal } from "../utils/estadisticas";
 import { obtenerMensajeError } from "../utils/errorMessages";
+import { articuloVisible } from "../utils/articulo";
 import "../styles/ProduccionDiaria.css";
 
 const TALLES = Array.from({ length: 13 }, (_, index) => index + 35);
@@ -98,7 +99,7 @@ export default function ProduccionDiaria() {
       setOrdenes(ordenesRes.data);
       setMaquinas(maquinasRes.data);
       setLotes(lotesRes.data);
-      setHistorial(historialRes.data);
+      setHistorial(historialRes.data.map((item) => ({ ...item, articulo: articuloVisible(item.articulo) })));
       setPunteras(punterasRes.data);
       setAdicionales(adicionalesRes.data);
     } catch (error) {
@@ -269,7 +270,7 @@ export default function ProduccionDiaria() {
     if (detallesHistorial[idLinea]) return;
     try {
       const respuesta = await axios.get(`/api/produccion-diaria/linea/${idLinea}/detalle`);
-      setDetallesHistorial((actuales) => ({ ...actuales, [idLinea]: respuesta.data }));
+      setDetallesHistorial((actuales) => ({ ...actuales, [idLinea]: { ...respuesta.data, articulo: articuloVisible(respuesta.data.articulo) } }));
     } catch (error) {
       console.error(error);
       setToast({ type: "error", title: "No se pudo abrir el detalle", message: obtenerMensajeError(error, "producción") });

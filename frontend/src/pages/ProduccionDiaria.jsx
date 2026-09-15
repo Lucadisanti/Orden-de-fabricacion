@@ -96,7 +96,7 @@ export default function ProduccionDiaria() {
       setErrorCarga("");
     } catch (error) {
       console.error(error);
-      setErrorCarga(obtenerMensajeError(error, "producción diaria"));
+      setErrorCarga("Verificá que el servidor esté iniciado e intentá nuevamente.");
     } finally {
       setCargando(false);
     }

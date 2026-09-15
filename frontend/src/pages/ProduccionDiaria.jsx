@@ -1,5 +1,6 @@
 import ParesDefectuosos from "../components/ParesDefectuosos";
 import NombreSugerido from "../components/NombreSugerido";
+import { useNativeTableSorting } from "../components/SortableHeader";
 import Selector from "../components/Selector";
 import SelectorMaterial from "../components/SelectorMaterial";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
@@ -40,7 +41,11 @@ export default function ProduccionDiaria() {
   const [formularioAbierto, setFormularioAbierto] = useState(false);
   const [ordenHistorial, setOrdenHistorial] = useState("fecha");
   const [direccionHistorial, setDireccionHistorial] = useState("desc");
+  useNativeTableSorting(".produccion-historial-tabla", { campo: ordenHistorial, setCampo: setOrdenHistorial, direccion: direccionHistorial, setDireccion: setDireccionHistorial }, { Fecha: "fecha", Orden: "orden" });
   const [grupoHistorial, setGrupoHistorial] = useState("");
+  const [estadoHistorial, setEstadoHistorial] = useState("");
+  const [inyectoraHistorial, setInyectoraHistorial] = useState("");
+  const [fechaHistorial, setFechaHistorial] = useState("");
   const [busquedaHistorial, setBusquedaHistorial] = useState("");
   const [toast, setToast] = useState(null);
   const [lineaDetalleAbierta, setLineaDetalleAbierta] = useState(null);
@@ -51,12 +56,18 @@ export default function ProduccionDiaria() {
   const [bloques, setBloques] = useState([nuevoBloque()]);
   const historialFiltrado = useMemo(() => {
     const texto = busquedaHistorial.trim().toLowerCase();
-    if (!texto) return historial;
-    return historial.filter((item) => [
+    return historial.filter((item) => {
+      const coincideBusqueda = !texto || [
       item.numero_orden, item.articulo, item.producto, item.color, item.inyectora,
       formatearFecha(item.fecha), item.estado_inspeccion, item.total_pares,
-    ].join(" ").toLowerCase().includes(texto));
-  }, [historial, busquedaHistorial]);
+      ].join(" ").toLowerCase().includes(texto);
+      const coincideEstado = !estadoHistorial || String(item.estado_inspeccion || "Pendiente") === estadoHistorial;
+      const coincideInyectora = !inyectoraHistorial || item.inyectora === inyectoraHistorial;
+      const coincideFecha = !fechaHistorial || String(item.fecha || "").slice(0, 10) === fechaHistorial;
+      return coincideBusqueda && coincideEstado && coincideInyectora && coincideFecha;
+    });
+  }, [historial, busquedaHistorial, estadoHistorial, inyectoraHistorial, fechaHistorial]);
+  const inyectorasHistorial = useMemo(() => [...new Set(historial.map((item) => item.inyectora).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es")), [historial]);
   const historialOrdenado = useMemo(() => [...historialFiltrado].sort((a, b) => {
     if (grupoHistorial) {
       const comparacionGrupo = String(a[grupoHistorial] ?? "").localeCompare(String(b[grupoHistorial] ?? ""), "es", { numeric: true, sensitivity: "base" });
@@ -366,9 +377,10 @@ export default function ProduccionDiaria() {
 
       <div className={`produccion-historial${formularioAbierto ? " produccion-historial-separado" : ""}`}>
         <div className="produccion-historial-header">{formularioAbierto && <div><h2>Producciones registradas</h2><p>Consultá el historial de producción guardado.</p></div>}<div className="ui-list-tools"><ClearableSearch value={busquedaHistorial} onChange={setBusquedaHistorial} placeholder="Buscar por orden, artículo, producto, inyectora, fecha o inspección..." /><div className="ui-sort-controls produccion-historial-filtros">
-          <label className="ui-filter-select"><span>Ordenar por</span><Selector value={ordenHistorial} onChange={(evento) => setOrdenHistorial(evento.target.value)}><option value="fecha">Fecha</option><option value="orden">Orden</option><option value="producto">Producto</option><option value="inyectora">Inyectora</option><option value="total">Total de pares</option></Selector></label>
-          <button type="button" className="ui-btn ui-sort-direction" onClick={() => setDireccionHistorial((actual) => actual === "asc" ? "desc" : "asc")}>{direccionHistorial === "asc" ? "↑ Ascendente" : "↓ Descendente"}</button>
           <label className="ui-filter-select"><span>Agrupar por</span><Selector value={grupoHistorial} onChange={(evento) => setGrupoHistorial(evento.target.value)}><option value="">Sin agrupar</option><option value="inyectora">Inyectora</option><option value="producto">Producto</option></Selector></label>
+          <label className="ui-filter-select"><span>Filtrar por estado</span><Selector value={estadoHistorial} onChange={(evento) => setEstadoHistorial(evento.target.value)}><option value="">Todos</option><option value="Conforme">Conforme</option><option value="No conforme">No conforme</option><option value="Pendiente">Pendiente</option></Selector></label>
+          <label className="ui-filter-select"><span>Filtrar por inyectora</span><Selector value={inyectoraHistorial} onChange={(evento) => setInyectoraHistorial(evento.target.value)}><option value="">Todas</option>{inyectorasHistorial.map((inyectora) => <option key={inyectora} value={inyectora}>{inyectora}</option>)}</Selector></label>
+          <label className="ui-filter-select"><span>Filtrar por fecha</span><input type="date" value={fechaHistorial} onChange={(evento) => setFechaHistorial(evento.target.value)} /></label>
         </div></div></div>
         <div className="ui-table-card"><table className="ui-data-table ui-listado-ajustado produccion-historial-tabla"><colgroup>{[12, 9, 10, 13, 13, 19, 13, 11].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup><thead><tr><th>Fecha</th><th>Orden</th><th>Artículo</th><th>Producto</th><th>Color</th><th>Inyectora</th><th>Inspección</th><th>Total de pares</th></tr></thead><tbody>{historialVisible.length ? historialVisible.map((item, indice) => {
           const grupoActual = grupoHistorial ? item[grupoHistorial] : null;

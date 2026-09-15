@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
-import SortControls from "../components/SortControls";
+import { useNativeTableSorting } from "../components/SortableHeader";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { formatearFecha } from "../utils/dateFormat";
+import { articuloVisible } from "../utils/articulo";
 import bohmLogo from "../assets/bohm-logo.png";
 import "../styles/ui.css";
 
@@ -42,6 +43,7 @@ export default function Trazabilidad() {
   const [bloqueAbierto, setBloqueAbierto] = useState("planillas");
   const [busquedaOrden, setBusquedaOrden] = useState("");
   const ordenListado = useSortPreference("trazabilidad-orden", "fecha", "desc");
+  useNativeTableSorting(".trazabilidad-ordenes-table", ordenListado, { "Nº Orden": "numero", "Fecha de corte": "fecha" });
 
   const mostrarToast = (type, title, message) => {
     setToast({ type, title, message });
@@ -305,7 +307,7 @@ export default function Trazabilidad() {
       pdf.setTextColor(255, 255, 255);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(12);
-      pdf.text(`Trazabilidad - Orden ${valor(ordenSeleccionada.numero_orden)} - Articulo ${valor(ordenSeleccionada.articulo_producto)}`, margen + 37, 12.5);
+      pdf.text(`Trazabilidad - Orden ${valor(ordenSeleccionada.numero_orden)} - Articulo ${articuloVisible(ordenSeleccionada.articulo_producto)}`, margen + 37, 12.5);
     };
 
     const tituloSeccion = (titulo) => {
@@ -341,7 +343,7 @@ export default function Trazabilidad() {
     tituloSeccion("Datos generales de la orden");
     tabla(
       ["Articulo", "Producto", "Color", "Estado", "Pares solicitados"],
-      [[valor(ordenSeleccionada.articulo_producto), valor(ordenSeleccionada.producto || ordenSeleccionada.nombre_producto), valor(ordenSeleccionada.color), mostrarEstado(ordenSeleccionada.estado), valor(totalPlanificado)]],
+      [[articuloVisible(ordenSeleccionada.articulo_producto), valor(ordenSeleccionada.producto || ordenSeleccionada.nombre_producto), valor(ordenSeleccionada.color), mostrarEstado(ordenSeleccionada.estado), valor(totalPlanificado)]],
       { alternateRowStyles: {}, pageBreak: "avoid" }
     );
 
@@ -371,7 +373,7 @@ export default function Trazabilidad() {
     const produccionesArticulo = listaPlanillas
       .filter((planilla) => obtenerGrupoPlanilla(planilla) === "R013/1")
       .flatMap((planilla) => obtenerDesgloseFiltrado(planilla.id_planilla));
-    tituloSeccion(`R013/1 - Planilla de Calzado, Inyeccion e Inspeccion final - Articulo ${valor(ordenSeleccionada.articulo_producto)}`);
+    tituloSeccion(`R013/1 - Planilla de Calzado, Inyeccion e Inspeccion final - Articulo ${articuloVisible(ordenSeleccionada.articulo_producto)}`);
     tabla(
       ["Fecha", "Inyectora", "Puntera", "Adicional", "Inspeccion", "Calzado", "Puntera", "Inyeccion", "Inspector final", "Pares por talle", "Total"],
       produccionesArticulo.length ? produccionesArticulo.flatMap((produccion) => produccion.jornadas.map((jornada) => [
@@ -420,7 +422,7 @@ export default function Trazabilidad() {
       pdf.text(`Pagina ${pagina} de ${cantidadPaginas}`, ancho - margen, alto - 6, { align: "right" });
     }
 
-    pdf.save(`trazabilidad-orden-${valor(ordenSeleccionada.numero_orden)}-articulo-${valor(ordenSeleccionada.articulo_producto)}.pdf`);
+    pdf.save(`trazabilidad-orden-${valor(ordenSeleccionada.numero_orden)}-articulo-${articuloVisible(ordenSeleccionada.articulo_producto)}.pdf`);
   };
 
   return (
@@ -447,12 +449,6 @@ export default function Trazabilidad() {
                 value={busquedaOrden}
                 onChange={setBusquedaOrden}
               />
-              <SortControls opciones={[
-                { value: "fecha", label: "Fecha de corte" },
-                { value: "numero", label: "Número de orden" },
-                { value: "producto", label: "Producto" },
-                { value: "articulo", label: "Artículo" },
-              ]} {...ordenListado} />
             </div>
             <div className="ui-table-card trazabilidad-listado">
             <h2>Órdenes por artículo</h2>
@@ -487,7 +483,7 @@ export default function Trazabilidad() {
                     style={{ cursor: "pointer" }}
                   >
                     <td>{orden.numero_orden}</td>
-                    <td>{orden.articulo_producto || "-"}</td>
+                    <td>{articuloVisible(orden.articulo_producto)}</td>
                     <td>{formatearFecha(orden.fecha)}</td>
                     <td>
                       <span
@@ -517,7 +513,7 @@ export default function Trazabilidad() {
             ) : (
               <>
                 <div className="planilla-resumen-header trazabilidad-detalle-header">
-                  <h2>Orden {ordenSeleccionada.numero_orden} · Artículo {ordenSeleccionada.articulo_producto || "-"}</h2>
+                  <h2>Orden {ordenSeleccionada.numero_orden} · Artículo {articuloVisible(ordenSeleccionada.articulo_producto)}</h2>
                   <div className="trazabilidad-header-actions">
                     <button type="button" className="ui-btn ui-btn-primary" onClick={descargarPdf} disabled={cargandoMateriales}>
                       Descargar PDF
@@ -542,7 +538,7 @@ export default function Trazabilidad() {
                 </div>
                 <div className="ui-table-card trazabilidad-resumen">
                   <div className="trazabilidad-meta">
-                    <div><span>Artículo</span><strong>{ordenSeleccionada.articulo_producto || "-"}</strong></div>
+                    <div><span>Artículo</span><strong>{articuloVisible(ordenSeleccionada.articulo_producto)}</strong></div>
                     <div><span>Producto</span><strong>{ordenSeleccionada.producto || ordenSeleccionada.nombre_producto || "-"}</strong></div>
                     <div><span>Color</span><strong>{ordenSeleccionada.color || "-"}</strong></div>
                     <div><span>Fecha de corte</span><strong>{formatearFecha(ordenSeleccionada.fecha)}</strong></div>

@@ -7,7 +7,7 @@ import axios from "axios";
 import CatalogModal from "../components/CatalogModal";
 import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
-import SortControls from "../components/SortControls";
+import { useNativeTableSorting } from "../components/SortableHeader";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
@@ -57,6 +57,7 @@ export default function RecepcionMateriales() {
   const [filaAbierta, setFilaAbierta] = useState(null);
   const [lineas, setLineas] = useState([crearLineaVacia()]);
   const orden = useSortPreference("recepciones-orden", "fecha", "desc");
+  useNativeTableSorting(".recepcion-listado-desplegable table", orden, { Remito: "remito", Fecha: "fecha" });
   
   const [form, setForm] = useState({
     numero_remito: "",
@@ -618,15 +619,6 @@ export default function RecepcionMateriales() {
             placeholder="Buscar por proveedor, material, color, remito, estado o recibido por..."
             value={busqueda}
             onChange={setBusqueda}
-          />
-          <SortControls
-            opciones={[
-              { value: "fecha", label: "Fecha" },
-              { value: "proveedor", label: "Proveedor" },
-              { value: "material", label: "Material" },
-              { value: "remito", label: "Número de remito" },
-            ]}
-            {...orden}
           />
         </div>
         {sinResultados ? (

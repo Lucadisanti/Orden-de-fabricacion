@@ -7,7 +7,7 @@ import NombreSugerido from "./NombreSugerido";
 
 vi.mock("axios");
 it("sugiere nombres guardados y permite escribir uno nuevo", async () => {
-  axios.get.mockResolvedValue({data:{personas:["José", "Ana"], talleres:[]}});
+  axios.get.mockResolvedValue({data:{sugerencias:["José", "Ana"]}});
   const cambio = vi.fn();
   function Campo() { const [valor,setValor] = useState(""); return <label>Recibido por<NombreSugerido name="recibido_por" value={valor} onChange={e => { cambio(e.target); setValor(e.target.value); }} /></label>; }
   render(<Campo />); const user = userEvent.setup(); const input = screen.getByLabelText("Recibido por");
@@ -26,14 +26,14 @@ it("sugiere nombres guardados y permite escribir uno nuevo", async () => {
 });
 
 it("limpia sugerencias sin cambiar el nombre escrito", async () => {
-  axios.get.mockResolvedValue({data:{personas:["Ana"], talleres:[]}});
+  axios.get.mockResolvedValue({data:{sugerencias:["Ana"]}});
   axios.delete.mockResolvedValue({data:{}});
   const cambio = vi.fn(); const user = userEvent.setup();
   render(<NombreSugerido aria-label="Controlador" value="Ana" onChange={cambio} />);
   await user.click(screen.getByRole("combobox"));
   await user.click(await screen.findByRole("button",{name:"Limpiar sugerencias"}));
   await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
-  expect(axios.delete).toHaveBeenCalledWith("/api/sugerencias/nombres?tipo=personas");
+  expect(axios.delete).toHaveBeenCalledWith("/api/sugerencias/nombres?campo=controlador");
   expect(screen.getByRole("combobox")).toHaveValue("Ana");
   expect(cambio).not.toHaveBeenCalled();
 });

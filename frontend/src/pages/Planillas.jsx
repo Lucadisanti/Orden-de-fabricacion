@@ -3,6 +3,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import CatalogModal from "../components/CatalogModal";
@@ -146,6 +147,7 @@ export default function Planillas() {
 
 
   async function cargarDatos() {
+    setCargando(true);
     try {
       const [planillasRes, ordenesRes, maquinasRes, distribucionRes, punterasRes, adicionalesRes, disponibilidadRes] = await Promise.all([
         axios.get("/api/planillas/"),
@@ -164,10 +166,11 @@ export default function Planillas() {
       setAdicionales(adicionalesRes.data);
       setOrdenesDisponibles(disponibilidadRes.data);
       setDistribucionPlanillas(Object.fromEntries(distribucionRes.data.map((item) => [item.id_planilla, item])));
-      setCargando(false);
+      setError("");
     } catch (error) {
       console.error(error);
       setError("No se pudieron cargar las planillas.");
+    } finally {
       setCargando(false);
     }
   }
@@ -1370,9 +1373,9 @@ export default function Planillas() {
 
       {(mostrarFormulario || planillaSeleccionada) && <SeparadorListado titulo="Planillas registradas" descripcion="Consultá las planillas de producción guardadas." />}
 
-      {cargando && <p>Cargando planillas...</p>}
+      {cargando && !error && <p>Cargando planillas...</p>}
 
-      {error && <p>{error}</p>}
+      {error && <RetryMessage message={error} onRetry={cargarDatos} retrying={cargando} />}
 
       {!cargando && !error && (
         <>

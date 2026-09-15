@@ -10,7 +10,7 @@ import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import CatalogModal from "../components/CatalogModal";
-import SortControls from "../components/SortControls";
+import { useNativeTableSorting } from "../components/SortableHeader";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
@@ -53,6 +53,7 @@ export default function Planillas() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const ordenListado = useSortPreference("planillas-orden", "fecha", "desc");
+  useNativeTableSorting(".planillas-listado-card table", ordenListado, { Fecha: "fecha", "Nº Orden": "orden" });
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
 
@@ -1378,11 +1379,6 @@ export default function Planillas() {
             value={busqueda}
             onChange={setBusqueda}
           />
-          <SortControls opciones={[
-            { value: "fecha", label: "Fecha" },
-            { value: "producto", label: "Producto" },
-            { value: "maquina", label: "Máquina" },
-          ]} {...ordenListado} />
         </div>
         {sinResultados ? (
           <div className="ui-empty-state">

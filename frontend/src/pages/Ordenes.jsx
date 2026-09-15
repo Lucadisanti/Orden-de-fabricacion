@@ -10,6 +10,8 @@ import ConfirmModal from "../components/ConfirmModal";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
+import { useNativeTableSorting } from "../components/SortableHeader";
+import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/Ordenes.css";
@@ -38,8 +40,9 @@ export default function Ordenes(){
   finally { setDescargando(null); }
  };
  const navigate=useNavigate(),[params]=useSearchParams();
- const [ordenes,setOrdenes]=useState([]),[productos,setProductos]=useState([]),[planillas,setPlanillas]=useState([]),[lotes,setLotes]=useState([]),[form,setForm]=useState({producto_id_producto:"",numero_orden:"",fecha:"",fecha_aparado:""}),[talles,setTalles]=useState(tallesVacios),[operarios,setOperarios]=useState({corte:"",aparado:""}),[materiales,setMateriales]=useState([""]),[materialBusquedas,setMaterialBusquedas]=useState([""]),[mostrar,setMostrar]=useState(false),[idEditando,setIdEditando]=useState(null),[toast,setToast]=useState(null),[confirmacion,setConfirmacion]=useState(null),[busqueda,setBusqueda]=useState(""),[cargando,setCargando]=useState(true),[detalleAbierto,setDetalleAbierto]=useState(null),[tallesDetalle,setTallesDetalle]=useState({}),[cargandoDetalle,setCargandoDetalle]=useState(null);const formRef=useRef(null);
-  const [guardando, setGuardando] = useState(false);
+ const [ordenes,setOrdenes]=useState([]),[productos,setProductos]=useState([]),[planillas,setPlanillas]=useState([]),[lotes,setLotes]=useState([]),[form,setForm]=useState({producto_id_producto:"",numero_orden:"",fecha:"",fecha_aparado:""}),[talles,setTalles]=useState(tallesVacios),[operarios,setOperarios]=useState({corte:"",aparado:""}),[materiales,setMateriales]=useState([""]),[materialBusquedas,setMaterialBusquedas]=useState([""]),[mostrar,setMostrar]=useState(false),[idEditando,setIdEditando]=useState(null),[toast,setToast]=useState(null),[confirmacion,setConfirmacion]=useState(null),[busqueda,setBusqueda]=useState(""),[cargando,setCargando]=useState(true),[detalleAbierto,setDetalleAbierto]=useState(null),[tallesDetalle,setTallesDetalle]=useState({}),[cargandoDetalle,setCargandoDetalle]=useState(null);const formRef=useRef(null),ordenListado=useSortPreference("ordenes-orden","fecha","desc");
+ const [guardando, setGuardando] = useState(false);
+ useNativeTableSorting(".ordenes-listado-tabla",ordenListado,{"Fecha de corte":"fecha","Nº Orden":"numero"});
   const envioEnCurso = useRef(false);
   const versionFormulario = useRef(0);
   // Invalida respuestas pendientes al salir de la pantalla.
@@ -69,7 +72,7 @@ const datos={...form,numero_orden:numeroOrden,producto_id_producto:Number(form.p
  const alternarDetalle=async o=>{if(detalleAbierto===o.id_orden){setDetalleAbierto(null);return;}setDetalleAbierto(o.id_orden);if(tallesDetalle[o.id_orden])return;setCargandoDetalle(o.id_orden);try{const respuesta=await axios.get(`${API_URL}/ordenes/${o.id_orden}/talles`);setTallesDetalle(actuales=>({...actuales,[o.id_orden]:respuesta.data}));}catch(error){setToast({type:"error",title:"No se pudo abrir la orden",message:obtenerMensajeError(error,"talles de la orden")});setDetalleAbierto(null);}finally{setCargandoDetalle(null);}};
  const claseEstado=estado=>{const valor=String(estado||"").toLowerCase();if(valor.includes("finalizada"))return "ui-status-finalizada";if(valor.includes("producci")||valor.includes("proceso"))return "ui-status-produccion";return "ui-status-pendiente";};
  const mostrarEstado=estado=>{const valor=String(estado||"").toLowerCase();if(valor.includes("finaliz"))return "Finalizada";if(valor.includes("producci")||valor.includes("proceso"))return "En producción";return "Pendiente";};
- const textoBusqueda=busqueda.trim(),filtradas=ordenes.filter(o=>`${o.numero_orden} ${o.producto} ${o.color} ${o.estado}`.toLowerCase().includes(textoBusqueda.toLowerCase())),hayBusqueda=textoBusqueda.length>0,sinResultados=hayBusqueda&&filtradas.length===0,sinOrdenes=!hayBusqueda&&ordenes.length===0,paginacion=usePagination(filtradas);
+ const textoBusqueda=busqueda.trim(),filtradas=ordenes.filter(o=>`${o.numero_orden} ${o.producto} ${o.color} ${o.estado}`.toLowerCase().includes(textoBusqueda.toLowerCase())),ordenadas=ordenarRegistros(filtradas,o=>({fecha:o.fecha,numero:o.numero_orden,producto:o.producto,color:o.color,total:o.total_pares,aparado:o.fecha_aparado,estado:o.estado})[ordenListado.campo],ordenListado.direccion),hayBusqueda=textoBusqueda.length>0,sinResultados=hayBusqueda&&filtradas.length===0,sinOrdenes=!hayBusqueda&&ordenes.length===0,paginacion=usePagination(ordenadas);
  const seleccionInicial=params.get("seleccion");
  useEffect(()=>{
   if(!seleccionInicial || cargando || seleccionAplicadaRef.current===seleccionInicial)return;

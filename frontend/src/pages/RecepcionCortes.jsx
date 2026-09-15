@@ -4,7 +4,7 @@ import axios from "axios";
 import Selector from "../components/Selector";
 import Toast from "../components/Toast";
 import ClearableSearch from "../components/ClearableSearch";
-import SortControls from "../components/SortControls";
+import { useNativeTableSorting } from "../components/SortableHeader";
 import Pagination from "../components/Pagination";
 import SeparadorListado from "../components/SeparadorListado";
 import usePagination from "../hooks/usePagination";
@@ -20,6 +20,8 @@ export default function RecepcionCortes() {
   const [fecha, setFecha] = useState(hoy), [controlador, setControlador] = useState(""), [lineas, setLineas] = useState([nuevaLinea()]);
   const [busqueda, setBusqueda] = useState(""), [cargando, setCargando] = useState(true), [error, setError] = useState(false), [guardando, setGuardando] = useState(false), [toast, setToast] = useState(null);
   const [direccion, setDireccion] = useState("desc");
+  const [campoOrden, setCampoOrden] = useState("fecha");
+  useNativeTableSorting(".r018-tabla", { campo: campoOrden, setCampo: setCampoOrden, direccion, setDireccion }, { "Fecha de recepción": "fecha", "N° orden": "numero_orden", "N° remito": "remito" });
   const enviando = useRef(false), formulario = useRef(null);
   async function cargar() {
     setCargando(true); setError(false);
@@ -30,7 +32,7 @@ export default function RecepcionCortes() {
   useEffect(() => { cargar(); }, []);
   const filas = recepciones.flatMap(recepcion => recepcion.lineas.map(linea => ({...linea, fecha: recepcion.fecha, controlador: recepcion.controlador, recepcion})));
   const filtradas = filas.filter(l => [l.fecha, formatearFecha(l.fecha), l.controlador, l.numero_orden, articuloVisible(l.articulo), l.producto, l.color, l.remito, l.estado, l.observaciones].join(" ").toLowerCase().includes(busqueda.toLowerCase()));
-  const ordenadas = [...filtradas].sort((a,b) => (a.fecha.localeCompare(b.fecha) || a.id_linea - b.id_linea) * (direccion === "asc" ? 1 : -1));
+  const ordenadas = [...filtradas].sort((a,b) => String(a[campoOrden] ?? "").localeCompare(String(b[campoOrden] ?? ""), "es", { numeric: true }) * (direccion === "asc" ? 1 : -1));
   const paginacion = usePagination(ordenadas);
   const maximoFila = (linea, indice) => {
     const orden = ordenes.find(o => String(o.id_orden) === String(linea.orden_id));
@@ -79,7 +81,7 @@ export default function RecepcionCortes() {
       </fieldset>
     </form>}
     {abierto && <SeparadorListado titulo="Recepciones registradas" descripcion="Historial de ingresos de cortes a fábrica." />}
-    <div className="ui-list-tools"><ClearableSearch value={busqueda} onChange={setBusqueda} placeholder="Buscar orden, artículo, color, remito o controlador…" /><SortControls opciones={[{value:"fecha",label:"Fecha de recepción"}]} campo="fecha" setCampo={() => {}} direccion={direccion} setDireccion={valor => { setDireccion(valor); paginacion.setPage(1); }} /></div>
+    <div className="ui-list-tools"><ClearableSearch value={busqueda} onChange={setBusqueda} placeholder="Buscar orden, artículo, color, remito o controlador…" /></div>
     {cargando ? <p>Cargando recepciones…</p> : error ? <div className="ui-empty-state"><p>No se pudieron cargar las recepciones.</p><button className="ui-btn ui-btn-secondary" onClick={cargar}>Reintentar</button></div> : !filtradas.length ? <p className="ui-empty-state">{busqueda ? "No hay coincidencias." : "Todavía no hay recepciones registradas."}</p> : <>
       <div className="ui-table-card"><table className="ui-data-table ui-listado-ajustado r018-tabla">
         <colgroup>{[10,7,17,9,7,11,17,13,9].map((ancho,i) => <col key={i} style={{width:ancho+"%"}} />)}</colgroup>

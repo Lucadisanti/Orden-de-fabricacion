@@ -23,5 +23,9 @@ foreach ($imagen in $imagenes) {
 
 Copy-Item compose.cliente.yaml "$Destino\compose.yaml"
 Copy-Item .env.cliente.example "$Destino\.env.cliente.example"
-Copy-Item scripts\iniciar-paquete.ps1, scripts\detener.ps1, scripts\backup.ps1, scripts\actualizar-paquete.ps1 "$Destino\scripts"
+Copy-Item scripts\iniciar-paquete.ps1, scripts\detener.ps1, scripts\backup.ps1, scripts\actualizar-paquete.ps1, scripts\abrir-sistema.ps1 "$Destino\scripts"
+Copy-Item 'Abrir sistema.cmd' "$Destino\Abrir sistema.cmd"
+if (Test-Path -LiteralPath 'Guia_instalacion_cliente.docx') {
+  Copy-Item 'Guia_instalacion_cliente.docx' "$Destino\Guia_instalacion_cliente.docx"
+}
 Write-Host "Paquete creado en $Destino" -ForegroundColor Green

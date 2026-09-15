@@ -24,10 +24,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\iniciar-paquete.ps1
 
 ## Actualización
 
-Entregar la nueva carpeta `imagenes` junto con un `.env.cliente` que apunte a las nuevas etiquetas de versión. El cliente ejecuta:
+Entregar solamente la carpeta `imagenes` nueva. El cliente reemplaza su carpeta `imagenes` y hace doble clic en `Abrir sistema.cmd`; el acceso directo detecta la versión, realiza el backup y abre el sistema.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\actualizar-paquete.ps1
 ```
 
 El script crea un backup antes de cargar imágenes y mantiene el volumen `orden_fabricacion_datos`. Nunca usar `docker compose down -v`.
+
+## Inicio con doble clic
+
+El archivo `Abrir sistema.cmd` puede copiarse al escritorio como acceso directo. El cliente reemplaza la carpeta `imagenes` cuando recibe una actualización y luego hace doble clic en ese archivo: crea un backup, carga las imágenes, actualiza el sistema y abre el navegador.

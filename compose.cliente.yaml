@@ -1,0 +1,46 @@
+name: orden-fabricacion
+
+services:
+  database:
+    image: ${ORDEN_DATABASE_IMAGE}
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MARIADB_DATABASE: orden_fabricacion
+      MARIADB_USER: orden_app
+      MARIADB_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  backend:
+    image: ${ORDEN_BACKEND_IMAGE}
+    restart: unless-stopped
+    environment:
+      DB_HOST: database
+      DB_USER: orden_app
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_NAME: orden_fabricacion
+      DB_PORT: 3306
+      CORS_ORIGINS: http://localhost:${APP_PORT:-8080}
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    image: ${ORDEN_FRONTEND_IMAGE}
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+    name: ${ORDEN_DATA_VOLUME:-orden_fabricacion_datos}

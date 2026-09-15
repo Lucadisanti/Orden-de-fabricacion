@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import RetryMessage from "../components/RetryMessage";
 import { fechaLocal, resumirEstadisticas } from "../utils/estadisticas";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/Estadisticas.css";
@@ -41,15 +42,29 @@ function Barras({ filas, fechas = false }) {
 export default function Estadisticas() {
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState("");
+  const [cargando, setCargando] = useState(true);
+  const versionCarga = useRef(0);
   const [desde, setDesde] = useState(() => `${fechaLocal().slice(0, 7)}-01`);
   const [hasta, setHasta] = useState(() => fechaLocal());
   const [periodo, setPeriodo] = useState("mes");
+  async function cargarEstadisticas() {
+    const version = ++versionCarga.current;
+    setCargando(true);
+    try {
+      const [p, o] = await Promise.all([axios.get("/api/produccion-diaria/"), axios.get("/api/ordenes/")]);
+      if (version !== versionCarga.current) return;
+      setDatos({ producciones: p.data, ordenes: o.data });
+      setError("");
+    } catch {
+      if (version === versionCarga.current) setError("No se pudieron cargar las estadísticas.");
+    } finally {
+      if (version === versionCarga.current) setCargando(false);
+    }
+  }
   useEffect(() => {
-    let activo = true;
-    Promise.all([axios.get("/api/produccion-diaria/"), axios.get("/api/ordenes/")])
-      .then(([p, o]) => { if (activo) setDatos({ producciones: p.data, ordenes: o.data }); })
-      .catch(() => { if (activo) setError("No se pudieron cargar las estadísticas. Volvé a abrir esta sección para reintentar."); });
-    return () => { activo = false; };
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarEstadisticas();
+    return () => { versionCarga.current += 1; };
   }, []);
   const resumen = useMemo(() => datos ? resumirEstadisticas(datos.producciones, datos.ordenes, desde, hasta) : null, [datos, desde, hasta]);
   const cambiarPeriodo = (valor) => {
@@ -69,7 +84,7 @@ export default function Estadisticas() {
       <label>Desde<input className="ui-input" type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPeriodo("personalizado"); }} /></label>
       <label>Hasta<input className="ui-input" type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPeriodo("personalizado"); }} /></label>
     </div>
-    {error ? <p role="alert">{error}</p> : !resumen ? <p role="status">Cargando estadísticas...</p> : invalido ? <p role="alert">La fecha Desde debe ser anterior o igual a Hasta.</p> : <>
+    {error ? <RetryMessage message={error} onRetry={cargarEstadisticas} retrying={cargando} /> : !resumen ? <p role="status">Cargando estadísticas...</p> : invalido ? <p role="alert">La fecha Desde debe ser anterior o igual a Hasta.</p> : <>
       <div className="estadisticas-titulo"><h2>Producción del período</h2><p>Se toma la fecha propia de cada producción, incluida la cargada desde Planillas.</p></div>
       <div className="estadisticas-tarjetas">{[["Pares producidos", numero(resumen.total), "Total registrado"], ["Órdenes con producción", numero(resumen.ordenes), "Con al menos una producción"], ["Días con producción", numero(resumen.dias.length), "Fechas con registros"], ["Pendientes de inspección", numero(paresEstado("Pendiente")), "Pares por inspeccionar"]].map(([titulo, valor, detalle]) => <article className="estadisticas-card" key={titulo}><span>{titulo}</span><strong>{valor}</strong><small>{detalle}</small></article>)}</div>
       <div className="estadisticas-graficos">

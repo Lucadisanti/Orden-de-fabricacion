@@ -1,6 +1,7 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import RetryMessage from "../components/RetryMessage";
 import { formatearFecha } from "../utils/dateFormat";
 import { fechaLocal } from "../utils/estadisticas";
 import "../styles/Dashboard.css";
@@ -153,29 +154,37 @@ export default function Dashboard() {
   const [resumen, setResumen] = useState(resumenInicial);
   const [seccionActiva, setSeccionActiva] = useState("");
   const [ultimos, setUltimos] = useState({});
-  const [cargando, setCargando] = useState("");
+  const [cargando, setCargando] = useState({});
   const [error, setError] = useState("");
-  const [errorDetalle, setErrorDetalle] = useState("");
+  const [errorDetalle, setErrorDetalle] = useState({});
   const [panelControl, setPanelControl] = useState(panelInicial);
   const [cargandoPanel, setCargandoPanel] = useState(true);
   const [errorPanel, setErrorPanel] = useState("");
+  const [cargandoResumen, setCargandoResumen] = useState(true);
+  const datosPanel = useRef([[], [], [], []]);
+  const versionCarga = useRef(0);
 
-  useEffect(() => {
-    async function cargarResumen() {
-      try {
-        const { data } = await axios.get(`${API_URL}/dashboard/resumen`);
-        setResumen(normalizarResumen(data));
-        setError("");
-      } catch (requestError) {
-        console.error(requestError);
-        setError("No se pudo cargar el resumen de Inicio.");
-      }
+  async function cargarResumen() {
+    const version = versionCarga.current;
+    setCargandoResumen(true);
+    try {
+      const { data } = await axios.get(`${API_URL}/dashboard/resumen`);
+      if (version !== versionCarga.current) return;
+      setResumen(normalizarResumen(data));
+      setError("");
+    } catch (requestError) {
+      if (version !== versionCarga.current) return;
+      console.error(requestError);
+      setError("No se pudo cargar el resumen de Inicio.");
+    } finally {
+      if (version === versionCarga.current) setCargandoResumen(false);
     }
+  }
 
-    async function cargarPanelControl() {
-      setCargandoPanel(true);
-      setErrorPanel("");
-
+  async function cargarPanelControl() {
+    const version = versionCarga.current;
+    setCargandoPanel(true);
+    try {
       const hoy = fechaISOHoy();
       const resultados = await Promise.allSettled([
         axios.get(`${API_URL}/ordenes/`),
@@ -183,11 +192,13 @@ export default function Dashboard() {
         axios.get(`${API_URL}/lotes/`),
         axios.get(`${API_URL}/produccion-diaria/`),
       ]);
+      if (version !== versionCarga.current) return;
 
-      const ordenes = obtenerDatos(resultados[0]);
-      const planillas = obtenerDatos(resultados[1]);
-      const lotes = obtenerDatos(resultados[2]);
-      const producciones = obtenerDatos(resultados[3]);
+      // Una fuente que falla conserva sus últimos datos disponibles.
+      resultados.forEach((resultado, indice) => {
+        if (resultado.status === "fulfilled") datosPanel.current[indice] = obtenerDatos(resultado);
+      });
+      const [ordenes, planillas, lotes, producciones] = datosPanel.current;
 
       setPanelControl({
         ordenesPendientes: ordenes.filter((orden) => estaPendiente(orden.estado)).length,
@@ -201,30 +212,28 @@ export default function Dashboard() {
         produccionesHoy: producciones.filter((produccion) => normalizarFechaISO(produccion.fecha) === hoy).length,
       });
 
-      if (resultados.some((resultado) => resultado.status === "rejected")) {
-        setErrorPanel("Algunos indicadores no se pudieron actualizar.");
-      }
-
-      setCargandoPanel(false);
+      setErrorPanel(resultados.some((resultado) => resultado.status === "rejected")
+        ? "Algunos indicadores no se pudieron actualizar."
+        : "");
+    } catch (requestError) {
+      if (version !== versionCarga.current) return;
+      console.error(requestError);
+      setErrorPanel("No se pudieron cargar los indicadores.");
+    } finally {
+      if (version === versionCarga.current) setCargandoPanel(false);
     }
+  }
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarResumen();
     cargarPanelControl();
+    return () => { versionCarga.current += 1; };
   }, []);
 
-  async function alternarDetalle(clave) {
-    if (seccionActiva === clave) {
-      setSeccionActiva("");
-      return;
-    }
-
-    setSeccionActiva(clave);
-    setErrorDetalle("");
-
-    if (ultimos[clave]) return;
-
-    setCargando(clave);
-
+  async function cargarDetalle(clave) {
+    const version = versionCarga.current;
+    setCargando((actuales) => ({ ...actuales, [clave]: true }));
     try {
       const configuracion = secciones[clave];
       const { data } = await axios.get(`${API_URL}${configuracion.endpoint}`);
@@ -235,13 +244,25 @@ export default function Dashboard() {
         .sort((a, b) => Number(b[configuracion.id] || 0) - Number(a[configuracion.id] || 0))
         .slice(0, 4);
 
+      if (version !== versionCarga.current) return;
       setUltimos((actuales) => ({ ...actuales, [clave]: recientes }));
+      setErrorDetalle((actuales) => ({ ...actuales, [clave]: "" }));
     } catch (requestError) {
+      if (version !== versionCarga.current) return;
       console.error(requestError);
-      setErrorDetalle("No se pudieron cargar los últimos registros.");
+      setErrorDetalle((actuales) => ({ ...actuales, [clave]: "No se pudieron cargar los últimos registros." }));
     } finally {
-      setCargando("");
+      if (version === versionCarga.current) setCargando((actuales) => ({ ...actuales, [clave]: false }));
     }
+  }
+
+  function alternarDetalle(clave) {
+    if (seccionActiva === clave) {
+      setSeccionActiva("");
+      return;
+    }
+    setSeccionActiva(clave);
+    if (!ultimos[clave] && !cargando[clave]) cargarDetalle(clave);
   }
 
   const itemActivo = resumen.find((item) => item.clave === seccionActiva);
@@ -299,13 +320,13 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {cargando === seccionActiva && <p className="dashboard-mensaje">Cargando últimos registros…</p>}
-      {errorDetalle && <p className="dashboard-error">{errorDetalle}</p>}
-      {!cargando && !errorDetalle && ultimos[seccionActiva]?.length === 0 && (
+      {cargando[seccionActiva] && !errorDetalle[seccionActiva] && <p className="dashboard-mensaje">Cargando últimos registros…</p>}
+      {errorDetalle[seccionActiva] && <RetryMessage message={errorDetalle[seccionActiva]} onRetry={() => cargarDetalle(seccionActiva)} retrying={Boolean(cargando[seccionActiva])} />}
+      {!cargando[seccionActiva] && !errorDetalle[seccionActiva] && ultimos[seccionActiva]?.length === 0 && (
         <p className="dashboard-mensaje">Todavía no hay registros cargados.</p>
       )}
 
-      {!cargando && ultimos[seccionActiva]?.length > 0 && (
+      {ultimos[seccionActiva]?.length > 0 && (
         <div className="dashboard-table-wrap">
           <table className="dashboard-table">
             <thead>
@@ -353,7 +374,7 @@ export default function Dashboard() {
         <p>Estado general de la producción y trazabilidad.</p>
       </div>
 
-      {error && <p className="dashboard-error">{error}</p>}
+      {error && <RetryMessage message={error} onRetry={cargarResumen} retrying={cargandoResumen} />}
 
       <div className="dashboard-cards">
         {resumen.map((item) => {
@@ -404,7 +425,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {errorPanel && <p className="dashboard-error dashboard-error-simple">{errorPanel}</p>}
+          {errorPanel && <RetryMessage message={errorPanel} onRetry={cargarPanelControl} retrying={cargandoPanel} />}
         </section>
 
         <section className="dashboard-panel dashboard-panel-produccion">

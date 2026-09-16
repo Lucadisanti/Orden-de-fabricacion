@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Toast from "../components/Toast";
-import { useNativeTableSorting } from "../components/SortableHeader";
+import SortableHeader from "../components/SortableHeader";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
@@ -43,7 +43,6 @@ export default function Trazabilidad() {
   const [bloqueAbierto, setBloqueAbierto] = useState("planillas");
   const [busquedaOrden, setBusquedaOrden] = useState("");
   const ordenListado = useSortPreference("trazabilidad-orden", "fecha", "desc");
-  useNativeTableSorting(".trazabilidad-ordenes-table", ordenListado, { "Nº Orden": "numero", "Fecha de corte": "fecha" });
 
   const mostrarToast = (type, title, message) => {
     setToast({ type, title, message });
@@ -467,9 +466,9 @@ export default function Trazabilidad() {
             <table className="ui-data-table trazabilidad-ordenes-table">
               <thead>
                 <tr>
-                  <th>Nº Orden</th>
+                  <SortableHeader campo="numero" orden={ordenListado}>Nº Orden</SortableHeader>
                   <th>Artículo</th>
-                  <th>Fecha de corte</th>
+                  <SortableHeader campo="fecha" orden={ordenListado}>Fecha de corte</SortableHeader>
                   <th>Estado</th>
                 </tr>
               </thead>

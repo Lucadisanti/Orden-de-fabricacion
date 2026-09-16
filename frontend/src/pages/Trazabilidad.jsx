@@ -42,7 +42,7 @@ export default function Trazabilidad() {
   const [planillaAbierta, setPlanillaAbierta] = useState(null);
   const [bloqueAbierto, setBloqueAbierto] = useState("planillas");
   const [busquedaOrden, setBusquedaOrden] = useState("");
-  const ordenListado = useSortPreference("trazabilidad-orden", "fecha", "desc");
+  const ordenListado = useSortPreference("trazabilidad-orden-v2", "fecha", "desc");
   useNativeTableSorting(".trazabilidad-ordenes-table", ordenListado, {});
 
   const mostrarToast = (type, title, message) => {

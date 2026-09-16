@@ -84,7 +84,7 @@ export default function RecepcionCortes() {
     <div className="ui-list-tools"><ClearableSearch value={busqueda} onChange={setBusqueda} placeholder="Buscar orden, artículo, color, remito o controlador…" /></div>
     {cargando ? <p>Cargando recepciones…</p> : error ? <div className="ui-empty-state"><p>No se pudieron cargar las recepciones.</p><button className="ui-btn ui-btn-secondary" onClick={cargar}>Reintentar</button></div> : !filtradas.length ? <p className="ui-empty-state">{busqueda ? "No hay coincidencias." : "Todavía no hay recepciones registradas."}</p> : <>
       <div className="ui-table-card"><table className="ui-data-table ui-listado-ajustado r018-tabla">
-        <colgroup>{[10,7,17,9,7,11,17,13,9].map((ancho,i) => <col key={i} style={{width:ancho+"%"}} />)}</colgroup>
+        <colgroup>{[12,7,15,9,7,11,17,13,9].map((ancho,i) => <col key={i} style={{width:ancho+"%"}} />)}</colgroup>
         <thead><tr><th>Fecha de recepción</th><th>N° orden</th><th>Artículo y color</th><th>N° remito</th><th>Pares</th><th>Estado</th><th>Observaciones</th><th>Controlador</th><th>Acciones</th></tr></thead>
         <tbody>{paginacion.pageItems.map(l => <tr key={l.id_linea}>
           <td>{formatearFecha(l.fecha)}</td><td><strong>{l.numero_orden}</strong></td>

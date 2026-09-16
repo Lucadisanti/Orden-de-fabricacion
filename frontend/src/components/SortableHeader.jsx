@@ -7,7 +7,7 @@ export function useNativeTableSorting(selector, orden, campos) {
     if (!tabla) return undefined;
     const encabezados = [...tabla.querySelectorAll("thead th")];
     const limpiar = encabezados.map((encabezado) => {
-      const campo = campos[encabezado.textContent.trim()];
+      const campo = encabezado.dataset.sortField || campos[encabezado.textContent.trim()];
       if (!campo) {
         delete encabezado.dataset.sortable;
         delete encabezado.dataset.direction;

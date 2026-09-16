@@ -42,8 +42,8 @@ export default function Trazabilidad() {
   const [planillaAbierta, setPlanillaAbierta] = useState(null);
   const [bloqueAbierto, setBloqueAbierto] = useState("planillas");
   const [busquedaOrden, setBusquedaOrden] = useState("");
-  const ordenListado = useSortPreference("trazabilidad-orden", "fecha", "desc");
-  useNativeTableSorting(".trazabilidad-ordenes-table", ordenListado, { "Nº Orden": "numero", "Fecha de corte": "fecha" });
+  const ordenListado = useSortPreference("trazabilidad-orden-v2", "fecha", "desc");
+  useNativeTableSorting(".trazabilidad-ordenes-table", ordenListado, {});
 
   const mostrarToast = (type, title, message) => {
     setToast({ type, title, message });
@@ -467,9 +467,9 @@ export default function Trazabilidad() {
             <table className="ui-data-table trazabilidad-ordenes-table">
               <thead>
                 <tr>
-                  <th>Nº Orden</th>
+                  <th data-sort-field="numero">Nº Orden</th>
                   <th>Artículo</th>
-                  <th>Fecha de corte</th>
+                  <th data-sort-field="fecha">Fecha de corte</th>
                   <th>Estado</th>
                 </tr>
               </thead>

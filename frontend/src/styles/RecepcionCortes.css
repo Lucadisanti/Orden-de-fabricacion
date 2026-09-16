@@ -18,6 +18,9 @@
 .r018-acciones>div { display:flex; gap:10px; flex-wrap:wrap; }
 .recepcion-cortes .ui-table-card { margin-top:16px; }
 .recepcion-cortes .r018-tabla th,.recepcion-cortes .r018-tabla td { overflow-wrap:break-word; word-break:normal; }
+.r018-tabla th[data-sortable="true"] { padding-right:34px !important; }
+.r018-tabla th[data-sortable="true"]::after { position:absolute; top:50%; right:10px; margin-left:0; transform:translateY(-50%); }
+.r018-tabla th[data-sortable="true"]:hover::after { transform:translateY(-50%) scale(1.08); }
 .r018-producto { display:block; margin-top:4px; color:var(--text-main); font-size:14px; font-weight:700; }
 .r018-observacion-celda { white-space:pre-wrap !important; }
 .r018-tabla .ui-status-badge { white-space:normal; overflow-wrap:normal; text-align:center; }

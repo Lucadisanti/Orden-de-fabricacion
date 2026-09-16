@@ -7,7 +7,7 @@ export function useNativeTableSorting(selector, orden, campos) {
     if (!tabla) return undefined;
     const encabezados = [...tabla.querySelectorAll("thead th")];
     const limpiar = encabezados.map((encabezado) => {
-      const campo = campos[encabezado.textContent.trim()];
+      const campo = encabezado.dataset.sortField || campos[encabezado.textContent.trim()];
       if (!campo) {
         delete encabezado.dataset.sortable;
         delete encabezado.dataset.direction;
@@ -46,9 +46,9 @@ export default function SortableHeader({ children, campo, orden, className }) {
     if (activo) orden.setDireccion(direccion === "asc" ? "desc" : "asc");
     else { orden.setCampo(campo); orden.setDireccion("desc"); }
   };
-  return <th className={className} aria-sort={activo ? (direccion === "asc" ? "ascending" : "descending") : "none"}>
+  return <th className={className} data-sortable="true" data-direction={activo ? direccion : ""} aria-sort={activo ? (direccion === "asc" ? "ascending" : "descending") : "none"}>
     <button type="button" className={`ui-sortable-header${activo ? " activo" : ""}`} onClick={cambiarOrden}>
-      {children}<span aria-hidden="true">{activo ? (direccion === "asc" ? "⌃" : "⌄") : ""}</span>
+      {children}
     </button>
   </th>;
 }

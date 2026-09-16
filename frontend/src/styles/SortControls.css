@@ -15,6 +15,8 @@
 .ui-data-table .ui-sortable-header span { color: var(--text-muted); font-size: 13px; }
 .ui-data-table .ui-sortable-header.activo span { color: currentColor; }
 .ui-data-table th[data-sortable="true"] { cursor: pointer; user-select: none; }
+.ui-data-table th[data-sortable="true"]:focus { outline: none; }
+.ui-data-table .ui-sortable-header:hover, .ui-data-table .ui-sortable-header.activo { color: inherit; }
 .ui-data-table th[data-sortable="true"]::after { margin-left: 5px; color: var(--primary); font-size: 15px; font-weight: 400; }
 .ui-data-table th[data-sortable="true"][data-direction="asc"]::after { content: "⌃"; }
 .ui-data-table th[data-sortable="true"][data-direction="desc"]::after { content: "⌄"; }

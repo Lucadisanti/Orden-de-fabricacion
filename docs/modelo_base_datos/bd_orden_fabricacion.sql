@@ -143,6 +143,7 @@ CREATE TABLE orden_fabricacion (
   producto_id_producto INT NOT NULL,
   numero_orden VARCHAR(45) NOT NULL,
   fecha DATE NOT NULL,
+  es_forrado TINYINT(1) NOT NULL DEFAULT 0,
 
   UNIQUE KEY uq_orden_numero (numero_orden),
   KEY idx_orden_producto (producto_id_producto),

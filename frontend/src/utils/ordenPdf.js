@@ -27,7 +27,7 @@ export function crearOrdenPdf({ orden, talles, materiales, logo }) {
   };
   const estado = String(orden.estado || "").toLowerCase();
   const estadoLegible = estado.includes("producci") || estado.includes("proceso") ? "En producción" : estado.includes("finaliz") ? "Finalizada" : "Pendiente";
-  tabla("Datos de la orden", [["Producto", "Color", "Estado"]], [[valor(orden.producto), valor(orden.color), estadoLegible]]);
+  tabla("Datos de la orden", [["Producto", "Color", "Terminación", "Estado"]], [[valor(orden.producto), valor(orden.color), orden.es_forrado ? "Forrado" : "Sin forro", estadoLegible]]);
   tabla("Corte y aparado", [["Fecha de corte", "Fecha de aparado"],], [[formatearFecha(orden.fecha, ""), formatearFecha(orden.fecha_aparado, "")]]);
   tabla("Responsables", [["Operario de corte", "Taller de aparado"]], [[valor(orden.operario_corte), valor(orden.operario_aparado)]]);
   const cantidades = talles.filter((t) => Number(t.cantidad_pares) > 0).sort((a, b) => Number(a.talle) - Number(b.talle));

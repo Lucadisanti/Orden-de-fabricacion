@@ -53,6 +53,11 @@
 .ordenes-buscador .ui-input { width: 100%; margin: 0; }
 .orden-fila-seleccionada td { background: #dbeafe !important; box-shadow: inset 0 2px 0 #3b82f6, inset 0 -2px 0 #3b82f6; }
 .orden-flecha { display: inline-block; width: 24px; color: var(--primary); font-size: 11px; }
+.orden-forrado { display: flex; flex-direction: column; gap: 7px; }
+.orden-forrado > span:first-child { font-weight: 700; color: var(--text-muted); }
+.orden-forrado input { position: absolute; opacity: 0; pointer-events: none; }
+.orden-forrado strong { display: inline-flex; align-items: center; width: fit-content; min-height: 28px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-card); color: var(--text-muted); cursor: pointer; }
+.orden-forrado:has(input:checked) strong { border-color: var(--primary); background: var(--primary-soft, #eaf2ff); color: var(--primary); }
 .orden-fila-abierta td { background: var(--primary-soft, #eff6ff); }
 .orden-fila-clickable { cursor: pointer; }
 .orden-fila-clickable:focus { outline: 2px solid var(--primary); outline-offset: -2px; }

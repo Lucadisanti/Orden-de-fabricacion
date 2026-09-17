@@ -7,6 +7,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
+import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import CatalogModal from "../components/CatalogModal";
 import ClearableSearch from "../components/ClearableSearch";
@@ -49,6 +50,7 @@ export default function ProduccionDiaria() {
   const [fechaHistorial, setFechaHistorial] = useState("");
   const [busquedaHistorial, setBusquedaHistorial] = useState("");
   const [toast, setToast] = useState(null);
+  const [salidaPendiente, setSalidaPendiente] = useState(null);
   const [lineaDetalleAbierta, setLineaDetalleAbierta] = useState(null);
   const [detallesHistorial, setDetallesHistorial] = useState({});
   const [altaMaquinaBloque, setAltaMaquinaBloque] = useState(null);
@@ -68,7 +70,15 @@ export default function ProduccionDiaria() {
     ));
     return form.fecha !== fechaLocal() || hayOperarios || hayCambiosEnBloques;
   }, [formularioAbierto, form, bloques]);
-  const confirmarDescarte = () => !tieneCambiosSinGuardar || window.confirm("Hay datos de producción sin guardar. ¿Querés salir y descartarlos?");
+  const solicitarSalida = (accion) => {
+    if (!tieneCambiosSinGuardar) { accion(); return; }
+    setSalidaPendiente(() => accion);
+  };
+  const confirmarSalida = () => {
+    const accion = salidaPendiente;
+    setSalidaPendiente(null);
+    accion?.();
+  };
 
   useEffect(() => {
     if (!tieneCambiosSinGuardar) return undefined;
@@ -84,7 +94,7 @@ export default function ProduccionDiaria() {
       if (destino.origin !== window.location.origin || destino.pathname === window.location.pathname) return;
       evento.preventDefault();
       evento.stopImmediatePropagation();
-      if (confirmarDescarte()) navigate(`${destino.pathname}${destino.search}${destino.hash}`);
+      setSalidaPendiente(() => () => navigate(`${destino.pathname}${destino.search}${destino.hash}`));
     };
     window.addEventListener("beforeunload", avisarAntesDeCerrar);
     document.addEventListener("click", avisarAntesDeNavegar, true);
@@ -367,6 +377,7 @@ export default function ProduccionDiaria() {
 
   return <section className="produccion-diaria">
     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+    <ConfirmModal open={Boolean(salidaPendiente)} title="Cambios sin guardar" message="Hay datos de producción sin guardar. Si salís, se perderán." confirmText="Salir sin guardar" danger onCancel={() => setSalidaPendiente(null)} onConfirm={confirmarSalida} />
     <PromptModal open={altaMaquinaBloque !== null} title="Nueva inyectora" label="Nombre de la inyectora" placeholder="Ej. Máquina INYEC-BGM" confirmText="Crear y seleccionar" onConfirm={crearMaquinaRapida} onCancel={() => setAltaMaquinaBloque(null)} />
     <CatalogModal key={altaCatalogo ? `${altaCatalogo.tipo}-${altaCatalogo.bloque}-${altaCatalogo.linea}` : "catalogo-cerrado"} open={Boolean(altaCatalogo)} title={altaCatalogo?.tipo === "puntera" ? "Agregar tipo de puntera" : "Agregar adicional"} codeLength={2} onConfirm={crearCatalogoRapido} onCancel={() => setAltaCatalogo(null)} />
     <div className="ui-page-header ui-page-header-row"><div><h1>Producción diaria</h1><p>Carga conjunta por inyectora que actualiza la R013/1 de cada orden.</p></div>{!formularioAbierto && <button type="button" className="ui-btn ui-btn-primary" onClick={() => { versionFormulario.current += 1; setFormularioAbierto(true); }}>+ Nueva producción diaria</button>}</div>
@@ -409,7 +420,7 @@ export default function ProduccionDiaria() {
           <button type="button" className="ui-btn ui-btn-secondary" onClick={() => agregarLinea(indiceBloque)}>+ Agregar orden</button>
         </div>)}
 
-        <div className="produccion-acciones"><button type="button" className="ui-btn ui-btn-secondary" onClick={agregarBloque}>+ Agregar inyectora</button><strong>Total del día: {totalGeneral} pares</strong><div className="produccion-acciones-guardado"><button type="button" className="ui-btn ui-btn-secondary" onClick={() => { if (!confirmarDescarte()) return; versionFormulario.current += 1; setFormularioAbierto(false); }}>Ocultar formulario</button><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producción diaria"}</button></div></div>
+        <div className="produccion-acciones"><button type="button" className="ui-btn ui-btn-secondary" onClick={agregarBloque}>+ Agregar inyectora</button><strong>Total del día: {totalGeneral} pares</strong><div className="produccion-acciones-guardado"><button type="button" className="ui-btn ui-btn-secondary" onClick={() => solicitarSalida(() => { versionFormulario.current += 1; setFormularioAbierto(false); })}>Ocultar formulario</button><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producción diaria"}</button></div></div>
       </form>}
 
 

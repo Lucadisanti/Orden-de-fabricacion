@@ -55,6 +55,44 @@ export default function ProduccionDiaria() {
   const [altaCatalogo, setAltaCatalogo] = useState(null);
   const [form, setForm] = useState({ fecha: fechaLocal(), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
   const [bloques, setBloques] = useState([nuevoBloque()]);
+  const tieneCambiosSinGuardar = useMemo(() => {
+    if (!formularioAbierto) return false;
+    const hayOperarios = [...form.operarios_calzado, ...form.operarios_puntera, ...form.operarios_inspeccion_final].some((nombre) => nombre.trim());
+    const hayCambiosEnBloques = bloques.some((bloque) => (
+      bloque.maquinas_id_maquina || bloque.operarios_inyeccion.some((nombre) => nombre.trim()) || bloque.lineas.some((linea) => (
+        linea.orden_fabricacion_id_orden || linea.busqueda_orden || linea.punteras_id_puntera || linea.adicionales_id_adicional ||
+        linea.busqueda_puntera || linea.busqueda_pu || linea.lote_puntera_id || linea.lote_pu_id || linea.materiales_extra.length ||
+        linea.estado_inspeccion !== "Pendiente" || linea.observacion_inspeccion.trim() || linea.pares_defectuosos ||
+        Object.values(linea.talles).some((cantidad) => Number(cantidad) > 0)
+      ))
+    ));
+    return form.fecha !== fechaLocal() || hayOperarios || hayCambiosEnBloques;
+  }, [formularioAbierto, form, bloques]);
+  const confirmarDescarte = () => !tieneCambiosSinGuardar || window.confirm("Hay datos de producción sin guardar. ¿Querés salir y descartarlos?");
+
+  useEffect(() => {
+    if (!tieneCambiosSinGuardar) return undefined;
+    const avisarAntesDeCerrar = (evento) => {
+      evento.preventDefault();
+      evento.returnValue = "";
+    };
+    const avisarAntesDeNavegar = (evento) => {
+      if (evento.defaultPrevented || evento.button !== 0 || evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.altKey) return;
+      const enlace = evento.target instanceof Element ? evento.target.closest("a[href]") : null;
+      if (!enlace || enlace.target === "_blank") return;
+      const destino = new URL(enlace.href, window.location.origin);
+      if (destino.origin !== window.location.origin || destino.pathname === window.location.pathname) return;
+      evento.preventDefault();
+      evento.stopImmediatePropagation();
+      if (confirmarDescarte()) navigate(`${destino.pathname}${destino.search}${destino.hash}`);
+    };
+    window.addEventListener("beforeunload", avisarAntesDeCerrar);
+    document.addEventListener("click", avisarAntesDeNavegar, true);
+    return () => {
+      window.removeEventListener("beforeunload", avisarAntesDeCerrar);
+      document.removeEventListener("click", avisarAntesDeNavegar, true);
+    };
+  }, [tieneCambiosSinGuardar, navigate]);
   const historialFiltrado = useMemo(() => {
     const texto = busquedaHistorial.trim().toLowerCase();
     return historial.filter((item) => {
@@ -371,7 +409,7 @@ export default function ProduccionDiaria() {
           <button type="button" className="ui-btn ui-btn-secondary" onClick={() => agregarLinea(indiceBloque)}>+ Agregar orden</button>
         </div>)}
 
-        <div className="produccion-acciones"><button type="button" className="ui-btn ui-btn-secondary" onClick={agregarBloque}>+ Agregar inyectora</button><strong>Total del día: {totalGeneral} pares</strong><div className="produccion-acciones-guardado"><button type="button" className="ui-btn ui-btn-secondary" onClick={() => { versionFormulario.current += 1; setFormularioAbierto(false); }}>Ocultar formulario</button><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producción diaria"}</button></div></div>
+        <div className="produccion-acciones"><button type="button" className="ui-btn ui-btn-secondary" onClick={agregarBloque}>+ Agregar inyectora</button><strong>Total del día: {totalGeneral} pares</strong><div className="produccion-acciones-guardado"><button type="button" className="ui-btn ui-btn-secondary" onClick={() => { if (!confirmarDescarte()) return; versionFormulario.current += 1; setFormularioAbierto(false); }}>Ocultar formulario</button><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producción diaria"}</button></div></div>
       </form>}
 
 

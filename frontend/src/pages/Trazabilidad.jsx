@@ -543,7 +543,7 @@ export default function Trazabilidad() {
                     <div><span>Artículo</span><strong>{articuloVisible(ordenSeleccionada.articulo_producto)}</strong></div>
                     <div><span>Producto</span><strong>{ordenSeleccionada.producto || ordenSeleccionada.nombre_producto || "-"}</strong></div>
                     <div><span>Color</span><strong>{ordenSeleccionada.color || "-"}</strong></div>
-                    <div><span>Adicional</span><strong>{ordenSeleccionada.es_forrado ? "Forrado" : "Sin forro"}</strong></div>
+                    {ordenSeleccionada.es_forrado && <div><span>Adicional</span><strong>Forrado</strong></div>}
                     <div><span>Fecha de corte</span><strong>{formatearFecha(ordenSeleccionada.fecha)}</strong></div>
                     <div><span>Estado</span><strong><span className={`ui-status-badge ${getEstadoClass(ordenSeleccionada.estado)}`}>{mostrarEstado(ordenSeleccionada.estado)}</span></strong></div>
                   </div>

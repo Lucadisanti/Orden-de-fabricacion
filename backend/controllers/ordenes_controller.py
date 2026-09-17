@@ -55,15 +55,21 @@ def _asegurar_fecha_aparado(cursor):
         cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN fecha_aparado DATE NULL")
 
 
+def _asegurar_forrado(cursor):
+    cursor.execute("SHOW COLUMNS FROM orden_fabricacion LIKE 'es_forrado'")
+    if not cursor.fetchone():
+        cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN es_forrado TINYINT(1) NOT NULL DEFAULT 0")
+
+
 def _agregar_datos_corte_aparado(respuesta):
     response, status = respuesta
     if status != 200:
         return respuesta
     conn = get_connection(); cursor = conn.cursor(dictionary=True)
     try:
-        _asegurar_fecha_aparado(cursor)
-        cursor.execute("SELECT id_orden, fecha_aparado FROM orden_fabricacion")
-        fechas = {fila['id_orden']: fila['fecha_aparado'].isoformat() if fila['fecha_aparado'] else None for fila in cursor.fetchall()}
+        _asegurar_fecha_aparado(cursor); _asegurar_forrado(cursor)
+        cursor.execute("SELECT id_orden, fecha_aparado, es_forrado FROM orden_fabricacion")
+        fechas = {fila['id_orden']: fila for fila in cursor.fetchall()}
         cursor.execute("""SELECT pp.orden_fabricacion_id_orden AS id_orden, op.etapa, op.nombre_operario
             FROM planilla_produccion pp
             INNER JOIN operarios_planilla op ON op.planilla_produccion_id_planilla = pp.id_planilla
@@ -78,7 +84,9 @@ def _agregar_datos_corte_aparado(respuesta):
                 nombres.append(nombre)
         datos = response.get_json()
         for fila in datos if isinstance(datos, list) else [datos]:
-            fila['fecha_aparado'] = fechas.get(fila['id_orden'])
+            datos_orden = fechas.get(fila['id_orden'], {})
+            fila['fecha_aparado'] = datos_orden.get('fecha_aparado').isoformat() if datos_orden.get('fecha_aparado') else None
+            fila['es_forrado'] = bool(datos_orden.get('es_forrado'))
             fila['operario_corte'] = ' / '.join(responsables.get((fila['id_orden'], 'corte'), []))
             fila['operario_aparado'] = ' / '.join(responsables.get((fila['id_orden'], 'aparado'), []))
         return jsonify(datos), status
@@ -101,10 +109,10 @@ def _guardar_orden(id_orden=None):
         return jsonify({"error": "La fecha de aparado no es válida."}), 400
     conn = get_connection(); cursor = conn.cursor(dictionary=True)
     try:
-        _asegurar_fecha_aparado(cursor)
-        valores = (data.get("producto_id_producto"), data.get("numero_orden"), data.get("fecha"))
-        if id_orden: cursor.execute("UPDATE orden_fabricacion SET producto_id_producto=%s,numero_orden=%s,fecha=%s WHERE id_orden=%s", (*valores, id_orden))
-        else: cursor.execute("INSERT INTO orden_fabricacion (producto_id_producto,numero_orden,fecha) VALUES (%s,%s,%s)", valores); id_orden = cursor.lastrowid
+        _asegurar_fecha_aparado(cursor); _asegurar_forrado(cursor)
+        valores = (data.get("producto_id_producto"), data.get("numero_orden"), data.get("fecha"), 1 if data.get("es_forrado") else 0)
+        if id_orden: cursor.execute("UPDATE orden_fabricacion SET producto_id_producto=%s,numero_orden=%s,fecha=%s,es_forrado=%s WHERE id_orden=%s", (*valores, id_orden))
+        else: cursor.execute("INSERT INTO orden_fabricacion (producto_id_producto,numero_orden,fecha,es_forrado) VALUES (%s,%s,%s,%s)", valores); id_orden = cursor.lastrowid
         if "fecha_aparado" in data:
             cursor.execute("UPDATE orden_fabricacion SET fecha_aparado=%s WHERE id_orden=%s", (fecha_aparado, id_orden))
         _guardar_talles(cursor, id_orden, talles); id_planilla = _guardar_r013(cursor, id_orden, data.get("fecha"), data); conn.commit()

@@ -18,7 +18,7 @@
 .orden-responsables span { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
 .orden-responsables strong { overflow-wrap: anywhere; }
 
-.orden-datos-grid { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 14px; }
+.orden-datos-grid { display: grid; grid-template-columns: minmax(150px, .85fr) minmax(260px, 1.45fr) minmax(120px, .65fr) minmax(180px, 1fr); gap: 14px; }
 .orden-producto-selector { display: grid; grid-template-columns: minmax(0, 1fr) 46px; gap: 8px; }
 .orden-producto-selector select { min-width: 0; }
 .orden-alta-producto { width: 46px; min-width: 46px; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); color: var(--text-main); font-size: 24px; font-weight: 700; cursor: pointer; }
@@ -53,6 +53,11 @@
 .ordenes-buscador .ui-input { width: 100%; margin: 0; }
 .orden-fila-seleccionada td { background: #dbeafe !important; box-shadow: inset 0 2px 0 #3b82f6, inset 0 -2px 0 #3b82f6; }
 .orden-flecha { display: inline-block; width: 24px; color: var(--primary); font-size: 11px; }
+.orden-forrado { display: flex; flex-direction: column; gap: 7px; }
+.orden-forrado > span:first-child { font-weight: 700; color: var(--text-muted); }
+.orden-forrado input { position: absolute; opacity: 0; pointer-events: none; }
+.orden-forrado strong { display: inline-flex; align-items: center; width: fit-content; min-height: 28px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-card); color: var(--text-muted); cursor: pointer; }
+.orden-forrado:has(input:checked) strong { border-color: var(--primary); background: var(--primary-soft, #eaf2ff); color: var(--primary); }
 .orden-fila-abierta td { background: var(--primary-soft, #eff6ff); }
 .orden-fila-clickable { cursor: pointer; }
 .orden-fila-clickable:focus { outline: 2px solid var(--primary); outline-offset: -2px; }

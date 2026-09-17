@@ -1,20 +1,24 @@
 import NombreSugerido from "../components/NombreSugerido";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Selector from "../components/Selector";
 import Toast from "../components/Toast";
+import ConfirmModal from "../components/ConfirmModal";
 import ClearableSearch from "../components/ClearableSearch";
 import { useNativeTableSorting } from "../components/SortableHeader";
 import Pagination from "../components/Pagination";
 import SeparadorListado from "../components/SeparadorListado";
 import usePagination from "../hooks/usePagination";
 import { formatearFecha } from "../utils/dateFormat";
+import useUnsavedFormWarning from "../hooks/useUnsavedFormWarning";
 import "../styles/RecepcionCortes.css";
 
 const nuevaLinea = () => ({ orden_id: "", remito: "", cantidad: "", estado: "Conforme", observaciones: "" });
 const hoy = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const articuloVisible = (valor) => String(valor || "").replace(/^BASE\s*-/i, "") || "—";
 export default function RecepcionCortes() {
+  const navigate = useNavigate();
   const [recepciones, setRecepciones] = useState([]), [ordenes, setOrdenes] = useState([]), [productos, setProductos] = useState([]);
   const [abierto, setAbierto] = useState(false), [editando, setEditando] = useState(null);
   const [fecha, setFecha] = useState(hoy), [controlador, setControlador] = useState(""), [lineas, setLineas] = useState([nuevaLinea()]);
@@ -23,6 +27,7 @@ export default function RecepcionCortes() {
   const [campoOrden, setCampoOrden] = useState("fecha");
   useNativeTableSorting(".r018-tabla", { campo: campoOrden, setCampo: setCampoOrden, direccion, setDireccion }, { "Fecha de recepción": "fecha", "N° orden": "numero_orden", "N° remito": "remito" });
   const enviando = useRef(false), formulario = useRef(null);
+  const salida = useUnsavedFormWarning({ enabled: abierto, refs: [formulario], navigate });
   async function cargar() {
     setCargando(true); setError(false);
     try { const [r,o,p] = await Promise.all([axios.get("/api/recepcion-cortes/"), axios.get("/api/ordenes/"), axios.get("/api/productos/")]); setRecepciones(r.data); setOrdenes(o.data); setProductos(p.data); }
@@ -59,6 +64,7 @@ export default function RecepcionCortes() {
   }
   return <section className="recepcion-cortes">
     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+    <ConfirmModal open={Boolean(salida.salidaPendiente)} title="Cambios sin guardar" message="Hay datos de recepción sin guardar. Si salís, se perderán." confirmText="Salir sin guardar" danger onCancel={salida.cancelarSalida} onConfirm={salida.confirmarSalida} />
     <div className="ui-page-header ui-page-header-row"><div><h1>Recepción de cortes R018/1</h1><p>Control de los cortes recibidos en fábrica, vinculados a sus órdenes.</p></div>{!abierto && <button className="ui-btn ui-btn-primary" disabled={cargando || error} onClick={() => abrir()}>+ Nueva recepción</button>}</div>
     {abierto && <form className="ui-form-card" onSubmit={guardar} ref={formulario}>
       <h2>{editando ? "Editar recepción" : "Nueva recepción"} · R018/1</h2>
@@ -77,7 +83,7 @@ export default function RecepcionCortes() {
             {l.estado === "No conforme" && <label className="r018-observaciones">Observaciones<textarea required maxLength={500} rows={2} value={l.observaciones} onChange={e => actualizar(i,"observaciones",e.target.value)} placeholder="Describí el motivo de la no conformidad" /><small>{l.observaciones.length}/500</small></label>}
           </div>;
         })}</div>
-        <div className="r018-acciones"><button type="button" className="ui-btn ui-btn-secondary" disabled={lineas.length >= 200} onClick={() => setLineas([...lineas,nuevaLinea()])}>+ Agregar orden</button><strong>Total recibido: {lineas.reduce((s,l) => s + Number(l.cantidad || 0),0)} pares</strong><div><button type="button" className="ui-btn ui-btn-secondary" onClick={() => setAbierto(false)}>Cancelar</button><button className="ui-btn ui-btn-primary" type="submit">{guardando ? "Guardando…" : "Guardar recepción"}</button></div></div>
+        <div className="r018-acciones"><button type="button" className="ui-btn ui-btn-secondary" disabled={lineas.length >= 200} onClick={() => setLineas([...lineas,nuevaLinea()])}>+ Agregar orden</button><strong>Total recibido: {lineas.reduce((s,l) => s + Number(l.cantidad || 0),0)} pares</strong><div><button type="button" className="ui-btn ui-btn-secondary" onClick={() => salida.solicitarSalida(() => setAbierto(false))}>Cancelar</button><button className="ui-btn ui-btn-primary" type="submit">{guardando ? "Guardando…" : "Guardar recepción"}</button></div></div>
       </fieldset>
     </form>}
     {abierto && <SeparadorListado titulo="Recepciones registradas" descripcion="Historial de ingresos de cortes a fábrica." />}

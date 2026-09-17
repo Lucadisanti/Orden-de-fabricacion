@@ -18,6 +18,7 @@ import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import { articuloVisible } from "../utils/articulo";
+import useUnsavedFormWarning from "../hooks/useUnsavedFormWarning";
 import "../styles/Planillas.css";
 
 export default function Planillas() {
@@ -96,6 +97,7 @@ export default function Planillas() {
     maquinas_id_maquina: "",
     estado: "Pendiente",
   });
+  const salida = useUnsavedFormWarning({ enabled: Boolean(mostrarFormulario || planillaSeleccionada), refs: [formRef, planillaAbiertaRef], navigate });
 
   useEffect(() => {
     cargarDatos();
@@ -423,6 +425,7 @@ export default function Planillas() {
 
       setEditando(false);
       setIdEditando(null);
+      salida.limpiarCambios();
       setMostrarFormulario(false);
       cargarDatos();
       if (planillaCreada) gestionarPlanilla(planillaCreada, "produccion");
@@ -817,6 +820,7 @@ export default function Planillas() {
         )
       );
 
+      salida.limpiarCambios();
       setTallesForm(crearTallesIniciales());
       if (esPlanillaInyeccion) reiniciarVariante();
       if (esPlanillaInyeccion) setVariantesPendientes([]);
@@ -990,6 +994,7 @@ export default function Planillas() {
       />
       <CatalogModal key={altaCatalogoVariante || "catalogo-variante-cerrado"} open={Boolean(altaCatalogoVariante)} title={altaCatalogoVariante === "puntera" ? "Agregar tipo de puntera" : "Agregar adicional"} codeLength={2} onConfirm={crearCatalogoVariante} onCancel={() => setAltaCatalogoVariante(null)} />
 
+      <ConfirmModal open={Boolean(salida.salidaPendiente)} title="Cambios sin guardar" message="Hay datos de la planilla sin guardar. Si salís, se perderán." confirmText="Salir sin guardar" danger onCancel={salida.cancelarSalida} onConfirm={salida.confirmarSalida} />
       <ConfirmModal
         open={Boolean(confirmacion)}
         title={confirmacion?.title}
@@ -1005,7 +1010,7 @@ export default function Planillas() {
           <p>Control de la Planilla de Calzado, Inyección e Inspección final R013/1.</p>
         </div>
 
-        <button className="ui-btn ui-btn-primary" onClick={abrirFormularioNuevo}>
+        <button className="ui-btn ui-btn-primary" onClick={() => salida.solicitarSalida(abrirFormularioNuevo)}>
           + Nueva planilla
         </button>
 
@@ -1064,9 +1069,11 @@ export default function Planillas() {
                 type="button"
                 className="ui-btn ui-btn-secondary"
                 onClick={() => {
-                  setMostrarFormulario(false);
-                  setEditando(false);
-                  setIdEditando(null);
+                  salida.solicitarSalida(() => {
+                    setMostrarFormulario(false);
+                    setEditando(false);
+                    setIdEditando(null);
+                  });
                 }}
               >
                 Cancelar
@@ -1089,10 +1096,10 @@ export default function Planillas() {
               </p>
             </div>
             <div className="ui-form-actions">
-              <button type="button" className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(planillaSeleccionada)}>
+              <button type="button" className="ui-btn ui-btn-secondary" onClick={() => salida.solicitarSalida(() => iniciarEdicion(planillaSeleccionada))}>
                 Editar datos generales
               </button>
-              {(!esPlanillaInyeccion || seccionAbierta !== "produccion") && <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPlanillaSeleccionada(null)}>
+              {(!esPlanillaInyeccion || seccionAbierta !== "produccion") && <button type="button" className="ui-btn ui-btn-secondary" onClick={() => salida.solicitarSalida(() => setPlanillaSeleccionada(null))}>
                 Cerrar
               </button>}
             </div>

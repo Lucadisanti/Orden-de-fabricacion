@@ -341,9 +341,11 @@ export default function Trazabilidad() {
     dibujarEncabezado();
 
     tituloSeccion("Datos generales de la orden");
+    const datosGeneralesHead = ["Articulo", "Producto", ...(ordenSeleccionada.es_forrado ? ["Adicional"] : []), "Color", "Estado", "Pares solicitados"];
+    const datosGeneralesBody = [articuloVisible(ordenSeleccionada.articulo_producto), valor(ordenSeleccionada.producto || ordenSeleccionada.nombre_producto), ...(ordenSeleccionada.es_forrado ? ["Forrado"] : []), valor(ordenSeleccionada.color), mostrarEstado(ordenSeleccionada.estado), valor(totalPlanificado)];
     tabla(
-      ["Articulo", "Producto", "Color", "Estado", "Pares solicitados"],
-      [[articuloVisible(ordenSeleccionada.articulo_producto), valor(ordenSeleccionada.producto || ordenSeleccionada.nombre_producto), valor(ordenSeleccionada.color), mostrarEstado(ordenSeleccionada.estado), valor(totalPlanificado)]],
+      datosGeneralesHead,
+      [datosGeneralesBody],
       { alternateRowStyles: {}, pageBreak: "avoid" }
     );
 

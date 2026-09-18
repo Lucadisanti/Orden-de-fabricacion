@@ -15,7 +15,7 @@ const normalizar = valor => String(valor || "").normalize("NFD").replace(/[\u030
 export default function NombreSugerido({ campo, tipo, value = "", onChange, ...props }) {
   const anchor = useRef(null), id = useId();
   const etiqueta = String(props["aria-label"] || "").toLowerCase();
-  const campoSugerencias = campo || (props.name === "recibido_por" ? "recibido_por" : etiqueta.includes("calzado") ? "operarios_calzado" : etiqueta.includes("puntera") ? "operarios_puntera" : etiqueta.includes("inyección") ? "operarios_inyeccion" : etiqueta.includes("inspección") ? "operarios_inspeccion_final" : props.maxLength === 100 ? "controlador" : tipo === "talleres" ? "taller_aparado" : props.required ? "operarios_inyeccion" : "operario_corte");
+  const campoSugerencias = campo || (props.name === "recibido_por" ? "recibido_por" : etiqueta.includes("calzado") ? "operarios_calzado" : etiqueta.includes("puntera") ? "operarios_puntera" : etiqueta.includes("inyección") ? "operarios_inyeccion" : etiqueta.includes("inspección") ? "operarios_inspeccion_final" : etiqueta.includes("controlador") || props.maxLength === 100 ? "controlador" : tipo === "talleres" ? "taller_aparado" : props.required ? "operarios_inyeccion" : "operario_corte");
   const [opciones, setOpciones] = useState([]), [abierto, setAbierto] = useState(false), [activo, setActivo] = useState(-1);
   const [limpiando, setLimpiando] = useState(false), [error, setError] = useState("");
   async function limpiar() {

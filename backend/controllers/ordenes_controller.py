@@ -104,18 +104,21 @@ def _guardar_orden(id_orden=None):
     if not talles: return jsonify({"error": "Debe cargar al menos un talle con cantidad."}), 400
     fecha_aparado = data.get("fecha_aparado") or None
     try:
+        fecha_corte = date.fromisoformat(data.get("fecha")).isoformat()
         if fecha_aparado: fecha_aparado = date.fromisoformat(fecha_aparado).isoformat()
     except (ValueError, TypeError):
-        return jsonify({"error": "La fecha de aparado no es válida."}), 400
+        return jsonify({"error": "La fecha de corte o de aparado no es válida."}), 400
+    if fecha_aparado and fecha_aparado < fecha_corte:
+        return jsonify({"error": "La fecha de aparado no puede ser anterior a la fecha de corte."}), 400
     conn = get_connection(); cursor = conn.cursor(dictionary=True)
     try:
         _asegurar_fecha_aparado(cursor); _asegurar_forrado(cursor)
-        valores = (data.get("producto_id_producto"), data.get("numero_orden"), data.get("fecha"), 1 if data.get("es_forrado") else 0)
+        valores = (data.get("producto_id_producto"), data.get("numero_orden"), fecha_corte, 1 if data.get("es_forrado") else 0)
         if id_orden: cursor.execute("UPDATE orden_fabricacion SET producto_id_producto=%s,numero_orden=%s,fecha=%s,es_forrado=%s WHERE id_orden=%s", (*valores, id_orden))
         else: cursor.execute("INSERT INTO orden_fabricacion (producto_id_producto,numero_orden,fecha,es_forrado) VALUES (%s,%s,%s,%s)", valores); id_orden = cursor.lastrowid
         if "fecha_aparado" in data:
             cursor.execute("UPDATE orden_fabricacion SET fecha_aparado=%s WHERE id_orden=%s", (fecha_aparado, id_orden))
-        _guardar_talles(cursor, id_orden, talles); id_planilla = _guardar_r013(cursor, id_orden, data.get("fecha"), data); conn.commit()
+        _guardar_talles(cursor, id_orden, talles); id_planilla = _guardar_r013(cursor, id_orden, fecha_corte, data); conn.commit()
         return jsonify({"id_orden": id_orden, "id_planilla": id_planilla, "mensaje": "Orden guardada correctamente"}), 201 if request.method == "POST" else 200
     except Exception as error: conn.rollback(); return jsonify({"error": str(error)}), 500
     finally: cursor.close(); conn.close()

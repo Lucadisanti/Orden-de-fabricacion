@@ -1,6 +1,6 @@
-from flask import Flask
-from flask_cors import CORS
 import os
+from flask import Flask, jsonify, request, session
+from flask_cors import CORS
 
 from routes.productos_routes import productos_bp
 from routes.colores_routes import colores_bp
@@ -20,10 +20,29 @@ from routes.produccion_diaria_routes import produccion_diaria_bp
 from routes.recepcion_cortes_routes import recepcion_cortes_bp
 
 from routes.sugerencias_routes import sugerencias_bp
+from routes.auth_routes import auth_bp
+from controllers.auth_controller import configurar_admin
+from utils.registro_permisos import autorizar_cambio, enriquecer_respuesta
 
 app = Flask(__name__)
-CORS(app, origins=os.getenv("CORS_ORIGINS", "http://127.0.0.1:5173").split(","))
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "bohm-cambiar-esta-clave-en-produccion")
+CORS(app, origins=os.getenv("CORS_ORIGINS", "http://127.0.0.1:5173").split(","), supports_credentials=True)
+configurar_admin()
+@app.before_request
+def proteger_api():
+    if request.method == "OPTIONS" or not request.path.startswith("/api/") or request.path in {"/api/auth/login", "/api/auth/me", "/api/auth/logout", "/api/auth/recuperar"}: return None
+    if not session.get("usuario"): return jsonify({"error":"Sesión requerida."}),401
+    if request.path.startswith("/api/auth/usuarios") and session["usuario"]["rol"] not in {"maestro", "admin"}: return jsonify({"error":"Solo un administrador puede gestionar usuarios."}),403
+    if request.method in {"PUT", "PATCH", "DELETE"} or (request.method == "POST" and request.path.startswith("/api/planillas/") and request.path.rstrip("/") != "/api/planillas"):
+        return autorizar_cambio()
+
+@app.after_request
+def registrar_y_mostrar_autoria(response):
+    if request.path.startswith("/api/") and session.get("usuario"):
+        return enriquecer_respuesta(response)
+    return response
 app.register_blueprint(sugerencias_bp, url_prefix="/api/sugerencias")
+app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(recepcion_cortes_bp, url_prefix="/api/recepcion-cortes")
 
 app.register_blueprint(productos_bp, url_prefix="/api/productos")

@@ -7,6 +7,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
+import PermisoRegistro, { AutoriaRegistro } from "../components/PermisoRegistro";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Proveedores.css";
 
@@ -244,6 +245,7 @@ export default function Proveedores() {
         <div className="ui-form-card" ref={formRef}>
           <h2>{editando ? "Editar proveedor" : "Nuevo proveedor"}</h2>
 
+
           <form onSubmit={guardarProveedor} className="form-proveedor">
             <label>
               <span>Nombre del proveedor</span>
@@ -252,6 +254,7 @@ export default function Proveedores() {
                 name="nombre_proveedor"
                 placeholder="Nombre del proveedor"
                 value={proveedorForm.nombre_proveedor}
+
                 onChange={manejarCambio}
                 required
               />
@@ -267,6 +270,7 @@ export default function Proveedores() {
                 name="telefono"
                 placeholder="Teléfono"
                 value={proveedorForm.telefono}
+
                 onChange={manejarCambio}
               />
             </label>
@@ -340,12 +344,12 @@ export default function Proveedores() {
                       <td>{proveedor.telefono || "-"}</td>
                       <td>{proveedor.email || "-"}</td>
                       <td>
-                        <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(proveedor)}>
+                        <PermisoRegistro registro={proveedor} completar><button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(proveedor)}>
                           Editar
-                        </button>
-                        <button className="ui-btn ui-btn-danger" onClick={() => eliminarProveedor(proveedor.id_proveedor)}>
+                        </button></PermisoRegistro>
+                        <PermisoRegistro registro={proveedor} soloAdmin><button className="ui-btn ui-btn-danger" onClick={() => eliminarProveedor(proveedor.id_proveedor)}>
                           Eliminar
-                        </button>
+                        </button></PermisoRegistro><AutoriaRegistro registro={proveedor} />
                       </td>
                     </tr>
                   ))}

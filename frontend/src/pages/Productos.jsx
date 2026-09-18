@@ -162,8 +162,8 @@ export default function Productos() {
                 <thead>
                   <tr>
                     <th>Producto</th>
-                    <th>Color fijo</th>
-                    <th>Código base</th>
+                    <th>Color</th>
+                    <th>Artículo</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>

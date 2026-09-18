@@ -73,11 +73,11 @@ const secciones = {
     ruta: "/productos",
     endpoint: "/productos/",
     id: "id_producto",
-    columnas: ["Código base", "Producto", "Color"],
+    columnas: ["Producto", "Color", "Artículo"],
     celdas: (item) => [
-      String(item.articulo_producto || item.codigo_base || "").replace(/^\s*BASE\s*[-\u2010-\u2015]\s*/i, "") || "-",
       item.nombre_producto || item.producto || "-",
       item.color || "Sin color",
+      String(item.articulo_producto || item.codigo_base || "").replace(/^\s*BASE\s*[-\u2010-\u2015]\s*/i, "") || "-",
     ],
   },
   proveedores: {

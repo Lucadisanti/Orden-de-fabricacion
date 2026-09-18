@@ -28,6 +28,13 @@ def _recuperacion(cursor):
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
 
 
+def _migraciones(cursor):
+    cursor.execute("""CREATE TABLE IF NOT EXISTS migraciones_sistema (
+      clave VARCHAR(100) NOT NULL PRIMARY KEY,
+      aplicado_en DATETIME(6) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+
+
 def _actor():
     return session.get("usuario") or {}
 
@@ -37,6 +44,7 @@ def configurar_admin():
     cur = conn.cursor(dictionary=True)
     try:
         _usuarios(cur)
+        _migraciones(cur)
         cur.execute("ALTER TABLE usuarios MODIFY COLUMN rol ENUM('maestro','admin','empleado') NOT NULL DEFAULT 'empleado'")
         cur.execute("SELECT COUNT(*) AS cantidad FROM usuarios")
         if not cur.fetchone()["cantidad"]:
@@ -45,9 +53,20 @@ def configurar_admin():
         if not cur.fetchone():
             cur.execute("UPDATE usuarios SET usuario='Admin' WHERE BINARY usuario='admin'")
         cur.execute("UPDATE usuarios SET rol='maestro' WHERE BINARY usuario='Admin'")
-        cur.execute("SELECT id_usuario FROM usuarios WHERE usuario='Usuario'")
+        cur.execute("SELECT clave FROM migraciones_sistema WHERE clave='usuarios_iniciales_v1'")
         if not cur.fetchone():
-            cur.execute("INSERT INTO usuarios (usuario,nombre,password_hash,rol) VALUES (%s,%s,%s,'empleado')", ("Usuario", "Usuario", generate_password_hash("Admin1234")))
+            # Esta carga se ejecuta una sola vez por base de datos. INSERT IGNORE
+            # preserva cualquier cuenta previa con el mismo usuario.
+            for usuario, nombre, rol in (
+                ("Admin", "Administrador maestro", "maestro"),
+                ("Ariel_disanti@bohm.com", "Ariel Disanti", "admin"),
+                ("Usuario", "Usuario", "empleado"),
+            ):
+                cur.execute(
+                    "INSERT IGNORE INTO usuarios (usuario,nombre,password_hash,rol) VALUES (%s,%s,%s,%s)",
+                    (usuario, nombre, generate_password_hash("Admin1234"), rol),
+                )
+            cur.execute("INSERT INTO migraciones_sistema (clave,aplicado_en) VALUES ('usuarios_iniciales_v1',UTC_TIMESTAMP(6))")
         conn.commit()
     finally:
         cur.close()

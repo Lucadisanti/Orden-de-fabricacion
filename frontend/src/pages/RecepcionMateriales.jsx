@@ -11,6 +11,7 @@ import { useNativeTableSorting } from "../components/SortableHeader";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
+import PermisoRegistro, { AutoriaRegistro } from "../components/PermisoRegistro";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import Toast from "../components/Toast";
 import RetryMessage from "../components/RetryMessage";
@@ -42,6 +43,7 @@ export default function RecepcionMateriales() {
   const [materiales, setMateriales] = useState([]);
   const [colores, setColores] = useState([]);
   const [lotes, setLotes] = useState([]);
+  const [remitos, setRemitos] = useState([]);
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -113,6 +115,7 @@ export default function RecepcionMateriales() {
     });
     setLineas(lotesDelRemito.map((item) => ({
       id_lote: item.id_lote,
+      codigo_lote: item.codigo_lote,
       materiales_id_material: String(item.materiales_id_material || ""),
       colores_id_color: String(item.colores_id_color || ""),
       cantidad_solicitada: item.cantidad_solicitada ?? "",
@@ -127,17 +130,19 @@ export default function RecepcionMateriales() {
   async function cargarDatos() {
     setCargando(true);
     try {
-      const [provRes, matRes, colRes, lotesRes] = await Promise.all([
+      const [provRes, matRes, colRes, lotesRes, remitosRes] = await Promise.all([
         axios.get("/api/proveedores/"),
         axios.get("/api/materiales/"),
         axios.get("/api/colores/"),
         axios.get("/api/lotes/"),
+        axios.get("/api/remitos/"),
       ]);
 
       setProveedores(provRes.data);
       setMateriales(matRes.data);
       setColores(colRes.data);
       setLotes(lotesRes.data);
+      setRemitos(remitosRes.data);
       setError("");
     } catch (error) {
       console.error(error);
@@ -291,6 +296,7 @@ export default function RecepcionMateriales() {
         proveedores_id_proveedor: Number(form.proveedores_id_proveedor),
         materiales: lineas.map((linea) => ({
           id_lote: linea.id_lote,
+          codigo_lote: linea.codigo_lote || null,
           materiales_id_material: Number(linea.materiales_id_material),
           colores_id_color: linea.colores_id_color ? Number(linea.colores_id_color) : null,
           cantidad_solicitada: Number(linea.cantidad_solicitada),
@@ -380,7 +386,7 @@ export default function RecepcionMateriales() {
 
   const recepciones = Object.values(lotes.reduce((grupos, lote) => {
     const clave = String(lote.remitos_id_remito);
-    if (!grupos[clave]) grupos[clave] = { ...lote, materiales: [] };
+    if (!grupos[clave]) grupos[clave] = { ...lote, ...remitos.find((remito) => String(remito.id_remito) === clave), materiales: [] };
     grupos[clave].materiales.push(lote);
     return grupos;
   }, {}));
@@ -464,6 +470,7 @@ export default function RecepcionMateriales() {
       {mostrarFormulario && (
       <div ref={formularioRef} className="ui-form-card recepcion-formulario-card">
         <h2>{editando ? "Editar recepción" : "Nueva recepción"}</h2>
+
 
         <form onSubmit={guardarRecepcion} className="form-recepcion">
           <div className="form-grid">
@@ -669,7 +676,7 @@ export default function RecepcionMateriales() {
                     <td>{totalRecibido}</td>
                     <td>{formatearFecha(recepcion.fecha_entrega || recepcion.fecha_solicitud)}</td>
                     <td className="recepcion-acciones-tabla">
-                      <button
+                      <PermisoRegistro registro={recepcion} completar><button
                         type="button"
                         className="ui-btn ui-btn-secondary"
                         onClick={(e) => {
@@ -678,8 +685,8 @@ export default function RecepcionMateriales() {
                         }}
                       >
                         Editar
-                      </button>
-                      <button
+                      </button></PermisoRegistro>
+                      <PermisoRegistro registro={recepcion} soloAdmin><button
                         type="button"
                         className="ui-btn ui-btn-danger"
                         onClick={(e) => {
@@ -688,7 +695,7 @@ export default function RecepcionMateriales() {
                         }}
                       >
                         Eliminar
-                      </button>
+                      </button></PermisoRegistro><AutoriaRegistro registro={recepcion} />
                     </td>
                   </tr>
 

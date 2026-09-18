@@ -7,6 +7,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
+import PermisoRegistro, { AutoriaRegistro } from "../components/PermisoRegistro";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import "../styles/Materiales.css";
 
@@ -295,12 +296,12 @@ export default function Materiales() {
                     <tr key={material.id_material}>
                       <td>{material.material}</td>
                       <td>
-                        <button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(material)}>
+                        <PermisoRegistro registro={material}><button className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(material)}>
                           Editar
-                        </button>
-                        <button className="ui-btn ui-btn-danger" onClick={() => eliminarMaterial(material.id_material)}>
+                        </button></PermisoRegistro>
+                        <PermisoRegistro registro={material} soloAdmin><button className="ui-btn ui-btn-danger" onClick={() => eliminarMaterial(material.id_material)}>
                           Eliminar
-                        </button>
+                        </button></PermisoRegistro><AutoriaRegistro registro={material} />
                       </td>
                     </tr>
                   ))}

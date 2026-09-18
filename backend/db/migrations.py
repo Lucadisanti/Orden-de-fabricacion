@@ -216,6 +216,9 @@ def migrate_schema(connection=None):
         if not lock_acquired:
             raise RuntimeError("No se pudo obtener el bloqueo para actualizar la base de datos.")
 
+        from utils.registro_permisos import asegurar_esquema
+        asegurar_esquema(cursor)
+
         # Un producto conserva modelo y color; puntera y adicionales forman variantes
         # que se eligen dentro de cada orden.
         cursor.execute(

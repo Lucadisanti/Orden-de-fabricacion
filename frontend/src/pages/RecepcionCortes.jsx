@@ -10,6 +10,7 @@ import { useNativeTableSorting } from "../components/SortableHeader";
 import Pagination from "../components/Pagination";
 import SeparadorListado from "../components/SeparadorListado";
 import usePagination from "../hooks/usePagination";
+import PermisoRegistro, { AutoriaRegistro } from "../components/PermisoRegistro";
 import { formatearFecha } from "../utils/dateFormat";
 import useUnsavedFormWarning from "../hooks/useUnsavedFormWarning";
 import "../styles/RecepcionCortes.css";
@@ -37,7 +38,7 @@ export default function RecepcionCortes() {
   useEffect(() => { cargar(); }, []);
   const filas = recepciones.flatMap(recepcion => recepcion.lineas.map(linea => ({...linea, fecha: recepcion.fecha, controlador: recepcion.controlador, recepcion})));
   const filtradas = filas.filter(l => [l.fecha, formatearFecha(l.fecha), l.controlador, l.numero_orden, articuloVisible(l.articulo), l.producto, l.color, l.remito, l.estado, l.observaciones].join(" ").toLowerCase().includes(busqueda.toLowerCase()));
-  const ordenadas = [...filtradas].sort((a,b) => String(a[campoOrden] ?? "").localeCompare(String(b[campoOrden] ?? ""), "es", { numeric: true }) * (direccion === "asc" ? 1 : -1));
+  const ordenadas = [...filtradas].sort((a,b) => (String(a[campoOrden] ?? "").localeCompare(String(b[campoOrden] ?? ""), "es", { numeric: true }) || String(a.numero_orden ?? "").localeCompare(String(b.numero_orden ?? ""), "es", { numeric: true })) * (direccion === "asc" ? 1 : -1));
   const paginacion = usePagination(ordenadas);
   const maximoFila = (linea, indice) => {
     const orden = ordenes.find(o => String(o.id_orden) === String(linea.orden_id));
@@ -68,13 +69,14 @@ export default function RecepcionCortes() {
     <div className="ui-page-header ui-page-header-row"><div><h1>Recepción de cortes R018/1</h1><p>Control de los cortes recibidos en fábrica, vinculados a sus órdenes.</p></div>{!abierto && <button className="ui-btn ui-btn-primary" disabled={cargando || error} onClick={() => abrir()}>+ Nueva recepción</button>}</div>
     {abierto && <form className="ui-form-card" onSubmit={guardar} ref={formulario}>
       <h2>{editando ? "Editar recepción" : "Nueva recepción"} · R018/1</h2>
+
       <fieldset disabled={guardando} className="r018-campos">
         <div className="r018-cabecera"><label>Fecha de recepción<input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} /></label><label>Nombre del controlador<NombreSugerido required maxLength={100} value={controlador} onChange={e => setControlador(e.target.value)} /></label></div>
         <div className="r018-filas">{lineas.map((l,i) => {
           const orden = ordenes.find(o => String(o.id_orden) === String(l.orden_id));
           const producto = productos.find(p => String(p.id_producto) === String(orden?.producto_id_producto));
           return <div className="r018-linea" key={i}>{lineas.length > 1 && <div className="r018-linea-titulo"> <button type="button" className="ui-btn ui-btn-danger" onClick={() => setLineas(lineas.filter((_,j) => j !== i))} aria-label={"Quitar fila " + (i+1)}>Quitar</button></div>}
-            <div className="r018-grid"><label>Número de orden<Selector required value={l.orden_id} onChange={e => actualizar(i,"orden_id",e.target.value)}><option value="">Seleccione orden</option>{ordenes.map(o => <option key={o.id_orden} value={o.id_orden}>{o.numero_orden} · {o.producto} · {o.color}</option>)}</Selector></label>
+            <div className="r018-grid"><label>Número de orden<Selector required value={l.orden_id} onChange={e => actualizar(i,"orden_id",e.target.value)}><option value="">Seleccione orden</option>{ordenes.filter(o => String(o.id_orden) === String(l.orden_id) || maximoFila({ ...l, orden_id: String(o.id_orden) }, i) > 0).map(o => <option key={o.id_orden} value={o.id_orden}>{o.numero_orden} · {o.producto} · {o.color}</option>)}</Selector></label>
               <div className="r018-articulo"><span>Artículo y color</span><strong>{orden ? `${articuloVisible(producto?.articulo_producto)} · ${orden.color || "Sin color"}` : "Seleccioná una orden"}</strong><small>{orden?.producto}</small></div>
               <label>N° remito<input required maxLength={100} value={l.remito} onChange={e => actualizar(i,"remito",e.target.value)} /></label>
               <label>Pares recibidos<input aria-label="Pares recibidos" type="number" min="1" max={maximoFila(l,i)} disabled={!orden} step="1" required value={l.cantidad} onChange={e => actualizar(i,"cantidad",e.target.value)} /><small>Disponible: {maximoFila(l,i)} pares</small></label>
@@ -98,7 +100,7 @@ export default function RecepcionCortes() {
           <td>{l.remito}</td><td><strong>{l.cantidad}</strong></td>
           <td><span className={"ui-status-badge " + (l.estado === "Conforme" ? "r018-conforme" : "r018-no-conforme")}>{l.estado}</span></td>
           <td className="r018-observacion-celda">{l.observaciones || "—"}</td><td>{l.controlador}</td>
-          <td><button className="ui-btn ui-btn-secondary" disabled={guardando} title="Editar la recepción completa" onClick={() => abrir(l.recepcion)}>Editar</button></td>
+          <td><PermisoRegistro registro={l.recepcion} completar><button className="ui-btn ui-btn-secondary" disabled={guardando} title="Editar la recepción completa" onClick={() => abrir(l.recepcion)}>Editar</button></PermisoRegistro><AutoriaRegistro registro={l.recepcion} /></td>
         </tr>)}</tbody>
       </table></div><Pagination {...paginacion} />
     </>}

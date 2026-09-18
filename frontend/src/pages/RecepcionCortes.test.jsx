@@ -1,17 +1,20 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import axios from "axios";
+import { MemoryRouter } from "react-router-dom";
 import RecepcionCortes from "./RecepcionCortes";
 
 vi.mock("axios");
 beforeEach(() => {
   vi.resetAllMocks(); Element.prototype.scrollIntoView = vi.fn();
+  document.documentElement.dataset.rol = "admin";
   axios.get.mockImplementation(async url => ({data: url === "/api/ordenes/" ? [
     {id_orden:1,total_pares:180,numero_orden:"0121",producto_id_producto:1,producto:"Bota",color:"Negro"},
   ] : url === "/api/productos/" ? [{id_producto:1,articulo_producto:"BASE-10009"}] : []}));
   axios.post.mockResolvedValue({data:{id_recepcion:1}});
 });
+afterEach(() => { delete document.documentElement.dataset.rol; });
 
 it("muestra las órdenes como filas y filtra cada detalle de la recepción", async () => {
   const user = userEvent.setup();
@@ -21,12 +24,12 @@ it("muestra las órdenes como filas y filtra cada detalle de la recepción", asy
       {id_linea:2,numero_orden:"0122",articulo:"20009",producto:"Zapato",color:"Negro",remito:"REM-B",cantidad:10,estado:"No conforme",observaciones:"Corte marcado"},
     ],
   }] : []}));
-  render(<RecepcionCortes />);
+  render(<MemoryRouter><RecepcionCortes /></MemoryRouter>);
   const tabla = await screen.findByRole("table");
   expect(within(tabla).getAllByRole("row")).toHaveLength(3);
   expect(within(tabla).getByText("Corte marcado")).toBeInTheDocument();
   expect(within(tabla).getAllByRole("row")[1]).toHaveTextContent("0122");
-  await user.click(screen.getByRole("button", {name:"Cambiar a orden ascendente"}));
+  await user.click(screen.getByRole("columnheader", {name:"Fecha de recepción"}));
   expect(within(tabla).getAllByRole("row")[1]).toHaveTextContent("0121");
   await user.type(screen.getByPlaceholderText(/Buscar orden/),"REM-B");
   expect(within(tabla).getAllByRole("row")).toHaveLength(2);
@@ -35,7 +38,7 @@ it("muestra las órdenes como filas y filtra cada detalle de la recepción", asy
 });
 
 it("guarda varias órdenes con pares totales, controlador y observación condicional", async () => {
-  const user = userEvent.setup(); render(<RecepcionCortes />);
+  const user = userEvent.setup(); render(<MemoryRouter><RecepcionCortes /></MemoryRouter>);
   const nuevo = await screen.findByRole("button",{name:/Nueva recepción/});
   await waitFor(() => expect(nuevo).toBeEnabled()); await user.click(nuevo);
   expect(screen.queryByRole("heading", {name:"Orden 1"})).not.toBeInTheDocument();
@@ -72,7 +75,7 @@ it("descuenta tandas previas y devuelve su cupo al editar", async () => {
       {id_linea:1,orden_id:1,numero_orden:"0121",articulo:"10009",producto:"Bota",color:"Negro",remito:"0001",cantidad:100,estado:"Conforme",observaciones:""},
     ],
   }] : url === "/api/ordenes/" ? [{id_orden:1,total_pares:180,numero_orden:"0121",producto:"Bota",color:"Negro"}] : []}));
-  render(<RecepcionCortes />);
+  render(<MemoryRouter><RecepcionCortes /></MemoryRouter>);
   await screen.findByRole("table");
   await user.click(screen.getByRole("button",{name:/Nueva recepción/}));
   await user.click(screen.getByRole("combobox",{name:"Número de orden"}));

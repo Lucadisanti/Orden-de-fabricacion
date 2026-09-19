@@ -174,6 +174,7 @@ export default function Planillas() {
       setOrdenesDisponibles(disponibilidadRes.data);
       setDistribucionPlanillas(Object.fromEntries(distribucionRes.data.map((item) => [item.id_planilla, item])));
       setCargando(false);
+      return planillasRes.data;
     } catch (error) {
       console.error(error);
       setError("No se pudieron cargar las planillas.");
@@ -297,6 +298,7 @@ export default function Planillas() {
       Number(esperadosPorTalle[String(talle)] || 0) - Number(realizadosPorTalle[String(talle)] || 0), 0
     ), 0
   );
+  const planillaFinalizada = Boolean(planillaSeleccionada) && tallesPlanificados.length > 0 && totalPendiente === 0;
 
   const manejarEnterTalle = (event, index) => {
     if (event.key !== "Enter") return;
@@ -827,7 +829,9 @@ export default function Planillas() {
       setTallesForm(crearTallesIniciales());
       if (esPlanillaInyeccion) reiniciarVariante();
       if (esPlanillaInyeccion) setVariantesPendientes([]);
-      gestionarPlanilla(planillaSeleccionada);
+      const planillasActualizadas = await cargarDatos();
+      const planillaActualizada = planillasActualizadas?.find((planilla) => Number(planilla.id_planilla) === Number(planillaSeleccionada.id_planilla));
+      gestionarPlanilla(planillaActualizada || planillaSeleccionada);
       mostrarToast("success", esPlanillaInyeccion ? "Producción guardada" : "Talles cargados", esPlanillaInyeccion ? "Las combinaciones, sus materiales y cantidades quedaron registradas." : "Los talles se guardaron correctamente.");
     } catch (error) {
       console.error(error);
@@ -1125,7 +1129,7 @@ export default function Planillas() {
 
           {esPlanillaInyeccion && produccionesOrdenadas.filter((item) => item.numero < numeroProduccionVisible).map(renderProduccionContraida)}
 
-          {esPlanillaInyeccion && <button type="button" ref={produccionActivaRef} aria-expanded={produccionActivaAbierta} className={`planilla-produccion-acordeon ${produccionActivaAbierta ? "activo" : ""}`} onClick={() => setProduccionActivaAbierta((abierta) => !abierta)}><span><strong>Producción {numeroProduccionVisible}</strong><small>{articuloVariante || "Sin configurar"} · {maquinas.find((maquina) => String(maquina.id_maquina) === String(varianteForm.maquinas_id_maquina))?.nombre_maquina || "Sin inyectora"} · {calcularTotalPares()} pares{varianteForm.id_linea ? " · Registrada" : ""}</small><small>Fecha: {formatearFecha(varianteForm.fecha || planillaSeleccionada.fecha)}</small></span>{varianteForm.id_linea && <strong className={`trazabilidad-inspeccion-estado ${varianteForm.estado_inspeccion === "Conforme" ? "conforme" : varianteForm.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{varianteForm.estado_inspeccion || "Pendiente"}</strong>}<b>{produccionActivaAbierta ? "▲" : "▼"}</b></button>}
+          {esPlanillaInyeccion && (produccionActivaAbierta || varianteForm.id_linea) && <button type="button" ref={produccionActivaRef} aria-expanded={produccionActivaAbierta} className={`planilla-produccion-acordeon ${produccionActivaAbierta ? "activo" : ""}`} onClick={() => setProduccionActivaAbierta((abierta) => !abierta)}><span><strong>Producción {numeroProduccionVisible}</strong><small>{articuloVariante || "Sin configurar"} · {maquinas.find((maquina) => String(maquina.id_maquina) === String(varianteForm.maquinas_id_maquina))?.nombre_maquina || "Sin inyectora"} · {calcularTotalPares()} pares{varianteForm.id_linea ? " · Registrada" : ""}</small><small>Fecha: {formatearFecha(varianteForm.fecha || planillaSeleccionada.fecha)}</small></span>{varianteForm.id_linea && <strong className={`trazabilidad-inspeccion-estado ${varianteForm.estado_inspeccion === "Conforme" ? "conforme" : varianteForm.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{varianteForm.estado_inspeccion || "Pendiente"}</strong>}<b>{produccionActivaAbierta ? "▲" : "▼"}</b></button>}
 
           {esPlanillaInyeccion && produccionActivaAbierta && <div className="planilla-variante-editor">
             <div className="planilla-variante-titulo"><div><strong>Carga de producción</strong><span>Completá la configuración y las cantidades por talle.</span></div><div className="planilla-articulo-variante"><span>Artículo resultante</span><strong>{articuloVariante || "Completá la configuración"}</strong></div></div>
@@ -1216,7 +1220,7 @@ export default function Planillas() {
           </div>}
 
           {esPlanillaInyeccion && produccionesOrdenadas.filter((item) => item.numero > numeroProduccionVisible).map(renderProduccionContraida)}
-          {esPlanillaInyeccion && <div className="ui-form-actions">{!corrigiendoRealizados && <button type="button" className="ui-btn ui-btn-secondary" onClick={prepararOtraVariante}>Cargar nueva producción</button>}<button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPlanillaSeleccionada(null)}>Cerrar</button></div>}
+          {esPlanillaInyeccion && <div className="ui-form-actions">{!corrigiendoRealizados && !planillaFinalizada && <button type="button" className="ui-btn ui-btn-secondary" onClick={prepararOtraVariante}>Cargar nueva producción</button>}<button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPlanillaSeleccionada(null)}>Cerrar</button></div>}
           </form>}
 
           {!esPlanillaInyeccion && <button type="button" className={`planilla-acordeon ${seccionAbierta === "operarios" ? "activo" : ""}`} onClick={() => setSeccionAbierta(seccionAbierta === "operarios" ? "" : "operarios")}>

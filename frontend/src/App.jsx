@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Login from "./pages/Login";
 
@@ -23,6 +23,37 @@ import useEnterToNextField from "./hooks/useEnterToNextField";
 import "./App.css";
 import "./styles/ui.css";
 
+function AppShell({ usuario, onLogout }) {
+  return <div className="app-layout">
+    <Sidebar usuario={usuario} onLogout={onLogout}/>
+    <main className="main-content"><Outlet /></main>
+  </div>;
+}
+
+function Aplicacion({ usuario, onLogout }) {
+  const router = useMemo(() => createBrowserRouter([{
+    path: "/",
+    element: <AppShell usuario={usuario} onLogout={onLogout} />,
+    children: [
+      { index: true, element: <Dashboard /> },
+      { path: "estadisticas", element: <Estadisticas /> },
+      { path: "productos", element: <Productos /> },
+      { path: "proveedores", element: <Proveedores /> },
+      { path: "recepcion-materiales", element: <RecepcionMateriales /> },
+      { path: "materiales", element: <Materiales /> },
+      { path: "ordenes", element: <Ordenes /> },
+      { path: "recepcion-cortes", element: <RecepcionCortes /> },
+      { path: "planillas", element: <Planillas /> },
+      { path: "produccion-diaria", element: <ProduccionDiaria /> },
+      { path: "uso-materiales", element: <UsoMateriales /> },
+      { path: "trazabilidad", element: <Trazabilidad /> },
+      ...(["maestro", "admin"].includes(usuario.rol) ? [{ path: "usuarios", element: <Usuarios /> }] : []),
+      { path: "*", element: <Navigate to="/" replace /> },
+    ],
+  }]), [usuario, onLogout]);
+  return <RouterProvider router={router} />;
+}
+
 function App() {
   useEnterToNextField();
   const [usuario,setUsuario]=useState(undefined);
@@ -31,34 +62,7 @@ function App() {
   if(usuario===undefined)return null;
   if(!usuario)return <Login onLogin={setUsuario}/>;
 
-  return (
-    <BrowserRouter>
-      <div className="app-layout">
-
-        <Sidebar usuario={usuario} onLogout={()=>axios.post("/api/auth/logout").finally(()=>setUsuario(null))}/>
-
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/estadisticas" element={<Estadisticas />} />
-            <Route path="/productos" element={<Productos />} />
-            <Route path="/proveedores" element={<Proveedores />} />
-            <Route path="/recepcion-materiales" element={<RecepcionMateriales />}/>
-            <Route path="/materiales" element={<Materiales />} />
-            <Route path="/ordenes" element={<Ordenes />} />
-            <Route path="/recepcion-cortes" element={<RecepcionCortes />} />
-            <Route path="/planillas" element={<Planillas />} />
-            <Route path="/produccion-diaria" element={<ProduccionDiaria />} />
-            <Route path="/uso-materiales" element={<UsoMateriales />} />
-            <Route path="/trazabilidad" element={<Trazabilidad />} />
-            {["maestro", "admin"].includes(usuario.rol) && <Route path="/usuarios" element={<Usuarios />} />}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-
-      </div>
-    </BrowserRouter>
-  );
+  return <Aplicacion usuario={usuario} onLogout={()=>axios.post("/api/auth/logout").finally(()=>setUsuario(null))}/>;
 }
 
 export default App;

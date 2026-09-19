@@ -646,7 +646,7 @@ def crear_produccion_diaria():
                 id_variante = _obtener_o_crear_variante(cursor, id_orden, id_tipo_puntera, adicionales_linea)
                 cursor.execute(
                     """
-                    SELECT id_planilla FROM planilla_produccion
+                    SELECT id_planilla, estado FROM planilla_produccion
                     WHERE orden_fabricacion_id_orden = %s
                       AND (UPPER(numero_planilla) = 'R013/1' OR tipo_planilla IN ('Calzado e Inyección', 'Planilla de Calzado, Inyección e Inspección final'))
                     ORDER BY id_planilla LIMIT 1
@@ -656,6 +656,8 @@ def crear_produccion_diaria():
                 planilla = cursor.fetchone()
                 if planilla:
                     id_planilla = planilla["id_planilla"]
+                    if str(planilla["estado"] or "").strip().lower() == "finalizada":
+                        raise ValueError("La planilla está finalizada. Corregí una producción existente para volverla a abrir.")
                     cursor.execute(
                         "UPDATE planilla_produccion SET estado = 'En proceso' WHERE id_planilla = %s",
                         (id_planilla,),

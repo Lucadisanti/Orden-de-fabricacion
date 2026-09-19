@@ -60,7 +60,7 @@ function App() {
   useEffect(()=>{axios.get("/api/auth/me").then(r=>setUsuario(r.data)).catch(()=>setUsuario(null));},[]);
   useEffect(()=>{ if(usuario) { document.documentElement.dataset.rol=usuario.rol; document.documentElement.dataset.usuarioId=usuario.id; } else { delete document.documentElement.dataset.rol; delete document.documentElement.dataset.usuarioId; } window.dispatchEvent(new Event("identidad-actualizada")); },[usuario]);
   if(usuario===undefined)return null;
-  if(!usuario)return <Login onLogin={setUsuario}/>;
+  if(!usuario)return <Login onLogin={(datos) => { window.history.replaceState(window.history.state, "", "/"); setUsuario(datos); }}/>;
 
   return <Aplicacion usuario={usuario} onLogout={()=>axios.post("/api/auth/logout").finally(()=>setUsuario(null))}/>;
 }

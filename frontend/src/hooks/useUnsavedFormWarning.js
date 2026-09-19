@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useBlocker } from "react-router-dom";
 
-export default function useUnsavedFormWarning({ enabled, refs, navigate }) {
+export default function useUnsavedFormWarning({ enabled, refs }) {
   const [tieneCambios, setTieneCambios] = useState(false);
   const [salidaPendiente, setSalidaPendiente] = useState(null);
+  const blocker = useBlocker(enabled && tieneCambios);
 
   const solicitarSalida = (accion) => {
     if (!tieneCambios) { accion(); return; }
@@ -17,28 +19,20 @@ export default function useUnsavedFormWarning({ enabled, refs, navigate }) {
   };
 
   useEffect(() => {
+    if (blocker.state === "blocked") setSalidaPendiente(() => blocker.proceed);
+  }, [blocker]);
+
+  useEffect(() => {
     if (!enabled || !tieneCambios) return undefined;
     const avisarAntesDeCerrar = (evento) => {
       evento.preventDefault();
       evento.returnValue = "";
     };
-    const avisarAntesDeNavegar = (evento) => {
-      if (evento.defaultPrevented || evento.button !== 0 || evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.altKey) return;
-      const enlace = evento.target instanceof Element ? evento.target.closest("a[href]") : null;
-      if (!enlace || enlace.target === "_blank") return;
-      const destino = new URL(enlace.href, window.location.origin);
-      if (destino.origin !== window.location.origin || destino.pathname === window.location.pathname) return;
-      evento.preventDefault();
-      evento.stopImmediatePropagation();
-      setSalidaPendiente(() => () => navigate(`${destino.pathname}${destino.search}${destino.hash}`));
-    };
     window.addEventListener("beforeunload", avisarAntesDeCerrar);
-    document.addEventListener("click", avisarAntesDeNavegar, true);
     return () => {
       window.removeEventListener("beforeunload", avisarAntesDeCerrar);
-      document.removeEventListener("click", avisarAntesDeNavegar, true);
     };
-  }, [enabled, tieneCambios, navigate]);
+  }, [enabled, tieneCambios]);
 
   useEffect(() => {
     if (!enabled) { setTieneCambios(false); return undefined; }
@@ -54,5 +48,10 @@ export default function useUnsavedFormWarning({ enabled, refs, navigate }) {
     });
   }, [enabled, refs]);
 
-  return { tieneCambios, salidaPendiente, solicitarSalida, confirmarSalida, cancelarSalida: () => setSalidaPendiente(null), limpiarCambios: () => setTieneCambios(false) };
+  const cancelarSalida = () => {
+    setSalidaPendiente(null);
+    if (blocker.state === "blocked") blocker.reset();
+  };
+
+  return { tieneCambios, salidaPendiente, solicitarSalida, confirmarSalida, cancelarSalida, limpiarCambios: () => setTieneCambios(false) };
 }

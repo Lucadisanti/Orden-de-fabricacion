@@ -4,7 +4,7 @@ import { useNativeTableSorting } from "../components/SortableHeader";
 import Selector from "../components/Selector";
 import SelectorMaterial from "../components/SelectorMaterial";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useBlocker, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
@@ -59,7 +59,6 @@ export default function ProduccionDiaria() {
   const [form, setForm] = useState({ fecha: fechaLocal(), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
   const [bloques, setBloques] = useState([nuevoBloque()]);
   const tieneCambiosSinGuardar = useMemo(() => {
-    if (!formularioAbierto) return false;
     const hayOperarios = [...form.operarios_calzado, ...form.operarios_puntera, ...form.operarios_inspeccion_final].some((nombre) => nombre.trim());
     const hayCambiosEnBloques = bloques.some((bloque) => (
       bloque.maquinas_id_maquina || bloque.operarios_inyeccion.some((nombre) => nombre.trim()) || bloque.lineas.some((linea) => (
@@ -70,16 +69,22 @@ export default function ProduccionDiaria() {
       ))
     ));
     return form.fecha !== fechaLocal() || hayOperarios || hayCambiosEnBloques;
-  }, [formularioAbierto, form, bloques]);
-  const solicitarSalida = (accion) => {
-    if (!tieneCambiosSinGuardar) { accion(); return; }
-    setSalidaPendiente(() => accion);
-  };
+  }, [form, bloques]);
+  const blocker = useBlocker(tieneCambiosSinGuardar);
   const confirmarSalida = () => {
     const accion = salidaPendiente;
     setSalidaPendiente(null);
     accion?.();
   };
+
+  const cancelarSalida = () => {
+    setSalidaPendiente(null);
+    if (blocker.state === "blocked") blocker.reset();
+  };
+
+  useEffect(() => {
+    if (blocker.state === "blocked") setSalidaPendiente(() => blocker.proceed);
+  }, [blocker]);
 
   useEffect(() => {
     if (!tieneCambiosSinGuardar) return undefined;
@@ -87,23 +92,11 @@ export default function ProduccionDiaria() {
       evento.preventDefault();
       evento.returnValue = "";
     };
-    const avisarAntesDeNavegar = (evento) => {
-      if (evento.defaultPrevented || evento.button !== 0 || evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.altKey) return;
-      const enlace = evento.target instanceof Element ? evento.target.closest("a[href]") : null;
-      if (!enlace || enlace.target === "_blank") return;
-      const destino = new URL(enlace.href, window.location.origin);
-      if (destino.origin !== window.location.origin || destino.pathname === window.location.pathname) return;
-      evento.preventDefault();
-      evento.stopImmediatePropagation();
-      setSalidaPendiente(() => () => navigate(`${destino.pathname}${destino.search}${destino.hash}`));
-    };
     window.addEventListener("beforeunload", avisarAntesDeCerrar);
-    document.addEventListener("click", avisarAntesDeNavegar, true);
     return () => {
       window.removeEventListener("beforeunload", avisarAntesDeCerrar);
-      document.removeEventListener("click", avisarAntesDeNavegar, true);
     };
-  }, [tieneCambiosSinGuardar, navigate]);
+  }, [tieneCambiosSinGuardar]);
   const historialFiltrado = useMemo(() => {
     const texto = busquedaHistorial.trim().toLowerCase();
     return historial.filter((item) => {
@@ -383,7 +376,7 @@ export default function ProduccionDiaria() {
 
   return <section className="produccion-diaria">
     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
-    <ConfirmModal open={Boolean(salidaPendiente)} title="Cambios sin guardar" message="Hay datos de producción sin guardar. Si salís, se perderán." confirmText="Salir sin guardar" danger onCancel={() => setSalidaPendiente(null)} onConfirm={confirmarSalida} />
+    <ConfirmModal open={Boolean(salidaPendiente)} title="Cambios sin guardar" message="Hay datos de producción sin guardar. Si salís, se perderán." confirmText="Salir sin guardar" danger onCancel={cancelarSalida} onConfirm={confirmarSalida} />
     <PromptModal open={altaMaquinaBloque !== null} title="Nueva inyectora" label="Nombre de la inyectora" placeholder="Ej. Máquina INYEC-BGM" confirmText="Crear y seleccionar" onConfirm={crearMaquinaRapida} onCancel={() => setAltaMaquinaBloque(null)} />
     <CatalogModal key={altaCatalogo ? `${altaCatalogo.tipo}-${altaCatalogo.bloque}-${altaCatalogo.linea}` : "catalogo-cerrado"} open={Boolean(altaCatalogo)} title={altaCatalogo?.tipo === "puntera" ? "Agregar tipo de puntera" : "Agregar adicional"} codeLength={2} onConfirm={crearCatalogoRapido} onCancel={() => setAltaCatalogo(null)} />
     <div className="ui-page-header ui-page-header-row"><div><h1>Producción diaria</h1><p>Carga conjunta por inyectora que actualiza la R013/1 de cada orden.</p></div>{!formularioAbierto && <button type="button" className="ui-btn ui-btn-primary" onClick={() => { versionFormulario.current += 1; setFormularioAbierto(true); }}>+ Nueva producción diaria</button>}</div>
@@ -426,7 +419,7 @@ export default function ProduccionDiaria() {
           <button type="button" className="ui-btn ui-btn-secondary" onClick={() => agregarLinea(indiceBloque)}>+ Agregar orden</button>
         </div>)}
 
-        <div className="produccion-acciones"><button type="button" className="ui-btn ui-btn-secondary" onClick={agregarBloque}>+ Agregar inyectora</button><strong>Total del día: {totalGeneral} pares</strong><div className="produccion-acciones-guardado"><button type="button" className="ui-btn ui-btn-secondary" onClick={() => solicitarSalida(() => { versionFormulario.current += 1; setFormularioAbierto(false); })}>Ocultar formulario</button><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producción diaria"}</button></div></div>
+        <div className="produccion-acciones"><button type="button" className="ui-btn ui-btn-secondary" onClick={agregarBloque}>+ Agregar inyectora</button><strong>Total del día: {totalGeneral} pares</strong><div className="produccion-acciones-guardado"><button type="button" className="ui-btn ui-btn-secondary" onClick={() => setFormularioAbierto(false)}>Ocultar formulario</button><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producción diaria"}</button></div></div>
       </form>}
 
 

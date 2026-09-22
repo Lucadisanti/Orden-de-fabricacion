@@ -37,16 +37,19 @@ export default function useUnsavedFormWarning({ enabled, refs }) {
 
   useEffect(() => {
     if (!enabled) { setTieneCambios(false); return undefined; }
-    const marcarCambio = () => setTieneCambios(true);
-    const formularios = refs.map((ref) => ref.current).filter(Boolean);
-    formularios.forEach((formulario) => {
-      formulario.addEventListener("input", marcarCambio);
-      formulario.addEventListener("change", marcarCambio);
-    });
-    return () => formularios.forEach((formulario) => {
-      formulario.removeEventListener("input", marcarCambio);
-      formulario.removeEventListener("change", marcarCambio);
-    });
+    // Escuchar después de la raíz de React: incluso una microtarea en un
+    // ancestro del input puede ejecutarse antes del onChange delegado.
+    const marcarCambio = (evento) => {
+      if (refs.some((ref) => ref.current?.contains(evento.target))) {
+        setTieneCambios(true);
+      }
+    };
+    document.addEventListener("input", marcarCambio);
+    document.addEventListener("change", marcarCambio);
+    return () => {
+      document.removeEventListener("input", marcarCambio);
+      document.removeEventListener("change", marcarCambio);
+    };
   }, [enabled, refs]);
 
   const cancelarSalida = () => {

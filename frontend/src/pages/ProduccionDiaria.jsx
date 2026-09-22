@@ -309,6 +309,19 @@ export default function ProduccionDiaria() {
 
   const totalGeneral = useMemo(() => bloques.reduce((total, bloque) => total + bloque.lineas.reduce((subtotal, linea) => subtotal + Object.values(linea.talles).reduce((suma, cantidad) => suma + Number(cantidad || 0), 0), 0), 0), [bloques]);
 
+  const detalleHistorialListo = Boolean(detallesHistorial[lineaDetalleAbierta]);
+  useEffect(() => {
+    if (lineaDetalleAbierta == null || !detalleHistorialListo) return;
+    const timer = window.setTimeout(() => {
+      document.querySelector(".produccion-historial-fila.abierta")?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+        block: "start",
+        inline: "nearest",
+      });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [lineaDetalleAbierta, detalleHistorialListo]);
+
   const alternarDetalleHistorial = async (idLinea) => {
     if (lineaDetalleAbierta === idLinea) { setLineaDetalleAbierta(null); return; }
     setLineaDetalleAbierta(idLinea);

@@ -107,7 +107,11 @@ export default function Planillas() {
 
   useEffect(() => {
     if (!filaDetalleAbierta) return;
-    const desplazamiento = window.setTimeout(() => listadoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    const desplazamiento = window.setTimeout(() => listadoRef.current?.querySelector(".planilla-fila-abierta")?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      block: "start",
+      inline: "nearest",
+    }), 80);
     return () => window.clearTimeout(desplazamiento);
   }, [filaDetalleAbierta]);
 

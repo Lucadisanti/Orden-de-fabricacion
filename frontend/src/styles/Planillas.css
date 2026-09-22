@@ -278,3 +278,4 @@
 @media (max-width: 760px) { .ui-table-card.planillas-listado-card.detalle-visible { overflow-x: auto; overflow-y: visible; } }
 @media (max-width: 900px) { .ui-table-card.planillas-listado-card { scroll-margin-top: 78px; } }
 @media (max-width: 480px) { .planilla-detalle-meta { grid-template-columns: 1fr; } .planilla-materiales-enlace { align-items: stretch; flex-direction: column; } }
+.planilla-fila-abierta { scroll-margin-top: 20px; }

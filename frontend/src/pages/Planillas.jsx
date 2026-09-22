@@ -18,6 +18,7 @@ import PermisoRegistro, { AutoriaRegistro } from "../components/PermisoRegistro"
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
+import DateInput from "../components/DateInput";
 import { articuloVisible } from "../utils/articulo";
 import useUnsavedFormWarning from "../hooks/useUnsavedFormWarning";
 import "../styles/Planillas.css";
@@ -651,10 +652,10 @@ export default function Planillas() {
 
   const esPlanillaInyeccion = planillaSeleccionada && (planillaSeleccionada.numero_planilla?.toUpperCase() === "R013/1" || planillaSeleccionada.tipo_planilla?.includes("Inyección"));
   const etiquetaLote = (lote) => `${lote.material || "Material"}${lote.color ? ` (${lote.color})` : ""} · Remito ${lote.numero_remito || "-"} · ${lote.nombre_proveedor || lote.proveedor || "Sin proveedor"}`;
-  const cargarMaterialNuevo = (destino) => {
+  const cargarMaterialNuevo = (destino) => salida.navegarSinAviso(() => {
     sessionStorage.setItem("borrador-material-planilla", JSON.stringify({ idPlanilla: planillaSeleccionada.id_planilla, varianteForm, tallesForm, variantesPendientes, produccionActivaAbierta, numeroProduccionActiva, destino }));
     navigate("/recepcion-materiales?nuevo=1&volver=planillas");
-  };
+  });
   const cambiarMaterialVariante = (campo, busqueda) => {
     const lote = lotes.find((item) => etiquetaLote(item).toLowerCase() === busqueda.trim().toLowerCase());
     setVarianteForm((actual) => ({ ...actual, [campo === "lote_puntera_id" ? "busqueda_puntera" : "busqueda_pu"]: busqueda, [campo]: lote ? String(lote.id_lote || lote.id_lote_materiales) : "" }));
@@ -1045,8 +1046,7 @@ export default function Planillas() {
 
             <label>
               <span>Fecha</span>
-              <input
-                type="date"
+              <DateInput
                 name="fecha"
                 value={planillaForm.fecha}
                 onChange={manejarCambio}
@@ -1134,7 +1134,7 @@ export default function Planillas() {
           {esPlanillaInyeccion && produccionActivaAbierta && <div className="planilla-variante-editor">
             <div className="planilla-variante-titulo"><div><strong>Carga de producción</strong><span>Completá la configuración y las cantidades por talle.</span></div><div className="planilla-articulo-variante"><span>Artículo resultante</span><strong>{articuloVariante || "Completá la configuración"}</strong></div></div>
             <div className="planilla-variante-grid">
-              <label className="planilla-fecha-produccion">Fecha de producción<input type="date" value={varianteForm.fecha ?? planillaSeleccionada.fecha ?? ""} onChange={(e) => setVarianteForm({ ...varianteForm, fecha: e.target.value })} required /></label>
+              <label className="planilla-fecha-produccion">Fecha de producción<DateInput value={varianteForm.fecha ?? planillaSeleccionada.fecha ?? ""} onChange={(e) => setVarianteForm({ ...varianteForm, fecha: e.target.value })} required /></label>
               <label>Inyectora<div className="planilla-selector-con-alta"><Selector value={varianteForm.maquinas_id_maquina} onChange={(e) => setVarianteForm({ ...varianteForm, maquinas_id_maquina: e.target.value })} required><option value="">Seleccione inyectora</option>{maquinas.map((maquina) => <option key={maquina.id_maquina} value={maquina.id_maquina}>{maquina.nombre_maquina || maquina.maquina}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setMostrarAltaMaquina(true)}>+</button></div></label>
               <label>Tipo de puntera<div className="planilla-selector-con-alta"><Selector value={varianteForm.punteras_id_puntera} onChange={(e) => setVarianteForm({ ...varianteForm, punteras_id_puntera: e.target.value })}><option value="">Seleccione puntera</option>{punteras.map((puntera) => <option key={puntera.id_puntera} value={puntera.id_puntera}>{puntera.codigo_puntera} - {puntera.nombre_puntera}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("puntera")}>+</button></div></label>
               <label>Adicional (opcional)<div className="planilla-selector-con-alta"><Selector value={varianteForm.adicionales_id_adicional} onChange={(e) => setVarianteForm({ ...varianteForm, adicionales_id_adicional: e.target.value })}><option value="">Sin adicional</option>{adicionales.map((adicional) => <option key={adicional.id_adicional} value={adicional.id_adicional}>{adicional.codigo_adicional} - {adicional.nombre_adicional}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("adicional")}>+</button></div></label>

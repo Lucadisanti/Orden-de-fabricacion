@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useBlocker } from "react-router-dom";
 
 export default function useUnsavedFormWarning({ enabled, refs }) {
   const [tieneCambios, setTieneCambios] = useState(false);
   const [salidaPendiente, setSalidaPendiente] = useState(null);
-  const blocker = useBlocker(enabled && tieneCambios);
+  const permitirNavegacionAuxiliar = useRef(false);
+  const blocker = useBlocker(() => enabled && tieneCambios && !permitirNavegacionAuxiliar.current);
 
   const solicitarSalida = (accion) => {
     if (!tieneCambios) { accion(); return; }
@@ -53,5 +54,10 @@ export default function useUnsavedFormWarning({ enabled, refs }) {
     if (blocker.state === "blocked") blocker.reset();
   };
 
-  return { tieneCambios, salidaPendiente, solicitarSalida, confirmarSalida, cancelarSalida, limpiarCambios: () => setTieneCambios(false) };
+  const navegarSinAviso = (accion) => {
+    permitirNavegacionAuxiliar.current = true;
+    accion();
+  };
+
+  return { tieneCambios, salidaPendiente, solicitarSalida, confirmarSalida, cancelarSalida, navegarSinAviso, limpiarCambios: () => setTieneCambios(false) };
 }

@@ -12,6 +12,7 @@ import SeparadorListado from "../components/SeparadorListado";
 import usePagination from "../hooks/usePagination";
 import PermisoRegistro, { AutoriaRegistro } from "../components/PermisoRegistro";
 import { formatearFecha } from "../utils/dateFormat";
+import DateInput from "../components/DateInput";
 import useUnsavedFormWarning from "../hooks/useUnsavedFormWarning";
 import "../styles/RecepcionCortes.css";
 
@@ -71,7 +72,7 @@ export default function RecepcionCortes() {
       <h2>{editando ? "Editar recepción" : "Nueva recepción"} · R018/1</h2>
 
       <fieldset disabled={guardando} className="r018-campos">
-        <div className="r018-cabecera"><label>Fecha de recepción<input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} /></label><label>Nombre del controlador<NombreSugerido required maxLength={100} value={controlador} onChange={e => setControlador(e.target.value)} /></label></div>
+        <div className="r018-cabecera"><label>Fecha de recepción<DateInput required value={fecha} onChange={e => setFecha(e.target.value)} /></label><label>Nombre del controlador<NombreSugerido required maxLength={100} value={controlador} onChange={e => setControlador(e.target.value)} /></label></div>
         <div className="r018-filas">{lineas.map((l,i) => {
           const orden = ordenes.find(o => String(o.id_orden) === String(l.orden_id));
           const producto = productos.find(p => String(p.id_producto) === String(orden?.producto_id_producto));

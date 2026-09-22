@@ -473,11 +473,11 @@ export default function RecepcionMateriales() {
         <h2>{editando ? "Editar recepción" : "Nueva recepción"}</h2>
 
 
-        <form onSubmit={guardarRecepcion} className="form-recepcion">
+        <form onSubmit={guardarRecepcion} className="form-recepcion" autoComplete="off">
           <div className="form-grid">
             <label className="recepcion-campo">
               <span>Número de remito</span>
-              <input type="text" name="numero_remito" placeholder="Ingrese el número" value={form.numero_remito} onChange={manejarCambio} required />
+              <input type="text" name="numero_remito" placeholder="Ingrese el número" value={form.numero_remito} onChange={manejarCambio} autoComplete="off" required />
             </label>
 
             <label className="recepcion-campo">

@@ -222,7 +222,7 @@
   text-align: left;
 }
 
-.ui-form-card form {
+.ui-form-card :is(form, .form-recepcion) {
   width: 100%;
   max-width: 860px;
   margin: 0 auto;
@@ -233,7 +233,7 @@
   .productos form.form-producto,
   .materiales form.form-producto,
   .proveedores form.form-proveedor,
-  .recepcion-materiales form.form-recepcion,
+  .recepcion-materiales .form-recepcion,
   .ordenes form.form-orden,
   .planillas form.form-planilla,
   .planillas form.planilla-acordeon-contenido,
@@ -255,7 +255,7 @@
   .productos form.form-producto,
   .materiales form.form-producto,
   .proveedores form.form-proveedor,
-  .recepcion-materiales form.form-recepcion,
+  .recepcion-materiales .form-recepcion,
   .ordenes form.form-orden,
   .planillas form.form-planilla,
   .planillas form.planilla-acordeon-contenido,

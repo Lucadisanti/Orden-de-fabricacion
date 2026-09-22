@@ -19,7 +19,7 @@ export default function useEnterToNextField() {
         if (!esNumero && !cursorAlInicio) return;
       }
 
-      const formulario = campo.form || campo.closest("form");
+      const formulario = campo.form || campo.closest("form, [data-form-fields]");
       if (!formulario) return;
 
       const campos = [...formulario.querySelectorAll("input, select, textarea")].filter((elemento) => {
@@ -40,7 +40,7 @@ export default function useEnterToNextField() {
         return;
       }
 
-      if (esEnter) formulario.querySelector('button[type="submit"], input[type="submit"]')?.focus();
+      if (esEnter) formulario.querySelector('button[type="submit"], input[type="submit"], [data-submit-form]')?.focus();
     };
 
     document.addEventListener("keydown", avanzar);

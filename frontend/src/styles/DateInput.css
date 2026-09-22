@@ -46,16 +46,4 @@
   stroke-linecap: round;
 }
 
-.date-input-picker {
-  position: absolute;
-  width: 1px !important;
-  min-width: 1px !important;
-  height: 1px;
-  min-height: 1px;
-  margin: 0;
-  padding: 0 !important;
-  opacity: 0;
-  pointer-events: none;
-}
-
 :root[data-theme="noche"] .date-input-icon { color: #e2e8f0; }

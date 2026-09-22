@@ -18,6 +18,7 @@ import { formatearFecha } from "../utils/dateFormat";
 import { fechaLocal } from "../utils/estadisticas";
 import { obtenerMensajeError } from "../utils/errorMessages";
 import { articuloVisible } from "../utils/articulo";
+import DateInput from "../components/DateInput";
 import "../styles/ProduccionDiaria.css";
 
 const TALLES = Array.from({ length: 13 }, (_, index) => index + 35);
@@ -39,6 +40,7 @@ export default function ProduccionDiaria() {
   const [guardando, setGuardando] = useState(false);
   const envioEnCurso = useRef(false);
   const versionFormulario = useRef(0);
+  const navegacionAuxiliar = useRef(false);
   // Invalida respuestas pendientes al salir de la pantalla.
   useEffect(() => () => { versionFormulario.current += 1; }, []);
   const [formularioAbierto, setFormularioAbierto] = useState(false);
@@ -70,7 +72,7 @@ export default function ProduccionDiaria() {
     ));
     return form.fecha !== fechaLocal() || hayOperarios || hayCambiosEnBloques;
   }, [form, bloques]);
-  const blocker = useBlocker(tieneCambiosSinGuardar);
+  const blocker = useBlocker(() => tieneCambiosSinGuardar && !navegacionAuxiliar.current);
   const confirmarSalida = () => {
     const accion = salidaPendiente;
     setSalidaPendiente(null);
@@ -230,6 +232,7 @@ export default function ProduccionDiaria() {
   }, [searchParams, lotes]);
   const cargarMaterialNuevo = (destino) => {
     sessionStorage.setItem("borrador-material-produccion", JSON.stringify({ form, bloques, destino }));
+    navegacionAuxiliar.current = true;
     navigate("/recepcion-materiales?nuevo=1&volver=produccion-diaria");
   };
   const actualizarBusquedaMaterial = (indiceBloque, indiceLinea, tipo, busqueda) => {
@@ -384,7 +387,7 @@ export default function ProduccionDiaria() {
       {formularioAbierto && <form className="produccion-diaria-form" onSubmit={guardar}>
         <div className="ui-form-card produccion-cabecera">
           <div><h2>Datos de la jornada</h2><p>Los operarios de calzado, puntera e inspección final se aplican a todos los bloques.</p></div>
-          <label>Fecha<input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required /></label>
+          <label>Fecha<DateInput value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required /></label>
           <div className="produccion-operarios"><span>Operarios de calzado</span>{form.operarios_calzado.map((nombre, indice) => <div key={indice}><label><NombreSugerido aria-label={`Operario de calzado ${indice + 1}`} value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_calzado", indice, e.target.value)} required /></label>{form.operarios_calzado.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_calzado", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_calzado")}>+ Agregar operario</button></div>
           <div className="produccion-operarios"><span>Operarios de puntera</span>{form.operarios_puntera.map((nombre, indice) => <div key={indice}><label><NombreSugerido aria-label={`Operario de puntera ${indice + 1}`} value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_puntera", indice, e.target.value)} required /></label>{form.operarios_puntera.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_puntera", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_puntera")}>+ Agregar operario</button></div>
           <div className="produccion-operarios"><span>Operarios de inspección final</span>{form.operarios_inspeccion_final.map((nombre, indice) => <div key={indice}><label><NombreSugerido aria-label={`Operario de inspección final ${indice + 1}`} value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_inspeccion_final", indice, e.target.value)} /></label>{form.operarios_inspeccion_final.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_inspeccion_final", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_inspeccion_final")}>+ Agregar operario</button></div>
@@ -429,7 +432,7 @@ export default function ProduccionDiaria() {
           <label className="ui-filter-select"><span>Agrupar por</span><Selector value={grupoHistorial} onChange={(evento) => setGrupoHistorial(evento.target.value)}><option value="">Sin agrupar</option><option value="inyectora">Inyectora</option><option value="producto">Producto</option></Selector></label>
           <label className="ui-filter-select"><span>Filtrar por estado</span><Selector value={estadoHistorial} onChange={(evento) => setEstadoHistorial(evento.target.value)}><option value="">Todos</option><option value="Conforme">Conforme</option><option value="No conforme">No conforme</option><option value="Pendiente">Pendiente</option></Selector></label>
           <label className="ui-filter-select"><span>Filtrar por inyectora</span><Selector value={inyectoraHistorial} onChange={(evento) => setInyectoraHistorial(evento.target.value)}><option value="">Todas</option>{inyectorasHistorial.map((inyectora) => <option key={inyectora} value={inyectora}>{inyectora}</option>)}</Selector></label>
-          <label className="ui-filter-select"><span>Filtrar por fecha</span><input type="date" value={fechaHistorial} onChange={(evento) => setFechaHistorial(evento.target.value)} /></label>
+          <label className="ui-filter-select"><span>Filtrar por fecha</span><DateInput value={fechaHistorial} onChange={(evento) => setFechaHistorial(evento.target.value)} /></label>
         </div></div></div>
         <div className="ui-table-card"><table className="ui-data-table ui-listado-ajustado produccion-historial-tabla"><colgroup>{[12, 9, 10, 13, 13, 19, 13, 11].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup><thead><tr><th>Fecha</th><th>Orden</th><th>Artículo</th><th>Producto</th><th>Color</th><th>Inyectora</th><th>Inspección</th><th>Total de pares</th></tr></thead><tbody>{historialVisible.length ? historialVisible.map((item, indice) => {
           const grupoActual = grupoHistorial ? item[grupoHistorial] : null;

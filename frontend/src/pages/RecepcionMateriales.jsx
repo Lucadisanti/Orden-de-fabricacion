@@ -17,6 +17,7 @@ import Toast from "../components/Toast";
 import RetryMessage from "../components/RetryMessage";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
+import DateInput from "../components/DateInput";
 import "../styles/RecepcionMateriales.css";
 
 const crearLineaVacia = () => ({
@@ -499,12 +500,12 @@ export default function RecepcionMateriales() {
 
             <label className="recepcion-campo">
               <span>Fecha de solicitud</span>
-              <input type="date" name="fecha_solicitud" value={form.fecha_solicitud} onChange={manejarCambio} required />
+              <DateInput name="fecha_solicitud" value={form.fecha_solicitud} onChange={manejarCambio} required />
             </label>
 
             <label className="recepcion-campo">
               <span>Fecha de entrega</span>
-              <input type="date" name="fecha_entrega" value={form.fecha_entrega} onChange={manejarCambio} />
+              <DateInput name="fecha_entrega" value={form.fecha_entrega} onChange={manejarCambio} />
             </label>
 
 

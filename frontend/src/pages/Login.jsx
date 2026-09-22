@@ -52,7 +52,7 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <main className="login" style={{ backgroundImage: `url(${imagen})` }}>
+    <main className="login" style={{ "--login-background": `url(${imagen})` }}>
       <div className="login-imagen" aria-hidden="true" />
       <section className="login-panel">
         <form className={`login-card${recuperando ? " login-card-recuperacion" : ""}`} onSubmit={recuperando ? recuperar : entrar} autoComplete={recuperando ? "off" : "on"}>

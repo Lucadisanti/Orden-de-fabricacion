@@ -47,3 +47,33 @@
 }
 
 :root[data-theme="noche"] .date-input-icon { color: #e2e8f0; }
+
+.date-calendar {
+  position: fixed;
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  z-index: 10000;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 14px;
+  background: var(--bg-card, #fff);
+  color: var(--text-main, #111827);
+  box-shadow: 0 10px 30px #0f172a26;
+}
+.date-calendar button, .date-calendar select {
+  font: inherit; font-size: 13px; color: inherit; background: transparent;
+  border: 0; border-radius: 6px; padding: 5px; cursor: pointer; min-width: 0;
+}
+.date-calendar select { background: var(--bg-card, #fff); }
+.date-calendar-header { display: grid; grid-template-columns: 24px 1fr 66px 24px; gap: 2px; align-items: center; }
+.date-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: 10px; }
+.date-calendar-grid > span { text-align: center; font-size: 12px; padding: 6px 0; color: var(--text-muted); }
+.date-calendar-grid button { height: 30px; }
+.date-calendar .date-calendar-other { color: var(--text-muted); }
+.date-calendar button:hover { background: var(--primary-soft, #eff6ff); }
+.date-calendar button[aria-pressed="true"] { background: #2563eb; color: #fff; }
+.date-calendar button[aria-current="date"] { box-shadow: inset 0 0 0 1px #2563eb; }
+.date-calendar :is(button, select):focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+.date-calendar button:disabled { opacity: .35; cursor: default; }
+.date-calendar-footer { display: flex; justify-content: space-between; margin-top: 8px; color: #2563eb; }

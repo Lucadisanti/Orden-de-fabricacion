@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "../styles/DateInput.css";
+import DateCalendar from "./DateCalendar";
 
 const mostrarFecha = (valor = "") => {
   const coincidencia = String(valor).match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -28,6 +29,9 @@ export default function DateInput({ value = "", onChange, name, inputName = name
   const [texto, setTexto] = useState(() => mostrarFecha(value));
   const ultimoValor = useRef(value);
   const textoActual = useRef(mostrarFecha(value));
+  const campoRef = useRef(null);
+  const botonRef = useRef(null);
+  const [calendarioAbierto, setCalendarioAbierto] = useState(false);
 
   useEffect(() => {
     if (value !== ultimoValor.current) {
@@ -71,34 +75,18 @@ export default function DateInput({ value = "", onChange, name, inputName = name
     actualizarTexto(nuevoTexto, campo);
   };
 
-  const seleccionarDesdeCalendario = (evento) => {
-    const iso = evento.target.value;
+  const seleccionarDesdeCalendario = (iso) => {
+    textoActual.current = mostrarFecha(iso);
+    campoRef.current?.setCustomValidity("");
     setTexto(mostrarFecha(iso));
     emitir(iso);
+    setCalendarioAbierto(false);
+    campoRef.current?.dispatchEvent(new Event("input", { bubbles: true }));
   };
 
   const abrirCalendario = () => {
-    const picker = document.createElement("input");
-    picker.type = "date";
-    picker.value = /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
-    picker.tabIndex = -1;
-    picker.setAttribute("aria-hidden", "true");
-    Object.assign(picker.style, {
-      position: "fixed", width: "1px", height: "1px", opacity: "0", pointerEvents: "none",
-    });
-    const cerrar = () => picker.remove();
-    picker.addEventListener("change", () => {
-      seleccionarDesdeCalendario({ target: picker });
-      cerrar();
-    }, { once: true });
-    picker.addEventListener("blur", () => window.setTimeout(cerrar, 0), { once: true });
-    document.body.appendChild(picker);
-    try {
-      picker.showPicker?.();
-    } catch {
-      picker.focus();
-      picker.click();
-    }
+    if (props.disabled || props.readOnly) return;
+    setCalendarioAbierto(abierto => !abierto);
   };
 
   const manejarSalida = (evento) => {
@@ -115,7 +103,8 @@ export default function DateInput({ value = "", onChange, name, inputName = name
   };
 
   return <span className="date-input-control">
-    <input {...props} type="text" name={inputName} value={texto} onChange={manejarCambio} onKeyDown={manejarTecla} onBlur={manejarSalida} autoComplete="off" aria-autocomplete="none" placeholder="dd/mm/aa" maxLength="8" />
-    <button type="button" className="date-input-icon" onClick={abrirCalendario} aria-label="Elegir fecha en el calendario"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4M17 3v4M3 10h18" /></svg></button>
+    <input {...props} ref={campoRef} type="text" name={inputName} value={texto} onChange={manejarCambio} onKeyDown={manejarTecla} onBlur={manejarSalida} autoComplete="off" aria-autocomplete="none" placeholder="dd/mm/aa" maxLength="8" />
+    <button ref={botonRef} type="button" className="date-input-icon" onClick={abrirCalendario} disabled={props.disabled || props.readOnly} aria-expanded={calendarioAbierto} aria-haspopup="dialog" aria-label="Elegir fecha en el calendario"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4M17 3v4M3 10h18" /></svg></button>
+    {calendarioAbierto && <DateCalendar anchor={botonRef} value={value} min={props.min} max={props.max} onSelect={seleccionarDesdeCalendario} onClose={() => setCalendarioAbierto(false)} />}
   </span>;
 }

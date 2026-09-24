@@ -107,13 +107,29 @@ export default function Planillas() {
 
   useEffect(() => {
     if (!filaDetalleAbierta) return;
-    const desplazamiento = window.setTimeout(() => listadoRef.current?.querySelector(".planilla-fila-abierta")?.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
-      block: "start",
-      inline: "nearest",
-    }), 80);
+    const desplazamiento = window.setTimeout(() => {
+      const filaGeneral = listadoRef.current?.querySelector(".planilla-fila-abierta");
+      const filaDetalle = listadoRef.current?.querySelector(".planilla-detalle-fila");
+      if (!filaGeneral || !filaDetalle) return;
+
+      const margen = 20;
+      const altoFilaGeneral = filaGeneral.getBoundingClientRect().height;
+      const espacioDisponibleParaDetalle = Math.max(260, window.innerHeight - altoFilaGeneral - (margen * 2));
+      const altoDetalleVisible = Math.min(filaDetalle.getBoundingClientRect().height, espacioDisponibleParaDetalle);
+      const limiteInferior = window.innerHeight - margen;
+      const desplazamientoNecesario = filaDetalle.getBoundingClientRect().top + altoDetalleVisible - limiteInferior;
+      const desplazamientoMaximo = filaGeneral.getBoundingClientRect().top - margen;
+      const desplazamientoFinal = Math.min(desplazamientoNecesario, desplazamientoMaximo);
+
+      if (desplazamientoFinal > 0) {
+        window.scrollBy({
+          top: desplazamientoFinal,
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+        });
+      }
+    }, 80);
     return () => window.clearTimeout(desplazamiento);
-  }, [filaDetalleAbierta]);
+  }, [filaDetalleAbierta, resumenesPlanilla]);
 
   const desplazarAlFormulario = () => {
     window.setTimeout(() => {
@@ -986,10 +1002,7 @@ export default function Planillas() {
       producto: planilla.producto,
       maquina: planilla.maquina || planilla.nombre_maquina,
     })[ordenListado.campo], ordenListado.direccion);
-    const planillasOrdenadas = filaDetalleAbierta
-      ? [...planillasConOrden].sort((a, b) => Number(String(b.id_planilla) === String(filaDetalleAbierta)) - Number(String(a.id_planilla) === String(filaDetalleAbierta)))
-      : planillasConOrden;
-    const paginacionPlanillas = usePagination(planillasOrdenadas);
+    const paginacionPlanillas = usePagination(planillasConOrden);
 
   return (
     <section className="planillas">

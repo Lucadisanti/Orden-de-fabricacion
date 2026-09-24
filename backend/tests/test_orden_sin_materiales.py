@@ -7,7 +7,7 @@ def test_guarda_orden_sin_operarios_ni_materiales(client, metodo, ruta, estado):
     conn = MagicMock()
     cursor = conn.cursor.return_value
     cursor.lastrowid = 1
-    cursor.fetchone.side_effect = [{"Field": "fecha_aparado"}, None]
+    cursor.fetchone.side_effect = [{"Field": "fecha_aparado"}, None, None]
     with patch("controllers.ordenes_controller.get_connection", return_value=conn):
         respuesta = getattr(client, metodo)(ruta, json={
             "producto_id_producto": 1, "numero_orden": "1234", "fecha": "2026-09-11",

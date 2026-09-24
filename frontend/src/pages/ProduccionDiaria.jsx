@@ -1,20 +1,25 @@
 import ParesDefectuosos from "../components/ParesDefectuosos";
 import NombreSugerido from "../components/NombreSugerido";
+import { useNativeTableSorting } from "../components/SortableHeader";
 import Selector from "../components/Selector";
 import SelectorMaterial from "../components/SelectorMaterial";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useBlocker, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
 import RetryMessage from "../components/RetryMessage";
+import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import CatalogModal from "../components/CatalogModal";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
+import { AutoriaRegistro } from "../components/PermisoRegistro";
 import usePagination from "../hooks/usePagination";
 import { formatearFecha } from "../utils/dateFormat";
 import { fechaLocal } from "../utils/estadisticas";
 import { obtenerMensajeError } from "../utils/errorMessages";
+import { articuloVisible } from "../utils/articulo";
+import DateInput from "../components/DateInput";
 import "../styles/ProduccionDiaria.css";
 
 const TALLES = Array.from({ length: 13 }, (_, index) => index + 35);
@@ -37,28 +42,79 @@ export default function ProduccionDiaria() {
   const [guardando, setGuardando] = useState(false);
   const envioEnCurso = useRef(false);
   const versionFormulario = useRef(0);
+  const navegacionAuxiliar = useRef(false);
   // Invalida respuestas pendientes al salir de la pantalla.
   useEffect(() => () => { versionFormulario.current += 1; }, []);
   const [formularioAbierto, setFormularioAbierto] = useState(false);
   const [ordenHistorial, setOrdenHistorial] = useState("fecha");
   const [direccionHistorial, setDireccionHistorial] = useState("desc");
+  useNativeTableSorting(".produccion-historial-tabla", { campo: ordenHistorial, setCampo: setOrdenHistorial, direccion: direccionHistorial, setDireccion: setDireccionHistorial }, { Fecha: "fecha", Orden: "orden" });
   const [grupoHistorial, setGrupoHistorial] = useState("");
+  const [estadoHistorial, setEstadoHistorial] = useState("");
+  const [inyectoraHistorial, setInyectoraHistorial] = useState("");
+  const [fechaHistorial, setFechaHistorial] = useState("");
   const [busquedaHistorial, setBusquedaHistorial] = useState("");
   const [toast, setToast] = useState(null);
+  const [salidaPendiente, setSalidaPendiente] = useState(null);
   const [lineaDetalleAbierta, setLineaDetalleAbierta] = useState(null);
   const [detallesHistorial, setDetallesHistorial] = useState({});
   const [altaMaquinaBloque, setAltaMaquinaBloque] = useState(null);
   const [altaCatalogo, setAltaCatalogo] = useState(null);
   const [form, setForm] = useState({ fecha: fechaLocal(), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
   const [bloques, setBloques] = useState([nuevoBloque()]);
+  const tieneCambiosSinGuardar = useMemo(() => {
+    const hayOperarios = [...form.operarios_calzado, ...form.operarios_puntera, ...form.operarios_inspeccion_final].some((nombre) => nombre.trim());
+    const hayCambiosEnBloques = bloques.some((bloque) => (
+      bloque.maquinas_id_maquina || bloque.operarios_inyeccion.some((nombre) => nombre.trim()) || bloque.lineas.some((linea) => (
+        linea.orden_fabricacion_id_orden || linea.busqueda_orden || linea.punteras_id_puntera || linea.adicionales_id_adicional ||
+        linea.busqueda_puntera || linea.busqueda_pu || linea.lote_puntera_id || linea.lote_pu_id || linea.materiales_extra.length ||
+        linea.estado_inspeccion !== "Pendiente" || linea.observacion_inspeccion.trim() || linea.pares_defectuosos ||
+        Object.values(linea.talles).some((cantidad) => Number(cantidad) > 0)
+      ))
+    ));
+    return form.fecha !== fechaLocal() || hayOperarios || hayCambiosEnBloques;
+  }, [form, bloques]);
+  const blocker = useBlocker(() => tieneCambiosSinGuardar && !navegacionAuxiliar.current);
+  const confirmarSalida = () => {
+    const accion = salidaPendiente;
+    setSalidaPendiente(null);
+    accion?.();
+  };
+
+  const cancelarSalida = () => {
+    setSalidaPendiente(null);
+    if (blocker.state === "blocked") blocker.reset();
+  };
+
+  useEffect(() => {
+    if (blocker.state === "blocked") setSalidaPendiente(() => blocker.proceed);
+  }, [blocker]);
+
+  useEffect(() => {
+    if (!tieneCambiosSinGuardar) return undefined;
+    const avisarAntesDeCerrar = (evento) => {
+      evento.preventDefault();
+      evento.returnValue = "";
+    };
+    window.addEventListener("beforeunload", avisarAntesDeCerrar);
+    return () => {
+      window.removeEventListener("beforeunload", avisarAntesDeCerrar);
+    };
+  }, [tieneCambiosSinGuardar]);
   const historialFiltrado = useMemo(() => {
     const texto = busquedaHistorial.trim().toLowerCase();
-    if (!texto) return historial;
-    return historial.filter((item) => [
+    return historial.filter((item) => {
+      const coincideBusqueda = !texto || [
       item.numero_orden, item.articulo, item.producto, item.color, item.inyectora,
       formatearFecha(item.fecha), item.estado_inspeccion, item.total_pares,
-    ].join(" ").toLowerCase().includes(texto));
-  }, [historial, busquedaHistorial]);
+      ].join(" ").toLowerCase().includes(texto);
+      const coincideEstado = !estadoHistorial || String(item.estado_inspeccion || "Pendiente") === estadoHistorial;
+      const coincideInyectora = !inyectoraHistorial || item.inyectora === inyectoraHistorial;
+      const coincideFecha = !fechaHistorial || String(item.fecha || "").slice(0, 10) === fechaHistorial;
+      return coincideBusqueda && coincideEstado && coincideInyectora && coincideFecha;
+    });
+  }, [historial, busquedaHistorial, estadoHistorial, inyectoraHistorial, fechaHistorial]);
+  const inyectorasHistorial = useMemo(() => [...new Set(historial.map((item) => item.inyectora).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es")), [historial]);
   const historialOrdenado = useMemo(() => [...historialFiltrado].sort((a, b) => {
     if (grupoHistorial) {
       const comparacionGrupo = String(a[grupoHistorial] ?? "").localeCompare(String(b[grupoHistorial] ?? ""), "es", { numeric: true, sensitivity: "base" });
@@ -90,7 +146,7 @@ export default function ProduccionDiaria() {
       setOrdenes(ordenesRes.data);
       setMaquinas(maquinasRes.data);
       setLotes(lotesRes.data);
-      setHistorial(historialRes.data);
+      setHistorial(historialRes.data.map((item) => ({ ...item, articulo: articuloVisible(item.articulo) })));
       setPunteras(punterasRes.data);
       setAdicionales(adicionalesRes.data);
       setErrorCarga("");
@@ -180,6 +236,7 @@ export default function ProduccionDiaria() {
   }, [searchParams, lotes]);
   const cargarMaterialNuevo = (destino) => {
     sessionStorage.setItem("borrador-material-produccion", JSON.stringify({ form, bloques, destino }));
+    navegacionAuxiliar.current = true;
     navigate("/recepcion-materiales?nuevo=1&volver=produccion-diaria");
   };
   const actualizarBusquedaMaterial = (indiceBloque, indiceLinea, tipo, busqueda) => {
@@ -256,13 +313,26 @@ export default function ProduccionDiaria() {
 
   const totalGeneral = useMemo(() => bloques.reduce((total, bloque) => total + bloque.lineas.reduce((subtotal, linea) => subtotal + Object.values(linea.talles).reduce((suma, cantidad) => suma + Number(cantidad || 0), 0), 0), 0), [bloques]);
 
+  const detalleHistorialListo = Boolean(detallesHistorial[lineaDetalleAbierta]);
+  useEffect(() => {
+    if (lineaDetalleAbierta == null || !detalleHistorialListo) return;
+    const timer = window.setTimeout(() => {
+      document.querySelector(".produccion-historial-fila.abierta")?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+        block: "start",
+        inline: "nearest",
+      });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [lineaDetalleAbierta, detalleHistorialListo]);
+
   const alternarDetalleHistorial = async (idLinea) => {
     if (lineaDetalleAbierta === idLinea) { setLineaDetalleAbierta(null); return; }
     setLineaDetalleAbierta(idLinea);
     if (detallesHistorial[idLinea]) return;
     try {
       const respuesta = await axios.get(`/api/produccion-diaria/linea/${idLinea}/detalle`);
-      setDetallesHistorial((actuales) => ({ ...actuales, [idLinea]: respuesta.data }));
+      setDetallesHistorial((actuales) => ({ ...actuales, [idLinea]: { ...respuesta.data, articulo: articuloVisible(respuesta.data.articulo) } }));
     } catch (error) {
       console.error(error);
       setToast({ type: "error", title: "No se pudo abrir el detalle", message: obtenerMensajeError(error, "producción") });
@@ -279,6 +349,11 @@ export default function ProduccionDiaria() {
     }
     if (bloques.some((bloque) => bloque.lineas.some((linea) => linea.estado_inspeccion === "No conforme" && !linea.observacion_inspeccion.trim()))) {
       setToast({ type: "warning", title: "Observación requerida", message: "Describí el motivo de cada no conformidad; no puede contener solo espacios." });
+      return;
+    }
+    const ordenAnterior = bloques.flatMap((bloque) => bloque.lineas).map((linea) => ordenes.find((orden) => String(orden.id_orden) === String(linea.orden_fabricacion_id_orden))).find((orden) => orden?.fecha_corte && form.fecha < orden.fecha_corte);
+    if (ordenAnterior) {
+      setToast({ type: "warning", title: "Fecha inválida", message: `La producción no puede ser anterior al corte de la orden ${ordenAnterior.numero_orden}.` });
       return;
     }
     const datos = {
@@ -321,6 +396,7 @@ export default function ProduccionDiaria() {
 
   return <section className="produccion-diaria">
     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+    <ConfirmModal open={Boolean(salidaPendiente)} title="Cambios sin guardar" message="Hay datos de producción sin guardar. Si salís, se perderán." confirmText="Salir sin guardar" danger onCancel={cancelarSalida} onConfirm={confirmarSalida} />
     <PromptModal open={altaMaquinaBloque !== null} title="Nueva inyectora" label="Nombre de la inyectora" placeholder="Ej. Máquina INYEC-BGM" confirmText="Crear y seleccionar" onConfirm={crearMaquinaRapida} onCancel={() => setAltaMaquinaBloque(null)} />
     <CatalogModal key={altaCatalogo ? `${altaCatalogo.tipo}-${altaCatalogo.bloque}-${altaCatalogo.linea}` : "catalogo-cerrado"} open={Boolean(altaCatalogo)} title={altaCatalogo?.tipo === "puntera" ? "Agregar tipo de puntera" : "Agregar adicional"} codeLength={2} onConfirm={crearCatalogoRapido} onCancel={() => setAltaCatalogo(null)} />
     <div className="ui-page-header ui-page-header-row"><div><h1>Producción diaria</h1><p>Carga conjunta por inyectora que actualiza la R013/1 de cada orden.</p></div>{!formularioAbierto && <button type="button" className="ui-btn ui-btn-primary" onClick={() => { versionFormulario.current += 1; setFormularioAbierto(true); }}>+ Nueva producción diaria</button>}</div>
@@ -329,7 +405,7 @@ export default function ProduccionDiaria() {
       {formularioAbierto && <form className="produccion-diaria-form" onSubmit={guardar}>
         <div className="ui-form-card produccion-cabecera">
           <div><h2>Datos de la jornada</h2><p>Los operarios de calzado, puntera e inspección final se aplican a todos los bloques.</p></div>
-          <label>Fecha<input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required /></label>
+          <label>Fecha<DateInput value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required /></label>
           <div className="produccion-operarios"><span>Operarios de calzado</span>{form.operarios_calzado.map((nombre, indice) => <div key={indice}><label><NombreSugerido aria-label={`Operario de calzado ${indice + 1}`} value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_calzado", indice, e.target.value)} required /></label>{form.operarios_calzado.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_calzado", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_calzado")}>+ Agregar operario</button></div>
           <div className="produccion-operarios"><span>Operarios de puntera</span>{form.operarios_puntera.map((nombre, indice) => <div key={indice}><label><NombreSugerido aria-label={`Operario de puntera ${indice + 1}`} value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_puntera", indice, e.target.value)} required /></label>{form.operarios_puntera.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_puntera", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_puntera")}>+ Agregar operario</button></div>
           <div className="produccion-operarios"><span>Operarios de inspección final</span>{form.operarios_inspeccion_final.map((nombre, indice) => <div key={indice}><label><NombreSugerido aria-label={`Operario de inspección final ${indice + 1}`} value={nombre} onChange={(e) => actualizarOperarioGeneral("operarios_inspeccion_final", indice, e.target.value)} /></label>{form.operarios_inspeccion_final.length > 1 && <button type="button" onClick={() => quitarOperarioGeneral("operarios_inspeccion_final", indice)} aria-label="Quitar operario">×</button>}</div>)}<button type="button" className="produccion-agregar-operario" onClick={() => agregarOperarioGeneral("operarios_inspeccion_final")}>+ Agregar operario</button></div>
@@ -364,7 +440,7 @@ export default function ProduccionDiaria() {
           <button type="button" className="ui-btn ui-btn-secondary" onClick={() => agregarLinea(indiceBloque)}>+ Agregar orden</button>
         </div>)}
 
-        <div className="produccion-acciones"><button type="button" className="ui-btn ui-btn-secondary" onClick={agregarBloque}>+ Agregar inyectora</button><strong>Total del día: {totalGeneral} pares</strong><div className="produccion-acciones-guardado"><button type="button" className="ui-btn ui-btn-secondary" onClick={() => { versionFormulario.current += 1; setFormularioAbierto(false); }}>Ocultar formulario</button><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producción diaria"}</button></div></div>
+        <div className="produccion-acciones"><button type="button" className="ui-btn ui-btn-secondary" onClick={agregarBloque}>+ Agregar inyectora</button><strong>Total del día: {totalGeneral} pares</strong><div className="produccion-acciones-guardado"><button type="button" className="ui-btn ui-btn-secondary" onClick={() => setFormularioAbierto(false)}>Ocultar formulario</button><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producción diaria"}</button></div></div>
       </form>}
 
 
@@ -372,9 +448,10 @@ export default function ProduccionDiaria() {
     {!cargando && !errorCarga && <>
       <div className={`produccion-historial${formularioAbierto ? " produccion-historial-separado" : ""}`}>
         <div className="produccion-historial-header">{formularioAbierto && <div><h2>Producciones registradas</h2><p>Consultá el historial de producción guardado.</p></div>}<div className="ui-list-tools"><ClearableSearch value={busquedaHistorial} onChange={setBusquedaHistorial} placeholder="Buscar por orden, artículo, producto, inyectora, fecha o inspección..." /><div className="ui-sort-controls produccion-historial-filtros">
-          <label className="ui-filter-select"><span>Ordenar por</span><Selector value={ordenHistorial} onChange={(evento) => setOrdenHistorial(evento.target.value)}><option value="fecha">Fecha</option><option value="orden">Orden</option><option value="producto">Producto</option><option value="inyectora">Inyectora</option><option value="total">Total de pares</option></Selector></label>
-          <button type="button" className="ui-btn ui-sort-direction" onClick={() => setDireccionHistorial((actual) => actual === "asc" ? "desc" : "asc")}>{direccionHistorial === "asc" ? "↑ Ascendente" : "↓ Descendente"}</button>
           <label className="ui-filter-select"><span>Agrupar por</span><Selector value={grupoHistorial} onChange={(evento) => setGrupoHistorial(evento.target.value)}><option value="">Sin agrupar</option><option value="inyectora">Inyectora</option><option value="producto">Producto</option></Selector></label>
+          <label className="ui-filter-select"><span>Filtrar por estado</span><Selector value={estadoHistorial} onChange={(evento) => setEstadoHistorial(evento.target.value)}><option value="">Todos</option><option value="Conforme">Conforme</option><option value="No conforme">No conforme</option><option value="Pendiente">Pendiente</option></Selector></label>
+          <label className="ui-filter-select"><span>Filtrar por inyectora</span><Selector value={inyectoraHistorial} onChange={(evento) => setInyectoraHistorial(evento.target.value)}><option value="">Todas</option>{inyectorasHistorial.map((inyectora) => <option key={inyectora} value={inyectora}>{inyectora}</option>)}</Selector></label>
+          <label className="ui-filter-select"><span>Filtrar por fecha</span><DateInput value={fechaHistorial} onChange={(evento) => setFechaHistorial(evento.target.value)} /></label>
         </div></div></div>
         <div className="ui-table-card"><table className="ui-data-table ui-listado-ajustado produccion-historial-tabla"><colgroup>{[12, 9, 10, 13, 13, 19, 13, 11].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup><thead><tr><th>Fecha</th><th>Orden</th><th>Artículo</th><th>Producto</th><th>Color</th><th>Inyectora</th><th>Inspección</th><th>Total de pares</th></tr></thead><tbody>{historialVisible.length ? historialVisible.map((item, indice) => {
           const grupoActual = grupoHistorial ? item[grupoHistorial] : null;
@@ -382,7 +459,7 @@ export default function ProduccionDiaria() {
           const detalle = detallesHistorial[item.id_linea];
           const abierto = lineaDetalleAbierta === item.id_linea;
           const estadoInspeccion = item.estado_inspeccion || "Pendiente";
-          return <Fragment key={item.id_linea}>{grupoActual !== grupoAnterior && <tr className="produccion-grupo"><td colSpan="8">{grupoActual}</td></tr>}<tr className={abierto ? "produccion-historial-fila abierta" : "produccion-historial-fila"} onClick={() => alternarDetalleHistorial(item.id_linea)}><td>{formatearFecha(item.fecha)}</td><td><span className="produccion-flecha">{abierto ? "▲" : "▼"}</span><strong>{item.numero_orden}</strong></td><td>{item.articulo}</td><td>{item.producto}</td><td>{item.color || "-"}</td><td>{item.inyectora}</td><td><span className={`inspeccion-badge inspeccion-${estadoInspeccion.toLowerCase().replace(" ", "-")}`}>{estadoInspeccion}</span></td><td><strong>{item.total_pares} pares</strong></td></tr>{abierto && <tr className="produccion-historial-detalle-fila"><td colSpan="8">{detalle ? <div className="produccion-historial-detalle"><div className="produccion-detalle-cabecera"><div><span>Artículo</span><strong>{detalle.articulo}</strong></div><div><span>Tipo de puntera</span><strong>{detalle.nombre_puntera || "Sin especificar"}</strong></div><div><span>Adicional</span><strong>{detalle.adicionales || "Sin adicional"}</strong></div></div><div className="produccion-detalle-etapas"><div className="produccion-detalle-etapa-doble"><div className="produccion-detalle-etapa produccion-subetapa"><span><strong>Calzado:</strong> {detalle.operario_calzado}</span></div><div className="produccion-detalle-etapa produccion-subetapa"><span><strong>Inspector final:</strong> {detalle.operario_inspeccion_final}</span><span><strong>Estado:</strong> <span className={`inspeccion-badge inspeccion-${String(detalle.estado_inspeccion || "Pendiente").toLowerCase().replace(" ", "-")}`}>{detalle.estado_inspeccion || "Pendiente"}</span></span>{detalle.estado_inspeccion === "No conforme" && <span>Pares defectuosos: {detalle.pares_defectuosos ?? "Sin desglose"}</span>}{detalle.observacion_inspeccion && <span className="produccion-inspeccion-observacion"><strong>Observación:</strong> {detalle.observacion_inspeccion}</span>}</div></div><div className="produccion-detalle-etapa"><span><strong>Puntera:</strong> {detalle.operario_puntera}</span><span><strong>Material de puntera:</strong> {detalle.material_puntera}{detalle.color_puntera ? ` · ${detalle.color_puntera}` : ""} · Remito {detalle.remito_puntera}</span></div><div className="produccion-detalle-etapa"><span><strong>Inyección:</strong> {detalle.operario_inyeccion}</span><span><strong>PU:</strong> {detalle.material_pu}{detalle.color_pu ? ` · ${detalle.color_pu}` : ""} · Remito {detalle.remito_pu}</span></div></div>{detalle.otros_materiales?.length > 0 && <div className="produccion-detalle-otros">{detalle.otros_materiales.map((material, indiceMaterial) => <span key={`${material.numero_remito}-${indiceMaterial}`}><strong>Otro material:</strong> {material.material}{material.color ? ` · ${material.color}` : ""} · Remito {material.numero_remito}</span>)}</div>}<div className="produccion-detalle-pie"><div className="produccion-detalle-talles">{detalle.talles.map((talle) => <span key={talle.talle}>T{talle.talle}: <strong>{talle.cantidad_pares}</strong></span>)}</div>{item.id_planilla && <button type="button" className="ui-btn ui-btn-secondary produccion-abrir-planilla" onClick={(event) => { event.stopPropagation(); navigate(`/planillas?seleccion=${item.id_planilla}`); }}>Abrir planilla completa →</button>}</div></div> : <div className="produccion-detalle-cargando">Cargando detalle…</div>}</td></tr>}</Fragment>;
+          return <Fragment key={item.id_linea}>{grupoActual !== grupoAnterior && <tr className="produccion-grupo"><td colSpan="8">{grupoActual}</td></tr>}<tr className={abierto ? "produccion-historial-fila abierta" : "produccion-historial-fila"} onClick={() => alternarDetalleHistorial(item.id_linea)}><td>{formatearFecha(item.fecha)}</td><td><span className="produccion-flecha">{abierto ? "▲" : "▼"}</span><strong>{item.numero_orden}</strong></td><td>{item.articulo}</td><td>{item.producto}</td><td>{item.color || "-"}</td><td>{item.inyectora}</td><td><span className={`inspeccion-badge inspeccion-${estadoInspeccion.toLowerCase().replace(" ", "-")}`}>{estadoInspeccion}</span></td><td><strong>{item.total_pares} pares</strong><AutoriaRegistro registro={item}/></td></tr>{abierto && <tr className="produccion-historial-detalle-fila"><td colSpan="8">{detalle ? <div className="produccion-historial-detalle"><div className="produccion-detalle-cabecera"><div><span>Artículo</span><strong>{detalle.articulo}</strong></div><div><span>Tipo de puntera</span><strong>{detalle.nombre_puntera || "Sin especificar"}</strong></div><div><span>Adicional</span><strong>{detalle.adicionales || "Sin adicional"}</strong></div></div><div className="produccion-detalle-etapas"><div className="produccion-detalle-etapa-doble"><div className="produccion-detalle-etapa produccion-subetapa"><span><strong>Calzado:</strong> {detalle.operario_calzado}</span></div><div className="produccion-detalle-etapa produccion-subetapa"><span><strong>Inspector final:</strong> {detalle.operario_inspeccion_final}</span><span><strong>Estado:</strong> <span className={`inspeccion-badge inspeccion-${String(detalle.estado_inspeccion || "Pendiente").toLowerCase().replace(" ", "-")}`}>{detalle.estado_inspeccion || "Pendiente"}</span></span>{detalle.estado_inspeccion === "No conforme" && <span>Pares defectuosos: {detalle.pares_defectuosos ?? "Sin desglose"}</span>}{detalle.observacion_inspeccion && <span className="produccion-inspeccion-observacion"><strong>Observación:</strong> {detalle.observacion_inspeccion}</span>}</div></div><div className="produccion-detalle-etapa"><span><strong>Puntera:</strong> {detalle.operario_puntera}</span><span><strong>Material de puntera:</strong> {detalle.material_puntera}{detalle.color_puntera ? ` · ${detalle.color_puntera}` : ""} · Remito {detalle.remito_puntera}</span></div><div className="produccion-detalle-etapa"><span><strong>Inyección:</strong> {detalle.operario_inyeccion}</span><span><strong>PU:</strong> {detalle.material_pu}{detalle.color_pu ? ` · ${detalle.color_pu}` : ""} · Remito {detalle.remito_pu}</span></div></div>{detalle.otros_materiales?.length > 0 && <div className="produccion-detalle-otros">{detalle.otros_materiales.map((material, indiceMaterial) => <span key={`${material.numero_remito}-${indiceMaterial}`}><strong>Otro material:</strong> {material.material}{material.color ? ` · ${material.color}` : ""} · Remito {material.numero_remito}</span>)}</div>}<div className="produccion-detalle-pie"><div className="produccion-detalle-talles">{detalle.talles.map((talle) => <span key={talle.talle}>T{talle.talle}: <strong>{talle.cantidad_pares}</strong></span>)}</div>{item.id_planilla && <button type="button" className="ui-btn ui-btn-secondary produccion-abrir-planilla" onClick={(event) => { event.stopPropagation(); navigate(`/planillas?seleccion=${item.id_planilla}`); }}>Abrir planilla completa →</button>}</div></div> : <div className="produccion-detalle-cargando">Cargando detalle…</div>}</td></tr>}</Fragment>;
         }) : <tr><td colSpan="8" className="produccion-sin-registros">{busquedaHistorial ? "No se encontraron producciones con esa búsqueda." : "No hay producciones registradas."}</td></tr>}</tbody></table></div>
         <Pagination {...paginacionHistorial} />
       </div>

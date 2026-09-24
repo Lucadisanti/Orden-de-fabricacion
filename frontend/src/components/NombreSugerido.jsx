@@ -3,28 +3,33 @@ import axios from "axios";
 import MenuSelector from "./MenuSelector";
 import "../styles/SelectorMaterial.css";
 
-let consulta;
-function cargarNombres() {
-  if (!consulta) consulta = axios.get("/api/sugerencias/nombres").then(r => r.data).finally(() => { consulta = null; });
-  return consulta;
+const consultas = new Map();
+function cargarNombres(campo) {
+  if (!consultas.has(campo)) {
+    const consulta = axios.get(`/api/sugerencias/nombres?campo=${campo}`).then(r => r.data).finally(() => { consultas.delete(campo); });
+    consultas.set(campo, consulta);
+  }
+  return consultas.get(campo);
 }
 const normalizar = valor => String(valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-export default function NombreSugerido({ tipo = "personas", value = "", onChange, ...props }) {
+export default function NombreSugerido({ campo, tipo, value = "", onChange, ...props }) {
   const anchor = useRef(null), id = useId();
+  const etiqueta = String(props["aria-label"] || "").toLowerCase();
+  const campoSugerencias = campo || (props.name === "recibido_por" ? "recibido_por" : etiqueta.includes("calzado") ? "operarios_calzado" : etiqueta.includes("puntera") ? "operarios_puntera" : etiqueta.includes("inyección") ? "operarios_inyeccion" : etiqueta.includes("inspección") ? "operarios_inspeccion_final" : etiqueta.includes("controlador") || props.maxLength === 100 ? "controlador" : tipo === "talleres" ? "taller_aparado" : props.required ? "operarios_inyeccion" : "operario_corte");
   const [opciones, setOpciones] = useState([]), [abierto, setAbierto] = useState(false), [activo, setActivo] = useState(-1);
   const [limpiando, setLimpiando] = useState(false), [error, setError] = useState("");
   async function limpiar() {
     if (limpiando) return;
     setLimpiando(true); setError("");
-    try { await axios.delete(`/api/sugerencias/nombres?tipo=${tipo}`); consulta = null; setOpciones([]); setAbierto(false); setActivo(-1); }
+    try { await axios.delete(`/api/sugerencias/nombres?campo=${campoSugerencias}`); consultas.delete(campoSugerencias); setOpciones([]); setAbierto(false); setActivo(-1); }
     catch { setError("No se pudo limpiar. Intentá nuevamente."); }
     finally { setLimpiando(false); }
   }
-  const visibles = opciones.slice(0, 5).filter(n => normalizar(n).includes(normalizar(value)));
+  const visibles = opciones.filter(n => normalizar(n).includes(normalizar(value)));
   const elegir = nombre => { onChange({target:{value:nombre,name:props.name}}); setAbierto(false); setActivo(-1); };
   return <div className="selector-material nombre-sugerido">
     <input {...props} ref={anchor} value={value} autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={abierto && visibles.length > 0} aria-controls={id} aria-activedescendant={abierto && visibles[activo] ? `${id}-${activo}` : undefined}
-      onFocus={() => { setAbierto(true); cargarNombres().then(datos => setOpciones(datos[tipo] || [])).catch(() => setOpciones([])); }}
+      onFocus={() => { setAbierto(true); cargarNombres(campoSugerencias).then(datos => setOpciones(datos.sugerencias || [])).catch(() => setOpciones([])); }}
       onClick={() => setAbierto(true)} onBlur={e => { if(e.relatedTarget?.dataset.sugerencias === id) return; setAbierto(false); setActivo(-1); }}
       onChange={e => { onChange(e); setAbierto(true); setActivo(-1); }}
       onKeyDown={e => {

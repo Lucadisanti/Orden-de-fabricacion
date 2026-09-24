@@ -216,6 +216,9 @@ def migrate_schema(connection=None):
         if not lock_acquired:
             raise RuntimeError("No se pudo obtener el bloqueo para actualizar la base de datos.")
 
+        from utils.registro_permisos import asegurar_esquema
+        asegurar_esquema(cursor)
+
         # Un producto conserva modelo y color; puntera y adicionales forman variantes
         # que se eligen dentro de cada orden.
         cursor.execute(
@@ -319,6 +322,9 @@ def migrate_schema(connection=None):
         if not _column_definition(cursor, "orden_fabricacion", "fecha_aparado"):
             cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN fecha_aparado DATE NULL")
             LOGGER.info("Agregada la fecha independiente de aparado.")
+        if not _column_definition(cursor, "orden_fabricacion", "es_forrado"):
+            cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN es_forrado TINYINT(1) NOT NULL DEFAULT 0")
+            LOGGER.info("Agregado el indicador de forrado en órdenes.")
 
         for campo in ("lote_puntera_id", "lote_pu_id"):
             columna = _column_definition(cursor, "produccion_diaria_linea", campo)

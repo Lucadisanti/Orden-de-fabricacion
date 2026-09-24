@@ -11,13 +11,17 @@ import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import CatalogModal from "../components/CatalogModal";
-import SortControls from "../components/SortControls";
+import { useNativeTableSorting } from "../components/SortableHeader";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
+import PermisoRegistro, { AutoriaRegistro } from "../components/PermisoRegistro";
 import { ordenarRegistros, useSortPreference } from "../utils/sorting";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
+import DateInput from "../components/DateInput";
+import { articuloVisible } from "../utils/articulo";
+import useUnsavedFormWarning from "../hooks/useUnsavedFormWarning";
 import "../styles/Planillas.css";
 
 export default function Planillas() {
@@ -54,6 +58,7 @@ export default function Planillas() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const ordenListado = useSortPreference("planillas-orden", "fecha", "desc");
+  useNativeTableSorting(".planillas-listado-card table", ordenListado, { Fecha: "fecha", "Nº Orden": "orden" });
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
 
@@ -95,6 +100,7 @@ export default function Planillas() {
     maquinas_id_maquina: "",
     estado: "Pendiente",
   });
+  const salida = useUnsavedFormWarning({ enabled: Boolean(mostrarFormulario || planillaSeleccionada), refs: [formRef, planillaAbiertaRef], navigate });
 
   useEffect(() => {
     cargarDatos();
@@ -102,7 +108,11 @@ export default function Planillas() {
 
   useEffect(() => {
     if (!filaDetalleAbierta) return;
-    const desplazamiento = window.setTimeout(() => listadoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    const desplazamiento = window.setTimeout(() => listadoRef.current?.querySelector(".planilla-fila-abierta")?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      block: "start",
+      inline: "nearest",
+    }), 80);
     return () => window.clearTimeout(desplazamiento);
   }, [filaDetalleAbierta]);
 
@@ -171,6 +181,7 @@ export default function Planillas() {
       setOrdenesDisponibles(disponibilidadRes.data);
       setDistribucionPlanillas(Object.fromEntries(distribucionRes.data.map((item) => [item.id_planilla, item])));
       setError("");
+      return planillasRes.data;
     } catch (error) {
       console.error(error);
       setError("No se pudieron cargar las planillas.");
@@ -295,6 +306,7 @@ export default function Planillas() {
       Number(esperadosPorTalle[String(talle)] || 0) - Number(realizadosPorTalle[String(talle)] || 0), 0
     ), 0
   );
+  const planillaFinalizada = Boolean(planillaSeleccionada) && tallesPlanificados.length > 0 && totalPendiente === 0;
 
   const manejarEnterTalle = (event, index) => {
     if (event.key !== "Enter") return;
@@ -424,6 +436,7 @@ export default function Planillas() {
 
       setEditando(false);
       setIdEditando(null);
+      salida.limpiarCambios();
       setMostrarFormulario(false);
       cargarDatos();
       if (planillaCreada) gestionarPlanilla(planillaCreada, "produccion");
@@ -521,10 +534,12 @@ export default function Planillas() {
         const buscarLote = (id) => lotesRes.data.find((lote) => String(lote.id_lote || lote.id_lote_materiales) === String(id));
         return {
           id_linea: linea.id_linea,
+          autor_id: linea.autor_id,
+          creado_en: linea.creado_en,
           fecha: jornada.fecha || planilla.fecha,
           modificada: false,
           numero: indice + 1,
-          articulo: linea.articulo,
+          articulo: articuloVisible(linea.articulo),
           maquinas_id_maquina: String(linea.maquinas_id_maquina || maquinas.find((maquina) => (maquina.nombre_maquina || maquina.maquina) === linea.maquina)?.id_maquina || ""),
           operarios_calzado: jornada.operarios_calzado?.length ? jornada.operarios_calzado : [""],
           operarios_puntera: jornada.operarios_puntera?.length ? jornada.operarios_puntera : [""],
@@ -620,7 +635,7 @@ export default function Planillas() {
           materiales: usosRes.data.filter((uso) =>
             Number(uso.planilla_produccion_id_planilla || uso.id_planilla) === Number(planilla.id_planilla)
           ),
-          desglose: desgloseRes.data,
+          desglose: desgloseRes.data.map((linea) => ({ ...linea, articulo: articuloVisible(linea.articulo) })),
         },
       }));
     } catch (resumenError) {
@@ -644,10 +659,10 @@ export default function Planillas() {
 
   const esPlanillaInyeccion = planillaSeleccionada && (planillaSeleccionada.numero_planilla?.toUpperCase() === "R013/1" || planillaSeleccionada.tipo_planilla?.includes("Inyección"));
   const etiquetaLote = (lote) => `${lote.material || "Material"}${lote.color ? ` (${lote.color})` : ""} · Remito ${lote.numero_remito || "-"} · ${lote.nombre_proveedor || lote.proveedor || "Sin proveedor"}`;
-  const cargarMaterialNuevo = (destino) => {
+  const cargarMaterialNuevo = (destino) => salida.navegarSinAviso(() => {
     sessionStorage.setItem("borrador-material-planilla", JSON.stringify({ idPlanilla: planillaSeleccionada.id_planilla, varianteForm, tallesForm, variantesPendientes, produccionActivaAbierta, numeroProduccionActiva, destino }));
     navigate("/recepcion-materiales?nuevo=1&volver=planillas");
-  };
+  });
   const cambiarMaterialVariante = (campo, busqueda) => {
     const lote = lotes.find((item) => etiquetaLote(item).toLowerCase() === busqueda.trim().toLowerCase());
     setVarianteForm((actual) => ({ ...actual, [campo === "lote_puntera_id" ? "busqueda_puntera" : "busqueda_pu"]: busqueda, [campo]: lote ? String(lote.id_lote || lote.id_lote_materiales) : "" }));
@@ -716,7 +731,7 @@ export default function Planillas() {
     const numeroSeleccionado = seleccionada.numero || indice + 1;
     const conservarActual = varianteTieneDatos(varianteForm, tallesActuales);
     setVariantesPendientes((actuales) => { const siguientes = [...actuales]; siguientes.splice(indice, 1); if (conservarActual) siguientes.splice(indice, 0, { ...varianteForm, talles: tallesActuales, articulo: articuloVariante, numero: numeroProduccionVisible }); return siguientes; });
-    setVarianteForm({ id_linea: seleccionada.id_linea, fecha: seleccionada.fecha, modificada: Boolean(seleccionada.id_linea), talles_originales: seleccionada.talles_originales || seleccionada.talles, maquinas_id_maquina: seleccionada.maquinas_id_maquina, operarios_calzado: seleccionada.operarios_calzado, operarios_puntera: seleccionada.operarios_puntera, operarios_inyeccion: seleccionada.operarios_inyeccion, operarios_inspeccion_final: seleccionada.operarios_inspeccion_final || [""], estado_inspeccion: seleccionada.estado_inspeccion || "Pendiente", observacion_inspeccion: seleccionada.observacion_inspeccion || "", pares_defectuosos: seleccionada.pares_defectuosos ?? "", punteras_id_puntera: seleccionada.punteras_id_puntera, adicionales_id_adicional: seleccionada.adicionales_id_adicional, lote_puntera_id: seleccionada.lote_puntera_id, lote_pu_id: seleccionada.lote_pu_id, busqueda_puntera: seleccionada.busqueda_puntera, busqueda_pu: seleccionada.busqueda_pu, materiales_extra: seleccionada.materiales_extra });
+    setVarianteForm({ id_linea: seleccionada.id_linea, autor_id: seleccionada.autor_id, creado_en: seleccionada.creado_en, fecha: seleccionada.fecha, modificada: Boolean(seleccionada.id_linea), talles_originales: seleccionada.talles_originales || seleccionada.talles, maquinas_id_maquina: seleccionada.maquinas_id_maquina, operarios_calzado: seleccionada.operarios_calzado, operarios_puntera: seleccionada.operarios_puntera, operarios_inyeccion: seleccionada.operarios_inyeccion, operarios_inspeccion_final: seleccionada.operarios_inspeccion_final || [""], estado_inspeccion: seleccionada.estado_inspeccion || "Pendiente", observacion_inspeccion: seleccionada.observacion_inspeccion || "", pares_defectuosos: seleccionada.pares_defectuosos ?? "", punteras_id_puntera: seleccionada.punteras_id_puntera, adicionales_id_adicional: seleccionada.adicionales_id_adicional, lote_puntera_id: seleccionada.lote_puntera_id, lote_pu_id: seleccionada.lote_pu_id, busqueda_puntera: seleccionada.busqueda_puntera, busqueda_pu: seleccionada.busqueda_pu, materiales_extra: seleccionada.materiales_extra });
     setTallesForm(Object.fromEntries(tallesDisponibles.map((talle) => [talle, seleccionada.talles.find((item) => Number(item.talle) === talle)?.cantidad || ""])));
     setNumeroProduccionActiva(numeroSeleccionado);
     setProduccionActivaAbierta(true);
@@ -818,10 +833,13 @@ export default function Planillas() {
         )
       );
 
+      salida.limpiarCambios();
       setTallesForm(crearTallesIniciales());
       if (esPlanillaInyeccion) reiniciarVariante();
       if (esPlanillaInyeccion) setVariantesPendientes([]);
-      gestionarPlanilla(planillaSeleccionada);
+      const planillasActualizadas = await cargarDatos();
+      const planillaActualizada = planillasActualizadas?.find((planilla) => Number(planilla.id_planilla) === Number(planillaSeleccionada.id_planilla));
+      gestionarPlanilla(planillaActualizada || planillaSeleccionada);
       mostrarToast("success", esPlanillaInyeccion ? "Producción guardada" : "Talles cargados", esPlanillaInyeccion ? "Las combinaciones, sus materiales y cantidades quedaron registradas." : "Los talles se guardaron correctamente.");
     } catch (error) {
       console.error(error);
@@ -991,6 +1009,7 @@ export default function Planillas() {
       />
       <CatalogModal key={altaCatalogoVariante || "catalogo-variante-cerrado"} open={Boolean(altaCatalogoVariante)} title={altaCatalogoVariante === "puntera" ? "Agregar tipo de puntera" : "Agregar adicional"} codeLength={2} onConfirm={crearCatalogoVariante} onCancel={() => setAltaCatalogoVariante(null)} />
 
+      <ConfirmModal open={Boolean(salida.salidaPendiente)} title="Cambios sin guardar" message="Hay datos de la planilla sin guardar. Si salís, se perderán." confirmText="Salir sin guardar" danger onCancel={salida.cancelarSalida} onConfirm={salida.confirmarSalida} />
       <ConfirmModal
         open={Boolean(confirmacion)}
         title={confirmacion?.title}
@@ -1006,7 +1025,7 @@ export default function Planillas() {
           <p>Control de la Planilla de Calzado, Inyección e Inspección final R013/1.</p>
         </div>
 
-        <button className="ui-btn ui-btn-primary" onClick={abrirFormularioNuevo}>
+        <button className="ui-btn ui-btn-primary" onClick={() => salida.solicitarSalida(abrirFormularioNuevo)}>
           + Nueva planilla
         </button>
 
@@ -1034,8 +1053,7 @@ export default function Planillas() {
 
             <label>
               <span>Fecha</span>
-              <input
-                type="date"
+              <DateInput
                 name="fecha"
                 value={planillaForm.fecha}
                 onChange={manejarCambio}
@@ -1065,9 +1083,11 @@ export default function Planillas() {
                 type="button"
                 className="ui-btn ui-btn-secondary"
                 onClick={() => {
-                  setMostrarFormulario(false);
-                  setEditando(false);
-                  setIdEditando(null);
+                  salida.solicitarSalida(() => {
+                    setMostrarFormulario(false);
+                    setEditando(false);
+                    setIdEditando(null);
+                  });
                 }}
               >
                 Cancelar
@@ -1090,10 +1110,10 @@ export default function Planillas() {
               </p>
             </div>
             <div className="ui-form-actions">
-              <button type="button" className="ui-btn ui-btn-secondary" onClick={() => iniciarEdicion(planillaSeleccionada)}>
+              <PermisoRegistro registro={planillaSeleccionada}><button type="button" className="ui-btn ui-btn-secondary" onClick={() => salida.solicitarSalida(() => iniciarEdicion(planillaSeleccionada))}>
                 Editar datos generales
-              </button>
-              {(!esPlanillaInyeccion || seccionAbierta !== "produccion") && <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPlanillaSeleccionada(null)}>
+              </button></PermisoRegistro>
+              {(!esPlanillaInyeccion || seccionAbierta !== "produccion") && <button type="button" className="ui-btn ui-btn-secondary" onClick={() => salida.solicitarSalida(() => setPlanillaSeleccionada(null))}>
                 Cerrar
               </button>}
             </div>
@@ -1116,12 +1136,12 @@ export default function Planillas() {
 
           {esPlanillaInyeccion && produccionesOrdenadas.filter((item) => item.numero < numeroProduccionVisible).map(renderProduccionContraida)}
 
-          {esPlanillaInyeccion && <button type="button" ref={produccionActivaRef} aria-expanded={produccionActivaAbierta} className={`planilla-produccion-acordeon ${produccionActivaAbierta ? "activo" : ""}`} onClick={() => setProduccionActivaAbierta((abierta) => !abierta)}><span><strong>Producción {numeroProduccionVisible}</strong><small>{articuloVariante || "Sin configurar"} · {maquinas.find((maquina) => String(maquina.id_maquina) === String(varianteForm.maquinas_id_maquina))?.nombre_maquina || "Sin inyectora"} · {calcularTotalPares()} pares{varianteForm.id_linea ? " · Registrada" : ""}</small><small>Fecha: {formatearFecha(varianteForm.fecha || planillaSeleccionada.fecha)}</small></span>{varianteForm.id_linea && <strong className={`trazabilidad-inspeccion-estado ${varianteForm.estado_inspeccion === "Conforme" ? "conforme" : varianteForm.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{varianteForm.estado_inspeccion || "Pendiente"}</strong>}<b>{produccionActivaAbierta ? "▲" : "▼"}</b></button>}
+          {esPlanillaInyeccion && (produccionActivaAbierta || varianteForm.id_linea) && <button type="button" ref={produccionActivaRef} aria-expanded={produccionActivaAbierta} className={`planilla-produccion-acordeon ${produccionActivaAbierta ? "activo" : ""}`} onClick={() => setProduccionActivaAbierta((abierta) => !abierta)}><span><strong>Producción {numeroProduccionVisible}</strong><small>{articuloVariante || "Sin configurar"} · {maquinas.find((maquina) => String(maquina.id_maquina) === String(varianteForm.maquinas_id_maquina))?.nombre_maquina || "Sin inyectora"} · {calcularTotalPares()} pares{varianteForm.id_linea ? " · Registrada" : ""}</small><small>Fecha: {formatearFecha(varianteForm.fecha || planillaSeleccionada.fecha)}</small></span>{varianteForm.id_linea && <strong className={`trazabilidad-inspeccion-estado ${varianteForm.estado_inspeccion === "Conforme" ? "conforme" : varianteForm.estado_inspeccion === "No conforme" ? "no-conforme" : "pendiente"}`}>{varianteForm.estado_inspeccion || "Pendiente"}</strong>}<b>{produccionActivaAbierta ? "▲" : "▼"}</b></button>}
 
           {esPlanillaInyeccion && produccionActivaAbierta && <div className="planilla-variante-editor">
             <div className="planilla-variante-titulo"><div><strong>Carga de producción</strong><span>Completá la configuración y las cantidades por talle.</span></div><div className="planilla-articulo-variante"><span>Artículo resultante</span><strong>{articuloVariante || "Completá la configuración"}</strong></div></div>
             <div className="planilla-variante-grid">
-              <label className="planilla-fecha-produccion">Fecha de producción<input type="date" value={varianteForm.fecha ?? planillaSeleccionada.fecha ?? ""} onChange={(e) => setVarianteForm({ ...varianteForm, fecha: e.target.value })} required /></label>
+              <label className="planilla-fecha-produccion">Fecha de producción<DateInput value={varianteForm.fecha ?? planillaSeleccionada.fecha ?? ""} onChange={(e) => setVarianteForm({ ...varianteForm, fecha: e.target.value })} required /></label>
               <label>Inyectora<div className="planilla-selector-con-alta"><Selector value={varianteForm.maquinas_id_maquina} onChange={(e) => setVarianteForm({ ...varianteForm, maquinas_id_maquina: e.target.value })} required><option value="">Seleccione inyectora</option>{maquinas.map((maquina) => <option key={maquina.id_maquina} value={maquina.id_maquina}>{maquina.nombre_maquina || maquina.maquina}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setMostrarAltaMaquina(true)}>+</button></div></label>
               <label>Tipo de puntera<div className="planilla-selector-con-alta"><Selector value={varianteForm.punteras_id_puntera} onChange={(e) => setVarianteForm({ ...varianteForm, punteras_id_puntera: e.target.value })}><option value="">Seleccione puntera</option>{punteras.map((puntera) => <option key={puntera.id_puntera} value={puntera.id_puntera}>{puntera.codigo_puntera} - {puntera.nombre_puntera}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("puntera")}>+</button></div></label>
               <label>Adicional (opcional)<div className="planilla-selector-con-alta"><Selector value={varianteForm.adicionales_id_adicional} onChange={(e) => setVarianteForm({ ...varianteForm, adicionales_id_adicional: e.target.value })}><option value="">Sin adicional</option>{adicionales.map((adicional) => <option key={adicional.id_adicional} value={adicional.id_adicional}>{adicional.codigo_adicional} - {adicional.nombre_adicional}</option>)}</Selector><button type="button" className="planilla-alta-maquina" onClick={() => setAltaCatalogoVariante("adicional")}>+</button></div></label>
@@ -1154,7 +1174,7 @@ export default function Planillas() {
                   <td className="columna-total">{totalEsperado}</td>
                 </tr>
                 {!varianteForm.id_linea && <tr className="fila-realizados">
-                  <th><span>{variantesPendientes.length ? "Realizados + preparados" : "Realizados"}</span>{!corrigiendoRealizados && <button type="button" className="planilla-editar-realizados" onClick={iniciarCorreccionRealizados}>Editar</button>}</th>
+                  <th><span>{variantesPendientes.length ? "Realizados + preparados" : "Realizados"}</span>{!corrigiendoRealizados && <PermisoRegistro registro={planillaSeleccionada}><button type="button" className="planilla-editar-realizados" onClick={iniciarCorreccionRealizados}>Editar</button></PermisoRegistro>}</th>
                   {tallesDisponibles.map((talle) => <td key={talle}>{corrigiendoRealizados ? <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={3} value={correccionesRealizados[String(talle)] ?? ""} onChange={(e) => cambiarRealizado(talle, e.target.value)} aria-label={`Corregir realizados del talle ${talle}`} /> : (realizadosPorTalle[String(talle)] || 0)}</td>)}
                   <td className="columna-total">{totalRealizado}</td>
                 </tr>}
@@ -1195,19 +1215,19 @@ export default function Planillas() {
 
             <div className="ui-form-actions">
               <strong>{varianteForm.id_linea ? `Editando producción ${numeroProduccionVisible}` : "Carga actual"}: {calcularTotalPares()} pares</strong>
-              {corrigiendoRealizados && <><button type="button" className="ui-btn ui-btn-secondary" onClick={() => { setCorrigiendoRealizados(false); setCorreccionesRealizados({}); }}>Cancelar corrección</button><button type="button" className="ui-btn ui-btn-primary" onClick={guardarCorreccionRealizados}>Guardar corrección</button></>}
-              {!corrigiendoRealizados && <button
+              {corrigiendoRealizados && <><button type="button" className="ui-btn ui-btn-secondary" onClick={() => { setCorrigiendoRealizados(false); setCorreccionesRealizados({}); }}>Cancelar corrección</button><PermisoRegistro registro={planillaSeleccionada}><button type="button" className="ui-btn ui-btn-primary" onClick={guardarCorreccionRealizados}>Guardar corrección</button></PermisoRegistro></>}
+              {!corrigiendoRealizados && <PermisoRegistro registro={varianteForm} nuevo={!varianteForm.id_linea}><button
                 type="submit"
                 className="ui-btn ui-btn-primary"
                 ref={guardarTallesRef}
               >
                 {esPlanillaInyeccion ? (variantesPendientes.length ? "Guardar producciones" : "Guardar producción") : "Agregar producción"}
-              </button>}
+              </button></PermisoRegistro>}
             </div>
           </div>}
 
           {esPlanillaInyeccion && produccionesOrdenadas.filter((item) => item.numero > numeroProduccionVisible).map(renderProduccionContraida)}
-          {esPlanillaInyeccion && <div className="ui-form-actions">{!corrigiendoRealizados && <button type="button" className="ui-btn ui-btn-secondary" onClick={prepararOtraVariante}>Cargar nueva producción</button>}<button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPlanillaSeleccionada(null)}>Cerrar</button></div>}
+          {esPlanillaInyeccion && <div className="ui-form-actions">{!corrigiendoRealizados && !planillaFinalizada && <button type="button" className="ui-btn ui-btn-secondary" onClick={prepararOtraVariante}>Cargar nueva producción</button>}<button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPlanillaSeleccionada(null)}>Cerrar</button></div>}
           </form>}
 
           {!esPlanillaInyeccion && <button type="button" className={`planilla-acordeon ${seccionAbierta === "operarios" ? "activo" : ""}`} onClick={() => setSeccionAbierta(seccionAbierta === "operarios" ? "" : "operarios")}>
@@ -1265,14 +1285,14 @@ export default function Planillas() {
                     <td>{operario.etapa}</td>
                     <td>{operario.nombre_operario}</td>
                     <td>
-                      <button
+                      <PermisoRegistro registro={planillaSeleccionada} soloAdmin><button
                         className="ui-btn ui-btn-danger"
                         onClick={() =>
                           eliminarOperario(operario.id_operario_planilla)
                         }
                       >
                         Eliminar
-                      </button>
+                      </button></PermisoRegistro>
                     </td>
                   </tr>
                 ))}
@@ -1345,12 +1365,12 @@ export default function Planillas() {
                     <td>{uso.material || "-"}</td>
                     <td>{uso.color || "-"}</td>
                     <td>
-                      <button
+                      <PermisoRegistro registro={planillaSeleccionada} soloAdmin><button
                         className="ui-btn ui-btn-danger"
                         onClick={() => eliminarUsoMaterial(uso.id_uso)}
                       >
                         Eliminar
-                      </button>
+                      </button></PermisoRegistro>
                     </td>
                   </tr>
                 ))}
@@ -1381,11 +1401,6 @@ export default function Planillas() {
             value={busqueda}
             onChange={setBusqueda}
           />
-          <SortControls opciones={[
-            { value: "fecha", label: "Fecha" },
-            { value: "producto", label: "Producto" },
-            { value: "maquina", label: "Máquina" },
-          ]} {...ordenListado} />
         </div>
         {sinResultados ? (
           <div className="ui-empty-state">
@@ -1439,19 +1454,19 @@ export default function Planillas() {
                     </span>
                   </td>
                   <td>
-                    <button
+                    <PermisoRegistro registro={planilla} completar><button
                       className="ui-btn ui-btn-secondary"
                       onClick={(event) => { event.stopPropagation(); gestionarPlanilla(planilla, "produccion"); }}
                     >
                       Editar
-                    </button>
+                    </button></PermisoRegistro>
 
-                    <button
+                    <PermisoRegistro registro={planilla} soloAdmin><button
                       className="ui-btn ui-btn-danger"
                       onClick={(event) => { event.stopPropagation(); eliminarPlanilla(planilla.id_planilla); }}
                     >
                       Eliminar
-                    </button>
+                    </button></PermisoRegistro><AutoriaRegistro registro={planilla} />
                   </td>
                 </tr>
 

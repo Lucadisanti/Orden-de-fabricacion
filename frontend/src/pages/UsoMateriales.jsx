@@ -9,6 +9,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import ClearableSearch from "../components/ClearableSearch";
 import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
+import PermisoRegistro, { AutoriaRegistro } from "../components/PermisoRegistro";
 import { obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import "../styles/UsoMateriales.css";
@@ -271,9 +272,11 @@ export default function UsoMateriales() {
         <div className="ui-form-card" ref={formRef}>
           <h2>{editando ? "Editar uso de material" : "Nuevo uso de material"}</h2>
 
+
           <form onSubmit={guardarUsoMaterial} className="form-uso-material">
             <Selector
               name="planilla_produccion_id_planilla"
+
               value={form.planilla_produccion_id_planilla}
               onChange={manejarCambio}
               required
@@ -290,6 +293,7 @@ export default function UsoMateriales() {
 
             <Selector
               name="lote_materiales_id_lote"
+
               value={form.lote_materiales_id_lote}
               onChange={manejarCambio}
               required
@@ -318,6 +322,7 @@ export default function UsoMateriales() {
                 name="cantidad_usada"
                 placeholder="Cantidad usada"
                 value={form.cantidad_usada}
+
                 onChange={manejarCambio}
                 required
               />
@@ -403,7 +408,7 @@ export default function UsoMateriales() {
                     <td>{uso.color || "-"}</td>
                     <td>{obtenerFechaUso(uso)}</td>
                     <td>
-                      <button
+                      <PermisoRegistro registro={uso} completar><button
                         className="ui-btn ui-btn-secondary"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -411,9 +416,9 @@ export default function UsoMateriales() {
                         }}
                       >
                         Editar
-                      </button>
+                      </button></PermisoRegistro>
 
-                      <button
+                      <PermisoRegistro registro={uso} soloAdmin><button
                         className="ui-btn ui-btn-danger"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -421,7 +426,7 @@ export default function UsoMateriales() {
                         }}
                       >
                         Eliminar
-                      </button>
+                      </button></PermisoRegistro><AutoriaRegistro registro={uso} />
                     </td>
                   </tr>
 

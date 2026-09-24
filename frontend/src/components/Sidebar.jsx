@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import bohmLogo from "../assets/bohm-logo.png";
 import "../styles/Sidebar.css";
@@ -21,7 +21,7 @@ const enlacesDatosGenerales = [
   ["/uso-materiales", "Uso de materiales"],
 ];
 
-export default function Sidebar() {
+export default function Sidebar({usuario,onLogout}) {
   const location = useLocation();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [datosGeneralesAbiertos, setDatosGeneralesAbiertos] = useState(() => (
@@ -29,7 +29,9 @@ export default function Sidebar() {
   ));
   const [ahora, setAhora] = useState(() => new Date());
   const [tema, setTema] = useState(() => localStorage.getItem("tema") || "dia");
-  const cerrarMenu = () => setMenuAbierto(false);
+  const [cuentaAbierta, setCuentaAbierta] = useState(false);
+  const cuentaRef = useRef(null);
+  const cerrarMenu = () => { setMenuAbierto(false); setCuentaAbierta(false); };
 
   useEffect(() => {
     const reloj = window.setInterval(() => setAhora(new Date()), 1000);
@@ -40,6 +42,22 @@ export default function Sidebar() {
     document.documentElement.dataset.theme = tema;
     localStorage.setItem("tema", tema);
   }, [tema]);
+
+  useEffect(() => {
+    if (!cuentaAbierta) return;
+    const cerrarAlSalir = (evento) => {
+      if (!cuentaRef.current?.contains(evento.target)) setCuentaAbierta(false);
+    };
+    const cerrarConEscape = (evento) => {
+      if (evento.key === "Escape") setCuentaAbierta(false);
+    };
+    document.addEventListener("pointerdown", cerrarAlSalir);
+    document.addEventListener("keydown", cerrarConEscape);
+    return () => {
+      document.removeEventListener("pointerdown", cerrarAlSalir);
+      document.removeEventListener("keydown", cerrarConEscape);
+    };
+  }, [cuentaAbierta]);
 
   const hora = new Intl.DateTimeFormat("es-AR", {
     hour: "2-digit",
@@ -52,11 +70,14 @@ export default function Sidebar() {
     month: "long",
   }).format(ahora);
   const fecha = fechaSinFormato.charAt(0).toUpperCase() + fechaSinFormato.slice(1);
+  const nombreCuenta = usuario?.nombre?.trim() || usuario?.usuario?.trim() || "Usuario";
+  const inicial = Array.from(nombreCuenta)[0]?.toLocaleUpperCase("es-AR") || "U";
   const datosGeneralesActivos = enlacesDatosGenerales.some(
     ([ruta]) => location.pathname.startsWith(ruta),
   );
   const irAOtroApartado = () => {
     setDatosGeneralesAbiertos(false);
+    setCuentaAbierta(false);
     cerrarMenu();
   };
 
@@ -107,16 +128,25 @@ export default function Sidebar() {
           </nav>
 
           <div className="sidebar-clock" aria-label={`${fecha}, ${hora}`}>
-            <button
-              type="button"
-              className="theme-toggle"
-              onClick={() => setTema((actual) => actual === "dia" ? "noche" : "dia")}
-              aria-label={tema === "dia" ? "Activar modo noche" : "Activar modo día"}
-              title={tema === "dia" ? "Activar modo noche" : "Activar modo día"}
-              aria-pressed={tema === "noche"}
-            >
-              <span aria-hidden="true">{tema === "dia" ? "☾" : "☀"}</span>
-            </button>
+            <div className="sidebar-account" ref={cuentaRef}>
+              <button
+                type="button"
+                className="sidebar-avatar"
+                aria-label={`Abrir cuenta de ${nombreCuenta}`}
+                aria-expanded={cuentaAbierta}
+                aria-controls="sidebar-cuenta-menu"
+                onClick={() => setCuentaAbierta((abierta) => !abierta)}
+              >{inicial}</button>
+              {cuentaAbierta && <div className="sidebar-account-menu" id="sidebar-cuenta-menu" aria-label="Cuenta">
+                <div className="sidebar-account-persona">
+                  <span className="sidebar-account-inicial" aria-hidden="true">{inicial}</span>
+                  <div><strong>{nombreCuenta}</strong><small>{usuario?.rol === "maestro" ? "Administrador maestro" : usuario?.rol === "admin" ? "Administrador" : "Empleado"}</small></div>
+                </div>
+                {["maestro", "admin"].includes(usuario?.rol) && <NavLink to="/usuarios" onClick={irAOtroApartado}>Usuarios</NavLink>}
+                <button type="button" aria-pressed={tema === "noche"} onClick={() => setTema((actual) => actual === "dia" ? "noche" : "dia")}>Tema: {tema === "dia" ? "Claro" : "Oscuro"}<span aria-hidden="true">{tema === "dia" ? "☾" : "☀"}</span></button>
+                <button type="button" className="sidebar-account-salir" onClick={() => { setCuentaAbierta(false); onLogout(); }}>Cerrar sesión</button>
+              </div>}
+            </div>
             <div className="sidebar-clock-info">
               <time dateTime={ahora.toISOString()}>{hora}</time>
               <span>{fecha}</span>

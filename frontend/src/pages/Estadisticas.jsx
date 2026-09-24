@@ -3,6 +3,7 @@ import axios from "axios";
 import RetryMessage from "../components/RetryMessage";
 import { fechaLocal, resumirEstadisticas } from "../utils/estadisticas";
 import { formatearFecha } from "../utils/dateFormat";
+import DateInput from "../components/DateInput";
 import "../styles/Estadisticas.css";
 
 const numero = (n) => n.toLocaleString("es-AR");
@@ -81,8 +82,8 @@ export default function Estadisticas() {
     <header className="ui-page-header"><h1>Estadísticas</h1><p>Una mirada a la producción, las inyectoras y el avance de las órdenes.</p></header>
     <div className="estadisticas-filtros">
       <div className="estadisticas-periodos">{[["semana", "Esta semana"], ["mes", "Este mes"], ["todo", "Todo el historial"]].map(([valor, texto]) => <button key={valor} className={`ui-btn ${periodo === valor ? "ui-btn-primary" : "ui-btn-secondary"}`} aria-pressed={periodo === valor} onClick={() => cambiarPeriodo(valor)}>{texto}</button>)}</div>
-      <label>Desde<input className="ui-input" type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPeriodo("personalizado"); }} /></label>
-      <label>Hasta<input className="ui-input" type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPeriodo("personalizado"); }} /></label>
+      <label>Desde<DateInput className="ui-input" value={desde} onChange={(e) => { setDesde(e.target.value); setPeriodo("personalizado"); }} /></label>
+      <label>Hasta<DateInput className="ui-input" value={hasta} onChange={(e) => { setHasta(e.target.value); setPeriodo("personalizado"); }} /></label>
     </div>
     {error ? <RetryMessage message={error} onRetry={cargarEstadisticas} retrying={cargando} /> : !resumen ? <p role="status">Cargando estadísticas...</p> : invalido ? <p role="alert">La fecha Desde debe ser anterior o igual a Hasta.</p> : <>
       <div className="estadisticas-titulo"><h2>Producción del período</h2><p>Se toma la fecha propia de cada producción, incluida la cargada desde Planillas.</p></div>

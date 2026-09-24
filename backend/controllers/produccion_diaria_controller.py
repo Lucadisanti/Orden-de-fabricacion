@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import jsonify, request
 
 from db.connection import get_connection
@@ -93,7 +95,7 @@ def listar_producciones_diarias():
         _asegurar_esquema_variantes(cursor)
         cursor.execute(
             """
-            SELECT pdl.id_linea, pdl.planilla_produccion_id_planilla AS id_planilla, ofab.id_orden, ofab.numero_orden, prod.modelos_calzado_id_modelo AS id_modelo,
+            SELECT pdl.id_linea, pd.id_produccion_diaria, pdl.planilla_produccion_id_planilla AS id_planilla, ofab.id_orden, ofab.numero_orden, prod.modelos_calzado_id_modelo AS id_modelo,
                    COALESCE(pv.articulo_producto, prod.articulo_producto) AS articulo,
                    prod.nombre_producto AS producto, col.color AS color,
                    m.nombre_maquina AS inyectora, pd.fecha, pdl.estado_inspeccion, pdl.pares_defectuosos,
@@ -108,7 +110,7 @@ def listar_producciones_diarias():
             LEFT JOIN colores col ON col.id_color = prod.colores_id_color
             LEFT JOIN producto_variante pv ON pv.id_variante = pdl.producto_variante_id_variante
             LEFT JOIN detalle_produccion_diaria dpdl ON dpdl.linea_id = pdl.id_linea
-            GROUP BY pdl.id_linea, pdl.planilla_produccion_id_planilla, ofab.id_orden, ofab.numero_orden, prod.modelos_calzado_id_modelo, pv.articulo_producto, prod.articulo_producto,
+            GROUP BY pdl.id_linea, pd.id_produccion_diaria, pdl.planilla_produccion_id_planilla, ofab.id_orden, ofab.numero_orden, prod.modelos_calzado_id_modelo, pv.articulo_producto, prod.articulo_producto,
                      prod.nombre_producto, col.color, m.nombre_maquina, pd.fecha, pdl.estado_inspeccion, pdl.pares_defectuosos
             ORDER BY pd.fecha DESC, pd.id_produccion_diaria DESC, pdl.id_linea DESC
             """
@@ -125,7 +127,7 @@ def listar_disponibilidad_ordenes():
     try:
         cursor.execute(
             """
-            SELECT ofab.id_orden, ofab.numero_orden, prod.nombre_producto AS producto,
+            SELECT ofab.id_orden, ofab.numero_orden, ofab.fecha AS fecha_corte, prod.nombre_producto AS producto,
                    mc.codigo_modelo, col.codigo_color,
                    dor.talle, dor.cantidad_pares AS planificados,
                    COALESCE(SUM(dp.cantidad_pares), 0) AS producidos
@@ -138,7 +140,7 @@ def listar_disponibilidad_ordenes():
               ON pp.orden_fabricacion_id_orden = ofab.id_orden
              AND (UPPER(pp.numero_planilla) = 'R013/1' OR pp.tipo_planilla IN ('Calzado e Inyección', 'Planilla de Calzado, Inyección e Inspección final'))
             LEFT JOIN detalle_planilla dp ON dp.planilla_produccion_id_planilla = pp.id_planilla AND dp.talle = dor.talle
-            GROUP BY ofab.id_orden, ofab.numero_orden, prod.nombre_producto, mc.codigo_modelo, col.codigo_color,
+            GROUP BY ofab.id_orden, ofab.numero_orden, ofab.fecha, prod.nombre_producto, mc.codigo_modelo, col.codigo_color,
                      dor.talle, dor.cantidad_pares
             ORDER BY ofab.numero_orden, CAST(dor.talle AS UNSIGNED)
             """
@@ -150,6 +152,7 @@ def listar_disponibilidad_ordenes():
                 ordenes[id_orden] = {
                     "id_orden": id_orden,
                     "numero_orden": fila["numero_orden"],
+                    "fecha_corte": fila["fecha_corte"].isoformat() if hasattr(fila["fecha_corte"], "isoformat") else fila["fecha_corte"],
                     "producto": fila["producto"],
                     "codigo_modelo": fila["codigo_modelo"],
                     "codigo_color": fila["codigo_color"],
@@ -249,7 +252,7 @@ def desglose_por_planilla(id_planilla):
         _asegurar_esquema_variantes(cursor)
         cursor.execute(
             """
-            SELECT pdl.id_linea, pd.fecha, m.nombre_maquina AS maquina,pdb.maquinas_id_maquina,
+            SELECT pdl.id_linea, pd.id_produccion_diaria, pd.fecha, m.nombre_maquina AS maquina,pdb.maquinas_id_maquina,
                    pdl.lote_puntera_id, pdl.lote_pu_id, pv.punteras_id_puntera,
                    pdl.estado_inspeccion, pdl.pares_defectuosos, pdl.observacion_inspeccion,
                    pd.operario_calzado, pd.operario_puntera, pd.operario_inspeccion_final, pdb.operario_inyeccion,
@@ -311,6 +314,7 @@ def desglose_por_planilla(id_planilla):
             if clave not in lineas:
                 lineas[clave] = {
                     "id_linea": fila["id_linea"],
+                    "id_produccion_diaria": fila["id_produccion_diaria"],
                     "maquinas_id_maquina": fila["maquinas_id_maquina"],
                     "lote_puntera_id": fila["lote_puntera_id"],
                     "lote_pu_id": fila["lote_pu_id"],
@@ -423,6 +427,7 @@ def actualizar_linea_produccion(id_linea):
     estado_inspeccion = (linea.get("estado_inspeccion") or "Pendiente").strip()
     observacion_inspeccion = (linea.get("observacion_inspeccion") or "").strip()
     try:
+        fecha = date.fromisoformat(str(fecha)).isoformat()
         if estado_inspeccion not in ("Pendiente", "Conforme", "No conforme"):
             raise ValueError("Seleccioná un veredicto de inspección válido.")
         if estado_inspeccion == "No conforme" and not observacion_inspeccion:
@@ -451,6 +456,11 @@ def actualizar_linea_produccion(id_linea):
         actual = cursor.fetchone()
         if not actual:
             return jsonify({"mensaje": "Producción no encontrada."}), 404
+        cursor.execute("SELECT fecha FROM orden_fabricacion WHERE id_orden=%s", (actual["orden_fabricacion_id_orden"],))
+        orden = cursor.fetchone()
+        fecha_corte = orden["fecha"].isoformat() if orden and hasattr(orden["fecha"], "isoformat") else str(orden["fecha"] if orden else "")
+        if not orden or fecha < fecha_corte:
+            raise ValueError("La fecha de producción no puede ser anterior a la fecha de corte de esta orden.")
         cursor.execute("SELECT talle,cantidad_pares FROM detalle_produccion_diaria WHERE linea_id=%s", (id_linea,))
         anteriores = {str(item["talle"]): int(item["cantidad_pares"] or 0) for item in cursor.fetchall()}
         nuevos = dict(talles)
@@ -512,7 +522,7 @@ def actualizar_linea_produccion(id_linea):
         estado = "Finalizada" if int(cursor.fetchone()["pendientes"]) == 0 else "En proceso"
         cursor.execute("UPDATE planilla_produccion SET estado=%s WHERE id_planilla=%s", (estado, actual["planilla_produccion_id_planilla"]))
         conn.commit()
-        return jsonify({"mensaje": "Producción actualizada correctamente."}), 200
+        return jsonify({"mensaje": "Producción actualizada correctamente.", "id_planilla": actual["planilla_produccion_id_planilla"]}), 200
     except ValueError as error:
         conn.rollback()
         return jsonify({"mensaje": str(error)}), 400
@@ -532,7 +542,12 @@ def crear_produccion_diaria():
     operarios_inspeccion_final = _lista_textos(data, "operarios_inspeccion_final", "operario_inspeccion_final")
     bloques = data.get("bloques") or []
 
-    if not fecha or not operarios_calzado or not operarios_puntera or not bloques:
+    try:
+        fecha = date.fromisoformat(str(fecha)).isoformat()
+    except (TypeError, ValueError):
+        return jsonify({"mensaje": "La fecha de producción no es válida."}), 400
+
+    if not operarios_calzado or not operarios_puntera or not bloques:
         return jsonify({"mensaje": "Completá la fecha, los operarios y al menos una inyectora."}), 400
 
     lineas_validas = []
@@ -577,6 +592,14 @@ def crear_produccion_diaria():
         cursor = conn.cursor(dictionary=True)
         _asegurar_esquema_variantes(cursor)
 
+        ids_ordenes = sorted({id_orden for _, _, lineas in lineas_validas for id_orden, *_ in lineas})
+        marcas = ",".join(["%s"] * len(ids_ordenes))
+        cursor.execute(f"SELECT id_orden,fecha FROM orden_fabricacion WHERE id_orden IN ({marcas})", tuple(ids_ordenes))
+        fechas_corte = {fila["id_orden"]: fila["fecha"].isoformat() if hasattr(fila["fecha"], "isoformat") else str(fila["fecha"]) for fila in cursor.fetchall()}
+        for id_orden in ids_ordenes:
+            if id_orden not in fechas_corte or fecha < fechas_corte[id_orden]:
+                raise ValueError("La fecha de producción no puede ser anterior a la fecha de corte de una orden seleccionada.")
+
         solicitado = {}
         for _, _, lineas in lineas_validas:
             for id_orden, _, _, _, _, _, talles, _, _, _ in lineas:
@@ -610,6 +633,7 @@ def crear_produccion_diaria():
         )
         id_diaria = cursor.lastrowid
         planillas_afectadas = set()
+        planillas_creadas = set()
 
         for id_maquina, operarios_inyeccion, lineas in lineas_validas:
             cursor.execute(
@@ -622,7 +646,7 @@ def crear_produccion_diaria():
                 id_variante = _obtener_o_crear_variante(cursor, id_orden, id_tipo_puntera, adicionales_linea)
                 cursor.execute(
                     """
-                    SELECT id_planilla FROM planilla_produccion
+                    SELECT id_planilla, estado FROM planilla_produccion
                     WHERE orden_fabricacion_id_orden = %s
                       AND (UPPER(numero_planilla) = 'R013/1' OR tipo_planilla IN ('Calzado e Inyección', 'Planilla de Calzado, Inyección e Inspección final'))
                     ORDER BY id_planilla LIMIT 1
@@ -632,6 +656,8 @@ def crear_produccion_diaria():
                 planilla = cursor.fetchone()
                 if planilla:
                     id_planilla = planilla["id_planilla"]
+                    if str(planilla["estado"] or "").strip().lower() == "finalizada":
+                        raise ValueError("La planilla está finalizada. Corregí una producción existente para volverla a abrir.")
                     cursor.execute(
                         "UPDATE planilla_produccion SET estado = 'En proceso' WHERE id_planilla = %s",
                         (id_planilla,),
@@ -646,6 +672,7 @@ def crear_produccion_diaria():
                         (id_orden, fecha, id_maquina),
                     )
                     id_planilla = cursor.lastrowid
+                    planillas_creadas.add(id_planilla)
                 planillas_afectadas.add(id_planilla)
 
                 cursor.execute(
@@ -750,7 +777,7 @@ def crear_produccion_diaria():
             )
 
         conn.commit()
-        return jsonify({"id_produccion_diaria": id_diaria, "planillas_actualizadas": len(planillas_afectadas), "mensaje": "Producción diaria registrada correctamente"}), 201
+        return jsonify({"id_produccion_diaria": id_diaria, "planillas_actualizadas": len(planillas_afectadas), "planillas_afectadas_ids": list(planillas_afectadas), "planillas_creadas": list(planillas_creadas), "mensaje": "Producción diaria registrada correctamente"}), 201
     except ValueError as error:
         if conn:
             conn.rollback()

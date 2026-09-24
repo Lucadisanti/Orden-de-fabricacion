@@ -39,7 +39,7 @@ export default function RecepcionMateriales() {
   const versionFormulario = useRef(0);
   // Invalida respuestas pendientes al salir de la pantalla.
   useEffect(() => () => { versionFormulario.current += 1; }, []);
-  const listadoRef = useRef(null);
+  const detalleAbiertoRef = useRef(null);
   const [proveedores, setProveedores] = useState([]);
   const [materiales, setMateriales] = useState([]);
   const [colores, setColores] = useState([]);
@@ -169,7 +169,7 @@ export default function RecepcionMateriales() {
 
   useEffect(() => {
     if (!filaAbierta) return;
-    const desplazamiento = window.setTimeout(() => listadoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    const desplazamiento = window.setTimeout(() => detalleAbiertoRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 80);
     return () => window.clearTimeout(desplazamiento);
   }, [filaAbierta]);
 
@@ -185,6 +185,8 @@ export default function RecepcionMateriales() {
       posicion === indice ? { ...linea, [campo]: valor } : linea
     )));
   };
+
+  const ignorarRuedaEnCantidad = (evento) => evento.currentTarget.blur();
 
   const calcularPendiente = (linea) => {
     const solicitada = Number(linea.cantidad_solicitada || 0);
@@ -419,10 +421,7 @@ export default function RecepcionMateriales() {
     remito: recepcion.numero_remito,
   })[orden.campo];
   const recepcionesConOrden = ordenarRegistros(recepcionesFiltradas, obtenerValorOrdenRecepcion, orden.direccion);
-  const recepcionesOrdenadas = filaAbierta
-    ? [...recepcionesConOrden].sort((a, b) => Number(String(b.remitos_id_remito) === String(filaAbierta)) - Number(String(a.remitos_id_remito) === String(filaAbierta)))
-    : recepcionesConOrden;
-  const paginacionRecepciones = usePagination(recepcionesOrdenadas);
+  const paginacionRecepciones = usePagination(recepcionesConOrden);
 
   return (
     <section className="recepcion-materiales">
@@ -559,12 +558,12 @@ export default function RecepcionMateriales() {
 
                 <label className="recepcion-campo">
                   <span>Cantidad solicitada</span>
-                  <input type="number" min="0" step="0.01" placeholder="0" value={linea.cantidad_solicitada} onChange={(e) => actualizarLinea(indice, "cantidad_solicitada", e.target.value)} required />
+                  <input type="number" min="0" step="0.01" placeholder="0" value={linea.cantidad_solicitada} onChange={(e) => actualizarLinea(indice, "cantidad_solicitada", e.target.value)} onWheel={ignorarRuedaEnCantidad} required />
                 </label>
 
                 <label className="recepcion-campo">
                   <span>Cantidad recibida</span>
-                  <input type="number" min="0" step="0.01" placeholder="0" value={linea.cantidad_recibida} onChange={(e) => actualizarLinea(indice, "cantidad_recibida", e.target.value)} required />
+                  <input type="number" min="0" step="0.01" placeholder="0" value={linea.cantidad_recibida} onChange={(e) => actualizarLinea(indice, "cantidad_recibida", e.target.value)} onWheel={ignorarRuedaEnCantidad} required />
                 </label>
 
                 <label className="recepcion-campo">
@@ -641,7 +640,7 @@ export default function RecepcionMateriales() {
           </div>
         ) : (
           <>
-        <div ref={listadoRef} className="ui-table-card recepcion-listado-desplegable">
+        <div className="ui-table-card recepcion-listado-desplegable">
           <table className="ui-data-table ui-listado-ajustado"><colgroup>{[10,20,20,12,10,12,16].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
               <tr>
@@ -701,7 +700,7 @@ export default function RecepcionMateriales() {
                   </tr>
 
                   {String(filaAbierta) === String(recepcion.remitos_id_remito) && (
-                    <tr>
+                    <tr ref={detalleAbiertoRef}>
                       <td colSpan="7">
                       <div className="recepcion-detalle-compacto">
                         <div className="recepcion-detalle-header">

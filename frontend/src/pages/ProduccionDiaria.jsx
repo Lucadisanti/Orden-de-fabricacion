@@ -26,6 +26,7 @@ const tallesVacios = () => Object.fromEntries(TALLES.map((talle) => [talle, ""])
 const nuevoMaterialExtra = () => ({ busqueda: "", lote_id: "" });
 const nuevaLinea = () => ({ orden_fabricacion_id_orden: "", busqueda_orden: "", punteras_id_puntera: "", adicionales_id_adicional: "", busqueda_puntera: "", busqueda_pu: "", lote_puntera_id: "", lote_pu_id: "", materiales_extra: [], estado_inspeccion: "Pendiente", observacion_inspeccion: "", pares_defectuosos: "", talles: tallesVacios() });
 const nuevoBloque = () => ({ maquinas_id_maquina: "", operarios_inyeccion: [""], lineas: [nuevaLinea()] });
+const formularioInicial = () => ({ fecha: fechaLocal(), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
 
 export default function ProduccionDiaria() {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ export default function ProduccionDiaria() {
   const [detallesHistorial, setDetallesHistorial] = useState({});
   const [altaMaquinaBloque, setAltaMaquinaBloque] = useState(null);
   const [altaCatalogo, setAltaCatalogo] = useState(null);
-  const [form, setForm] = useState({ fecha: fechaLocal(), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
+  const [form, setForm] = useState(formularioInicial);
   const [bloques, setBloques] = useState([nuevoBloque()]);
   const tieneCambiosSinGuardar = useMemo(() => {
     const hayOperarios = [...form.operarios_calzado, ...form.operarios_puntera, ...form.operarios_inspeccion_final].some((nombre) => nombre.trim());
@@ -380,6 +381,7 @@ export default function ProduccionDiaria() {
       const respuesta = await axios.post("/api/produccion-diaria/", datos);
       setToast({ type: "success", title: "Producción registrada", message: `${respuesta.data.planillas_actualizadas} R013/1 actualizadas correctamente.` });
       if (versionFormulario.current === versionEnviada) {
+        setForm(formularioInicial());
         setBloques([nuevoBloque()]);
         setFormularioAbierto(false);
       }

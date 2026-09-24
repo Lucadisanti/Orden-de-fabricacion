@@ -27,6 +27,7 @@ const tallesVacios = () => Object.fromEntries(TALLES.map((talle) => [talle, ""])
 const nuevoMaterialExtra = () => ({ busqueda: "", lote_id: "" });
 const nuevaLinea = () => ({ orden_fabricacion_id_orden: "", busqueda_orden: "", punteras_id_puntera: "", adicionales_id_adicional: "", busqueda_puntera: "", busqueda_pu: "", lote_puntera_id: "", lote_pu_id: "", materiales_extra: [], estado_inspeccion: "Pendiente", observacion_inspeccion: "", pares_defectuosos: "", talles: tallesVacios() });
 const nuevoBloque = () => ({ maquinas_id_maquina: "", operarios_inyeccion: [""], lineas: [nuevaLinea()] });
+const formularioInicial = () => ({ fecha: fechaLocal(), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
 
 export default function ProduccionDiaria() {
   const navigate = useNavigate();
@@ -60,7 +61,7 @@ export default function ProduccionDiaria() {
   const [detallesHistorial, setDetallesHistorial] = useState({});
   const [altaMaquinaBloque, setAltaMaquinaBloque] = useState(null);
   const [altaCatalogo, setAltaCatalogo] = useState(null);
-  const [form, setForm] = useState({ fecha: fechaLocal(), operarios_calzado: [""], operarios_puntera: [""], operarios_inspeccion_final: [""] });
+  const [form, setForm] = useState(formularioInicial);
   const [bloques, setBloques] = useState([nuevoBloque()]);
   const tieneCambiosSinGuardar = useMemo(() => {
     const hayOperarios = [...form.operarios_calzado, ...form.operarios_puntera, ...form.operarios_inspeccion_final].some((nombre) => nombre.trim());
@@ -384,6 +385,7 @@ export default function ProduccionDiaria() {
       const respuesta = await axios.post("/api/produccion-diaria/", datos);
       setToast({ type: "success", title: "Producción registrada", message: `${respuesta.data.planillas_actualizadas} R013/1 actualizadas correctamente.` });
       if (versionFormulario.current === versionEnviada) {
+        setForm(formularioInicial());
         setBloques([nuevoBloque()]);
         setFormularioAbierto(false);
       }
@@ -448,9 +450,9 @@ export default function ProduccionDiaria() {
     {!cargando && !errorCarga && <>
       <div className={`produccion-historial${formularioAbierto ? " produccion-historial-separado" : ""}`}>
         <div className="produccion-historial-header">{formularioAbierto && <div><h2>Producciones registradas</h2><p>Consultá el historial de producción guardado.</p></div>}<div className="ui-list-tools"><ClearableSearch value={busquedaHistorial} onChange={setBusquedaHistorial} placeholder="Buscar por orden, artículo, producto, inyectora, fecha o inspección..." /><div className="ui-sort-controls produccion-historial-filtros">
-          <label className="ui-filter-select"><span>Agrupar por</span><Selector value={grupoHistorial} onChange={(evento) => setGrupoHistorial(evento.target.value)}><option value="">Sin agrupar</option><option value="inyectora">Inyectora</option><option value="producto">Producto</option></Selector></label>
-          <label className="ui-filter-select"><span>Filtrar por estado</span><Selector value={estadoHistorial} onChange={(evento) => setEstadoHistorial(evento.target.value)}><option value="">Todos</option><option value="Conforme">Conforme</option><option value="No conforme">No conforme</option><option value="Pendiente">Pendiente</option></Selector></label>
-          <label className="ui-filter-select"><span>Filtrar por inyectora</span><Selector value={inyectoraHistorial} onChange={(evento) => setInyectoraHistorial(evento.target.value)}><option value="">Todas</option>{inyectorasHistorial.map((inyectora) => <option key={inyectora} value={inyectora}>{inyectora}</option>)}</Selector></label>
+          <label className="ui-filter-select"><span>Agrupar por</span><Selector searchable={false} value={grupoHistorial} onChange={(evento) => setGrupoHistorial(evento.target.value)}><option value="">Sin agrupar</option><option value="inyectora">Inyectora</option><option value="producto">Producto</option></Selector></label>
+          <label className="ui-filter-select"><span>Filtrar por estado</span><Selector searchable={false} value={estadoHistorial} onChange={(evento) => setEstadoHistorial(evento.target.value)}><option value="">Todos</option><option value="Conforme">Conforme</option><option value="No conforme">No conforme</option><option value="Pendiente">Pendiente</option></Selector></label>
+          <label className="ui-filter-select"><span>Filtrar por inyectora</span><Selector searchable={false} value={inyectoraHistorial} onChange={(evento) => setInyectoraHistorial(evento.target.value)}><option value="">Todas</option>{inyectorasHistorial.map((inyectora) => <option key={inyectora} value={inyectora}>{inyectora}</option>)}</Selector></label>
           <label className="ui-filter-select"><span>Filtrar por fecha</span><DateInput value={fechaHistorial} onChange={(evento) => setFechaHistorial(evento.target.value)} /></label>
         </div></div></div>
         <div className="ui-table-card"><table className="ui-data-table ui-listado-ajustado produccion-historial-tabla"><colgroup>{[12, 9, 10, 13, 13, 19, 13, 11].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup><thead><tr><th>Fecha</th><th>Orden</th><th>Artículo</th><th>Producto</th><th>Color</th><th>Inyectora</th><th>Inspección</th><th>Total de pares</th></tr></thead><tbody>{historialVisible.length ? historialVisible.map((item, indice) => {

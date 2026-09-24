@@ -5,7 +5,7 @@ import "../styles/SelectorMaterial.css";
 const texto = children => Children.toArray(children).map(c => isValidElement(c) ? texto(c.props.children) : String(c)).join("");
 const opcionesDe = children => Children.toArray(children).flatMap(c => !isValidElement(c) ? [] : c.type === "option" ? [{ value: String(c.props.value ?? texto(c.props.children)), label: texto(c.props.children), disabled: c.props.disabled }] : opcionesDe(c.props.children));
 
-export default function Selector({ children, value, defaultValue, onChange, name, required, disabled, className = "", ...props }) {
+export default function Selector({ children, value, defaultValue, onChange, name, required, disabled, searchable = true, className = "", ...props }) {
   const id = useId();
   const anchor = useRef(null);
   const opciones = opcionesDe(children);
@@ -17,6 +17,11 @@ export default function Selector({ children, value, defaultValue, onChange, name
   const [busqueda, setBusqueda] = useState(null);
   const normalizar = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
   const visibles = opciones.filter(o => busqueda === null || normalizar(o.label).includes(normalizar(busqueda)));
+  const abrir = () => {
+    setBusqueda(searchable ? "" : null);
+    setAbierto(true);
+    setActivo(-1);
+  };
   const elegir = opcion => {
     if (!opcion || opcion.disabled) return;
     setInterno(opcion.value);
@@ -26,10 +31,10 @@ export default function Selector({ children, value, defaultValue, onChange, name
     setActivo(-1);
   };
   return <div className={`selector-material selector-unificado ${className}`}>
-    <input ref={anchor} {...props} className="selector-control" value={busqueda ?? (actual ? elegida?.label || "" : "")} placeholder={opciones.find(o => !o.value)?.label || "Seleccionar"} required={required} disabled={disabled} pattern={busqueda !== null ? "(?!)" : props.pattern} autoComplete="off" role="combobox" aria-expanded={abierto} aria-controls={id} aria-autocomplete="list" aria-activedescendant={abierto && activo >= 0 && visibles[activo] ? `${id}-${activo}` : undefined}
-      onChange={e => { setBusqueda(e.target.value); setAbierto(true); setActivo(-1); }}
-      onFocus={() => { setBusqueda(""); setAbierto(true); setActivo(-1); }}
-      onClick={() => { if (!abierto) { setBusqueda(""); setAbierto(true); setActivo(-1); } }}
+    <input ref={anchor} {...props} className="selector-control" value={busqueda ?? (actual ? elegida?.label || "" : "")} placeholder={opciones.find(o => !o.value)?.label || "Seleccionar"} required={required} disabled={disabled} readOnly={!searchable} pattern={busqueda !== null ? "(?!)" : props.pattern} autoComplete="off" role="combobox" aria-expanded={abierto} aria-controls={id} aria-autocomplete={searchable ? "list" : "none"} aria-activedescendant={abierto && activo >= 0 && visibles[activo] ? `${id}-${activo}` : undefined}
+      onChange={e => { if (searchable) { setBusqueda(e.target.value); setAbierto(true); setActivo(-1); } }}
+      onFocus={abrir}
+      onClick={() => { if (!abierto) abrir(); }}
       onBlur={() => { setAbierto(false); setBusqueda(null); setActivo(-1); }}
       onKeyDown={e => {
         if (["ArrowDown", "ArrowUp"].includes(e.key) || (busqueda === null && ["Home", "End"].includes(e.key))) {

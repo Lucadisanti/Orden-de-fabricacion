@@ -20,3 +20,4 @@ backend/.env
 *.bak
 *.tmp
 tmp/
+backups/

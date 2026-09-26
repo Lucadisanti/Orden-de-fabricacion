@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import axios from "axios";
 import bohmLogo from "../assets/bohm-logo.png";
 import imagen from "../assets/login-productos-bohm-wide.png";
@@ -11,15 +11,24 @@ export default function Login({ onLogin }) {
   const [recuperando, setRecuperando] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [ingresando, setIngresando] = useState(false);
+  const ingresoEnCurso = useRef(false);
 
   const entrar = async (event) => {
     event.preventDefault();
+    if (ingresoEnCurso.current) return;
+    ingresoEnCurso.current = true;
+    setIngresando(true);
     setError("");
     try {
       const response = await axios.post("/api/auth/login", { usuario, contrasena });
       onLogin(response.data);
     } catch (err) {
-      setError(err.response?.data?.error || "No se pudo iniciar sesión.");
+      const mensaje = err.response?.data?.error;
+      setError(mensaje === "Usuario o contraseña incorrectos." ? mensaje : "No se pudo iniciar sesión.");
+    } finally {
+      ingresoEnCurso.current = false;
+      setIngresando(false);
     }
   };
 
@@ -38,6 +47,7 @@ export default function Login({ onLogin }) {
   };
 
   const cambiarVista = () => {
+    if (ingresoEnCurso.current) return;
     setRecuperando(!recuperando);
     setError("");
     setMensaje("");
@@ -71,8 +81,8 @@ export default function Login({ onLogin }) {
           <label>{recuperando ? "Nueva contraseña" : "Contraseña"}
             <input name={recuperando ? "new-password" : "password"} type="password" minLength={recuperando ? 8 : undefined} value={contrasena} onChange={(event) => setContrasena(event.target.value)} onKeyDown={enviarConEnter} autoComplete={recuperando ? "new-password" : "current-password"} required />
           </label>
-          <button className="ui-btn ui-btn-primary" type="submit">{recuperando ? "Cambiar contraseña" : "Ingresar"}</button>
-          <button className="login-switch" type="button" onClick={cambiarVista}>{recuperando ? "Volver al ingreso" : "¿Olvidaste la contraseña?"}</button>
+          <button className="ui-btn ui-btn-primary" type="submit" disabled={ingresando}>{recuperando ? "Cambiar contraseña" : ingresando ? "Ingresando…" : "Ingresar"}</button>
+          <button className="login-switch" type="button" onClick={cambiarVista} disabled={ingresando}>{recuperando ? "Volver al ingreso" : "¿Olvidaste la contraseña?"}</button>
           {recuperando && <small className="login-help">Si no tenés el código, usá “Recuperar acceso administrador” en la computadora donde está instalado el sistema.</small>}
         </form>
       </section>

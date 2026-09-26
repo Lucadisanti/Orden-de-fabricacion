@@ -2,6 +2,7 @@ import NombreSugerido from "../components/NombreSugerido";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { obtenerMensajeError } from "../utils/errorMessages";
 import Selector from "../components/Selector";
 import Toast from "../components/Toast";
 import RetryMessage from "../components/RetryMessage";
@@ -62,7 +63,7 @@ export default function RecepcionCortes() {
     if (lineas.some((l,i) => Number(l.cantidad) > maximoFila(l,i))) { setToast({type:"error",title:"Cantidad excedida",message:"Los pares recibidos no pueden superar el corte de la orden, sumando todas las tandas y filas."}); return; }
     enviando.current = true; setGuardando(true);
     try { const datos = {fecha, controlador:controlador.trim(), lineas}; if(editando) await axios.put(`/api/recepcion-cortes/${editando}`,datos); else await axios.post("/api/recepcion-cortes/",datos); setAbierto(false); setToast({type:"success",title:"Recepción guardada",message:"Se guardaron todas las órdenes de la R018/1."}); await cargar(); }
-    catch(err) { setToast({type:"error",title:"No se pudo guardar",message:err.response?.data?.error || "Revisá la conexión. Los datos siguen en el formulario."}); }
+    catch(err) { setToast({type:"error",title:"No se pudo guardar",message:obtenerMensajeError(err, "recepción", "Revisá la conexión. Los datos siguen en el formulario.")}); }
     finally { enviando.current = false; setGuardando(false); }
   }
   return <section className="recepcion-cortes">

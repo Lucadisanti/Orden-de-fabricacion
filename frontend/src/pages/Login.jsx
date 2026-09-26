@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import axios from "axios";
+import { obtenerMensajeError } from "../utils/errorMessages";
 import bohmLogo from "../assets/bohm-logo.png";
 import imagen from "../assets/login-productos-bohm-wide.png";
 import "../styles/Login.css";
@@ -24,8 +25,7 @@ export default function Login({ onLogin }) {
       const response = await axios.post("/api/auth/login", { usuario, contrasena });
       onLogin(response.data);
     } catch (err) {
-      const mensaje = err.response?.data?.error;
-      setError(mensaje === "Usuario o contraseña incorrectos." ? mensaje : "No se pudo iniciar sesión.");
+      setError(obtenerMensajeError(err, "usuario", "No se pudo iniciar sesión."));
     } finally {
       ingresoEnCurso.current = false;
       setIngresando(false);
@@ -42,7 +42,7 @@ export default function Login({ onLogin }) {
       setRecuperando(false);
       setMensaje("Contraseña actualizada. Ingresá con tu nueva contraseña.");
     } catch (err) {
-      setError(err.response?.data?.error || "No se pudo recuperar el acceso.");
+      setError(obtenerMensajeError(err, "usuario", "No se pudo recuperar el acceso."));
     }
   };
 

@@ -1,16 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
+import { obtenerMensajeError } from "../utils/errorMessages";
 import RetryMessage from "../components/RetryMessage";
 import "../styles/Usuarios.css";
 
 const formularioVacio = { usuario: "", nombre: "", contrasena: "", rol: "empleado" };
-
-function mensajeSeguro(error, alternativa) {
-  const texto = error?.response?.data?.error;
-  if (typeof texto !== "string" || !texto.trim() || texto.length > 400) return alternativa;
-  const tecnico = /axios|fetch|network|request failed|status\s*code|\bHTTP\s*\d{3}|\b\w*Error\b|traceback|stack\s*trace|ECONN\w*|ENOTFOUND|ERR_\w+|timeout|\bSQL\b|mysql|https?:\/\/|<\/?(?:html|body|pre)\b/i;
-  return tecnico.test(texto) ? alternativa : texto;
-}
 
 export default function Usuarios() {
   const esMaestro = document.documentElement.dataset.rol === "maestro";
@@ -70,7 +64,7 @@ export default function Usuarios() {
       setMostrar(false);
       await cargar(true);
     } catch (err) {
-      setMensaje(mensajeSeguro(err, "No se pudo crear."));
+      setMensaje(obtenerMensajeError(err, "usuario", "No se pudo crear."));
     } finally {
       finalizarAccion();
     }
@@ -93,7 +87,7 @@ export default function Usuarios() {
       setMensaje("Contraseña actualizada.");
       setCambioClave(null);
     } catch (err) {
-      setMensaje(mensajeSeguro(err, "No se pudo actualizar."));
+      setMensaje(obtenerMensajeError(err, "usuario", "No se pudo actualizar."));
     } finally {
       finalizarAccion();
     }
@@ -115,7 +109,7 @@ export default function Usuarios() {
       setEdicion(null);
       await cargar(true);
     } catch (err) {
-      setMensaje(mensajeSeguro(err, "No se pudo actualizar el usuario."));
+      setMensaje(obtenerMensajeError(err, "usuario", "No se pudo actualizar el usuario."));
     } finally {
       finalizarAccion();
     }
@@ -130,7 +124,7 @@ export default function Usuarios() {
       setConfirmarEliminacion(null);
       await cargar(true);
     } catch (err) {
-      setMensaje(mensajeSeguro(err, "No se pudo eliminar el usuario."));
+      setMensaje(obtenerMensajeError(err, "usuario", "No se pudo eliminar el usuario."));
     } finally {
       finalizarAccion();
     }
@@ -144,7 +138,7 @@ export default function Usuarios() {
       setMensaje("");
       await cargar(true);
     } catch (err) {
-      setMensaje(mensajeSeguro(err, "No se pudo generar el código."));
+      setMensaje(obtenerMensajeError(err, "usuario", "No se pudo generar el código."));
     } finally {
       finalizarAccion();
     }

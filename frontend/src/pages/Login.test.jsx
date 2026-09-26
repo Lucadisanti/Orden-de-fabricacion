@@ -78,15 +78,31 @@ it("conserva el error de credenciales y permite reintentar el ingreso", async ()
 });
 
 it.each([
-  new Error("AxiosError: Network Error"),
-  { response: { data: { error: "SQL connection failed: internal server details" } } },
-])("muestra un mensaje amigable y habilita el ingreso ante un error técnico %#", async (error) => {
+  [new Error("AxiosError: Network Error"), "Verificá que el servidor esté iniciado e intentá nuevamente."],
+  [{ response: { data: { error: "SQL connection failed: internal server details" } } }, "No se pudo iniciar sesión."],
+])("muestra un mensaje amigable y habilita el ingreso ante un error técnico %#", async (error, mensaje) => {
   axios.post.mockRejectedValueOnce(error);
   render(<Login onLogin={vi.fn()} />);
   fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Admin" } });
   fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "ClaveSegura123" } });
   fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(/^No se pudo iniciar sesión\.$/);
+  expect(await screen.findByRole("alert")).toHaveTextContent(mensaje);
   expect(screen.getByRole("button", { name: "Ingresar" })).toBeEnabled();
   expect(screen.getByRole("button", { name: "¿Olvidaste la contraseña?" })).toBeEnabled();
+});
+
+
+it.each([
+  ["Usuario o código de recuperación inválido.", "Usuario o código de recuperación inválido."],
+  ["Request failed with status code 502", "No se pudo recuperar el acceso."],
+])("normaliza errores de recuperación sin cerrar el formulario %#", async (error, mensaje) => {
+  axios.post.mockRejectedValueOnce({ response: { status: 502, data: { error } } });
+  render(<Login onLogin={vi.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "¿Olvidaste la contraseña?" }));
+  fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Admin" } });
+  fireEvent.change(screen.getByLabelText("Código de recuperación"), { target: { value: "codigo-de-prueba" } });
+  fireEvent.change(screen.getByLabelText("Nueva contraseña"), { target: { value: "NuevaClave123" } });
+  fireEvent.click(screen.getByRole("button", { name: "Cambiar contraseña" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(mensaje);
+  expect(screen.getByLabelText("Código de recuperación")).toHaveValue("codigo-de-prueba");
 });

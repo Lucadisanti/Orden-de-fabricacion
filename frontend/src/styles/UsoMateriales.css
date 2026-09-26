@@ -10,6 +10,7 @@
 
 
 .uso-fila-abierta { background: #eff6ff !important; }
+.uso-fila-abierta + tr { scroll-margin-block: 12px; }
 .uso-materiales .listado-desplegable { max-height: calc(100vh - 250px) !important; scroll-margin-top: 18px; }
 .uso-grupo-header td { padding: 11px 16px !important; border-top: 2px solid #cbdcf0; background: #eaf2ff !important; text-align: left !important; }
 .uso-grupo-header:first-child td { border-top: 0; }

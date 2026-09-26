@@ -72,6 +72,11 @@ REPORTING_PROCEDURES = {
             c.color,
             l.cantidad_solicitada,
             l.cantidad_recibida,
+            COALESCE((SELECT SUM(um.cantidad_usada) FROM uso_materiales um WHERE um.lote_materiales_id_lote = l.id_lote), 0) AS cantidad_usada,
+            l.cantidad_descartada,
+            l.lote_cerrado,
+            l.motivo_cierre,
+            CASE WHEN l.lote_cerrado = 1 THEN 0 ELSE GREATEST(l.cantidad_recibida - l.cantidad_descartada - COALESCE((SELECT SUM(um.cantidad_usada) FROM uso_materiales um WHERE um.lote_materiales_id_lote = l.id_lote), 0), 0) END AS cantidad_disponible,
             l.pendiente,
             l.observaciones
           FROM lote_materiales l
@@ -325,6 +330,9 @@ def migrate_schema(connection=None):
         if not _column_definition(cursor, "orden_fabricacion", "es_forrado"):
             cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN es_forrado TINYINT(1) NOT NULL DEFAULT 0")
             LOGGER.info("Agregado el indicador de forrado en órdenes.")
+        if not _column_definition(cursor, "producto", "consumo_cuero_por_par"):
+            cursor.execute("ALTER TABLE producto ADD COLUMN consumo_cuero_por_par DECIMAL(10,4) NOT NULL DEFAULT 0.25")
+            LOGGER.info("Agregado el consumo de cuero predeterminado por producto.")
 
         for campo in ("lote_puntera_id", "lote_pu_id"):
             columna = _column_definition(cursor, "produccion_diaria_linea", campo)
@@ -450,6 +458,13 @@ def migrate_schema(connection=None):
                 "ALTER TABLE lote_materiales MODIFY codigo_lote VARCHAR(50) NULL"
             )
             LOGGER.info("Actualizada la definición de lote_materiales.codigo_lote.")
+
+        if not _column_definition(cursor, "lote_materiales", "cantidad_descartada"):
+            cursor.execute("ALTER TABLE lote_materiales ADD cantidad_descartada DECIMAL(10,2) NOT NULL DEFAULT 0")
+        if not _column_definition(cursor, "lote_materiales", "lote_cerrado"):
+            cursor.execute("ALTER TABLE lote_materiales ADD lote_cerrado TINYINT(1) NOT NULL DEFAULT 0")
+        if not _column_definition(cursor, "lote_materiales", "motivo_cierre"):
+            cursor.execute("ALTER TABLE lote_materiales ADD motivo_cierre VARCHAR(255) NULL")
 
         _refresh_reporting_procedures(cursor)
 

@@ -105,32 +105,6 @@ export default function Planillas() {
     cargarDatos();
   }, []);
 
-  useEffect(() => {
-    if (!filaDetalleAbierta) return;
-    const desplazamiento = window.setTimeout(() => {
-      const filaGeneral = listadoRef.current?.querySelector(".planilla-fila-abierta");
-      const filaDetalle = listadoRef.current?.querySelector(".planilla-detalle-fila");
-      if (!filaGeneral || !filaDetalle) return;
-
-      const margen = 20;
-      const altoFilaGeneral = filaGeneral.getBoundingClientRect().height;
-      const espacioDisponibleParaDetalle = Math.max(260, window.innerHeight - altoFilaGeneral - (margen * 2));
-      const altoDetalleVisible = Math.min(filaDetalle.getBoundingClientRect().height, espacioDisponibleParaDetalle);
-      const limiteInferior = window.innerHeight - margen;
-      const desplazamientoNecesario = filaDetalle.getBoundingClientRect().top + altoDetalleVisible - limiteInferior;
-      const desplazamientoMaximo = filaGeneral.getBoundingClientRect().top - margen;
-      const desplazamientoFinal = Math.min(desplazamientoNecesario, desplazamientoMaximo);
-
-      if (desplazamientoFinal > 0) {
-        window.scrollBy({
-          top: desplazamientoFinal,
-          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
-        });
-      }
-    }, 80);
-    return () => window.clearTimeout(desplazamiento);
-  }, [filaDetalleAbierta, resumenesPlanilla]);
-
   const desplazarAlFormulario = () => {
     window.setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -659,17 +633,6 @@ export default function Planillas() {
     }
   };
 
-  useEffect(() => {
-    if (!seleccionInicial || seleccionAplicadaRef.current === seleccionInicial || planillas.length === 0) return;
-    const planilla = planillas.find((item) => String(item.id_planilla) === String(seleccionInicial));
-    if (!planilla) return;
-    seleccionAplicadaRef.current = seleccionInicial;
-    // La selección recibida desde Inicio abre el detalle una sola vez.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    alternarResumenPlanilla(planilla);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seleccionInicial, planillas]);
-
   const esPlanillaInyeccion = planillaSeleccionada && (planillaSeleccionada.numero_planilla?.toUpperCase() === "R013/1" || planillaSeleccionada.tipo_planilla?.includes("Inyección"));
   const etiquetaLote = (lote) => `${lote.material || "Material"}${lote.color ? ` (${lote.color})` : ""} · Remito ${lote.numero_remito || "-"} · ${lote.nombre_proveedor || lote.proveedor || "Sin proveedor"}`;
   const cargarMaterialNuevo = (destino) => salida.navegarSinAviso(() => {
@@ -1003,6 +966,44 @@ export default function Planillas() {
       maquina: planilla.maquina || planilla.nombre_maquina,
     })[ordenListado.campo], ordenListado.direccion);
     const paginacionPlanillas = usePagination(planillasConOrden);
+
+    useEffect(() => {
+      if (!seleccionInicial || seleccionAplicadaRef.current === seleccionInicial || planillasConOrden.length === 0) return;
+      const indice = planillasConOrden.findIndex((item) => String(item.id_planilla) === String(seleccionInicial));
+      if (indice < 0) return;
+      seleccionAplicadaRef.current = seleccionInicial;
+      paginacionPlanillas.setPage(paginacionPlanillas.pageSize === "all" ? 1 : Math.floor(indice / paginacionPlanillas.pageSize) + 1);
+      // La selección recibida desde Inicio abre el detalle una sola vez.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      alternarResumenPlanilla(planillasConOrden[indice]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seleccionInicial, planillas]);
+
+    useEffect(() => {
+      if (!filaDetalleAbierta) return;
+      const desplazamiento = window.setTimeout(() => {
+        const filaGeneral = listadoRef.current?.querySelector(".planilla-fila-abierta");
+        const filaDetalle = listadoRef.current?.querySelector(".planilla-detalle-fila");
+        if (!filaGeneral || !filaDetalle) return;
+
+        const margen = 20;
+        const altoFilaGeneral = filaGeneral.getBoundingClientRect().height;
+        const espacioDisponibleParaDetalle = Math.max(260, window.innerHeight - altoFilaGeneral - (margen * 2));
+        const altoDetalleVisible = Math.min(filaDetalle.getBoundingClientRect().height, espacioDisponibleParaDetalle);
+        const limiteInferior = window.innerHeight - margen;
+        const desplazamientoNecesario = filaDetalle.getBoundingClientRect().top + altoDetalleVisible - limiteInferior;
+        const desplazamientoMaximo = filaGeneral.getBoundingClientRect().top - margen;
+        const desplazamientoFinal = Math.min(desplazamientoNecesario, desplazamientoMaximo);
+
+        if (desplazamientoFinal > 0) {
+          window.scrollBy({
+            top: desplazamientoFinal,
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+          });
+        }
+      }, 80);
+      return () => window.clearTimeout(desplazamiento);
+    }, [filaDetalleAbierta, resumenesPlanilla, paginacionPlanillas.page]);
 
   return (
     <section className="planillas">

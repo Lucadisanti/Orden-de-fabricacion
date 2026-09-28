@@ -4,9 +4,9 @@ Aplicación para administrar órdenes de fabricación de calzado, planificación
 
 ## Tecnologías
 
-- Frontend: React + Vite
-- Backend: Python 3.12 + Flask
-- Base de datos: MySQL/MariaDB mediante XAMPP
+- Frontend: React + Vite.
+- Backend: Python + Flask.
+- Base de datos: MySQL. El proyecto también contempla MariaDB/XAMPP; verificar compatibilidad según entorno.
 
 ## Funcionalidades principales
 
@@ -17,179 +17,94 @@ Aplicación para administrar órdenes de fabricación de calzado, planificación
 - Carga de producción por talle con teclado y avance mediante Enter.
 - Comparación de pares esperados, realizados y pendientes.
 - Operarios por etapa y materiales utilizados.
-- Trazabilidad completa por orden.
+- Trazabilidad por orden.
 - Interfaz responsive para computadora, tablet y celular.
 
 ## Documentación útil
 
-- [Flujo de stock de cuero](docs/flujo-stock-cuero.md)
+- [Instalación, actualización, backup y recuperación](docs/guia-instalacion-actualizacion.md): requisitos, configuración, actualización desde GitHub, usuarios iniciales, recuperación de acceso y pruebas básicas.
+- [Flujo de stock de cuero](docs/flujo-stock-cuero.md).
+- [Documento del proyecto](docs/proyecto_orden_fabricacion.docx).
+- [Modelo de base de datos y SQL existentes](docs/modelo_base_datos/): revisar la guía antes de importar archivos.
 
-## Requisitos
+## Formas de trabajo
 
-- XAMPP con MySQL iniciado.
-- Python 3.12.
-- Node.js y npm.
-- Git.
+El proyecto contempla dos modalidades:
 
-## Instalación desde cero
+- **Modo desarrollo/local manual:** para programar, depurar, diagnosticar problemas y preparar una recuperación si Docker falla. Requiere instalar las herramientas indicadas en la guía manual.
+- **Modo empaquetado/entrega con Docker:** previsto para entregar backend y frontend preparados y reducir instalaciones manuales en la PC cliente. Los requisitos y pasos concretos quedan como **verificar según empaquetado final**.
 
-### 1. Descargar el proyecto
+En esta copia del repositorio no se encontraron Dockerfiles, `docker-compose.yml`, archivos Compose alternativos ni `frontend/nginx.conf`. Por eso todavía no hay un procedimiento Docker verificable para indicar comandos de construcción o arranque. La [guía operativa](docs/guia-instalacion-actualizacion.md) incluye la sección «Uso con Docker / empaquetado», los pendientes y su checklist de prueba. Los backups de MySQL siguen siendo necesarios con Docker.
 
-```bash
-git clone https://github.com/Lucadisanti/Orden-de-fabricacion.git
-cd Orden-de-fabricacion
-```
+## Instalación y actualización en modo desarrollo/manual
 
-### 2. Crear la base de datos
+Para este modo se necesitan Python con `pip` y entorno virtual, Node.js con npm, Git y un servidor MySQL disponible. Las versiones pueden variar según la PC; verificar las dependencias del proyecto. Python 3.12 es la referencia de la documentación anterior, no una versión mínima comprobada.
 
-Abrir `http://localhost/phpmyadmin`, ingresar en **Importar** y ejecutar, en este orden:
+Seguí la [guía operativa](docs/guia-instalacion-actualizacion.md) para clonar el repositorio, preparar una base nueva, instalar dependencias y configurar `backend/.env`.
 
-1. `docs/modelo_base_datos/bd_orden_fabricacion.sql`
-2. `docs/modelo_base_datos/stored_procedures.sql`
+Para actualizar, revisá primero `git status`, hacé backup antes de cualquier cambio de base de datos y seguí la secuencia `git fetch origin` / `git merge origin/main` explicada en la guía. El merge se aplica a la rama actual. No uses el SQL de instalación como actualización: contiene `DROP DATABASE`.
 
-El primer archivo recrea la base completa. No debe ejecutarse sobre una base con información que se quiera conservar sin realizar antes una copia de seguridad.
+## Trabajo diario en modo desarrollo/manual
 
-### 3. Configurar y levantar el backend
-
-Desde la carpeta raíz del proyecto:
+Con la instalación terminada, desde la raíz, en Linux/macOS:
 
 ```bash
 cd backend
-py -3.12 -m venv venv
-venv\Scripts\activate
-python -m pip install -r requirements.txt
-copy .env.example .env
+source venv/bin/activate
 python app.py
 ```
 
-La API queda disponible en `http://127.0.0.1:5000`.
+En Windows CMD, reemplazá la activación por `venv\Scripts\activate.bat`.
 
-La configuración predeterminada de XAMPP es:
-
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=orden_fabricacion
-DB_PORT=3306
-```
-
-### 4. Levantar el frontend
-
-En otra terminal, desde la carpeta raíz:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Abrir la dirección indicada por Vite, normalmente `http://127.0.0.1:5173` o `http://127.0.0.1:4173`.
-
-## Actualizar una instalación existente
-
-Antes de actualizar, realizar una copia de seguridad de la base desde phpMyAdmin.
-
-Desde la carpeta del proyecto:
-
-```bash
-git pull origin main
-```
-
-Luego actualizar las dependencias:
-
-```bash
-cd backend
-venv\Scripts\activate
-python -m pip install -r requirements.txt
-cd ..\frontend
-npm install
-```
-
-Para incorporar la planificación por talle sin borrar la información existente, importar desde phpMyAdmin:
-
-```text
-docs/modelo_base_datos/migracion_talles_por_orden_2026-08-19.sql
-```
-
-Esta migración crea `detalle_orden`, conserva las órdenes existentes y actualiza los procedimientos necesarios. Debe ejecutarse una sola vez en cada base anterior a esta versión.
-
-Para incorporar la composición automática de artículos por modelo, puntera, adicionales y color, importar después:
-
-```text
-docs/modelo_base_datos/migracion_codigos_producto_2026-08-28.sql
-```
-
-Esta migración conserva los artículos actuales, crea los nuevos catálogos y relaciona automáticamente los códigos existentes que pueda reconocer. También debe ejecutarse una sola vez.
-
-Después, reiniciar backend y frontend.
-
-## Trabajo diario
-
-Backend:
-
-```bash
-cd backend
-venv\Scripts\activate
-python app.py
-```
-
-Frontend, en otra terminal:
+Frontend, en otra terminal desde la raíz:
 
 ```bash
 cd frontend
 npm run dev
+```
+
+El backend normalmente escucha en `http://127.0.0.1:5000` y sus rutas usan `/api`. Abrí la URL que indique Vite, normalmente `http://127.0.0.1:5173`. Ambos procesos y MySQL deben permanecer encendidos.
+
+Para comprobar la compilación del frontend, desde `frontend/`:
+
+```bash
+npm run build
 ```
 
 ## Testing automatizado
 
-Las pruebas no requieren que MySQL este iniciado: las respuestas de base de datos se simulan para que los casos sean repetibles y no modifiquen informacion real.
+### Backend: Flask y pytest
 
-### Backend - Flask y pytest
+**Usar una base de pruebas configurada en el entorno antes de ejecutar.** Aunque varias pruebas simulan consultas, `backend/tests/conftest.py` importa `app`, que llama a `configurar_admin()` y puede escribir en la base al importar. No se garantiza una ejecución sin MySQL ni sin efectos sobre los datos.
 
-Instalar las dependencias de prueba y ejecutar la suite:
+Desde `backend/`, con el entorno virtual activado:
 
 ```bash
-cd backend
-py -3.12 -m pip install -r requirements-test.txt
-py -3.12 -m pytest -v
+python -m pip install -r requirements-test.txt
+python -m pytest -v
 ```
 
-La suite comprueba el listado de productos, respuestas `404`, creacion con codigo `201`, validacion de datos con codigo `400` y manejo controlado de errores `500`.
+Pendiente conocido: `backend/tests/test_recuperacion_local.py` referencia `entrega-cliente/scripts/recuperar-admin.py`, ausente en esta copia del proyecto. Esa prueba no puede completarse tal como está. Ver la sección de recuperación de acceso de la guía.
 
-### Frontend - Vitest y React Testing Library
+### Frontend: Vitest y React Testing Library
 
-Instalar las dependencias y ejecutar todos los tests una vez:
+Desde `frontend/`, con dependencias instaladas:
 
 ```bash
-cd frontend
-npm install
 npm test
 ```
 
-Para trabajar viendo como se vuelven a ejecutar al guardar cambios:
+Para volver a ejecutar las pruebas al guardar cambios:
 
 ```bash
 npm run test:watch
 ```
 
-La suite del Dashboard verifica el contenido inicial, el consumo simulado de la API, los enlaces de navegacion y el mensaje mostrado cuando la API falla.
-
-## Subir cambios a GitHub
-
-Revisar los archivos modificados:
+## Antes de compartir cambios
 
 ```bash
 git status
 git diff --check
 ```
 
-Guardar y subir una versión:
-
-```bash
-git add .
-git commit -m "Mejora planillas, trazabilidad y diseño responsive"
-git push origin main
-```
-
-No subir el archivo `backend/.env`, contraseñas, copias de seguridad ni las carpetas `node_modules` o `venv`.
+No subir `backend/.env`, contraseñas reales, códigos de recuperación, backups, `node_modules` ni `venv`. La carpeta `backups/` ya está incluida en el `.gitignore` de la raíz; esto no deja de versionar archivos que ya estuvieran registrados en Git.

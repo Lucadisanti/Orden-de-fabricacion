@@ -9,6 +9,15 @@
 }
 
 
+.uso-campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.uso-campo > label { color: var(--text-main); font-weight: 700; overflow-wrap: anywhere; }
+.uso-campo > input { min-width: 0; max-width: 100%; }
+.uso-campo-ayuda { color: var(--text-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.uso-filtro-contexto { margin: 0 0 12px; color: var(--text-muted); line-height: 1.5; overflow-wrap: anywhere; }
+.uso-materiales .ui-empty-state { overflow-wrap: anywhere; }
+.uso-materiales .form-uso-material .ui-form-actions { flex-wrap: wrap; }
+.uso-materiales .form-uso-material .ui-form-actions .ui-btn { max-width: 100%; }
+
 .uso-fila-abierta { background: var(--primary-soft) !important; }
 .uso-fila-abierta + tr { scroll-margin-block: 12px; }
 .uso-materiales .listado-desplegable { max-height: calc(100vh - 250px) !important; scroll-margin-top: 18px; }

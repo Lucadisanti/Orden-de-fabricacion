@@ -208,6 +208,7 @@ export default function UsoMateriales() {
   };
 
   const textoBusqueda = busqueda.trim();
+  const planillaParametro = searchParams.get("planilla");
 
   const usosFiltrados = usos.filter((uso) => {
   const texto = `
@@ -219,14 +220,14 @@ export default function UsoMateriales() {
     ${uso.color || ""}
   `.toLowerCase();
 
-  const planillaParametro = searchParams.get("planilla");
   const coincidePlanilla = !planillaParametro || (uso.numero_planilla || uso.planilla || "").toLowerCase() === planillaParametro.toLowerCase();
   return texto.includes(textoBusqueda.toLowerCase()) && coincidePlanilla;
   });
 
   const hayBusqueda = textoBusqueda.length > 0;
-  const sinResultados = hayBusqueda && usosFiltrados.length === 0;
-  const sinUsos = !hayBusqueda && usos.length === 0;
+  const hayFiltros = hayBusqueda || Boolean(planillaParametro);
+  const sinResultados = hayFiltros && usosFiltrados.length === 0;
+  const sinUsos = !hayFiltros && usos.length === 0;
 
   const gruposUsos = Object.values(usosFiltrados.reduce((grupos, uso) => {
     const orden = uso.numero_orden || uso.orden || "Sin orden";
@@ -270,59 +271,75 @@ export default function UsoMateriales() {
 
 
           <form onSubmit={guardarUsoMaterial} className="form-uso-material">
-            <Selector
-              name="planilla_produccion_id_planilla"
+            <div className="uso-campo">
+              <label htmlFor="uso-planilla">Planilla de producción</label>
+              <Selector
+                id="uso-planilla"
+                aria-describedby="uso-planilla-ayuda"
+                name="planilla_produccion_id_planilla"
+                value={form.planilla_produccion_id_planilla}
+                onChange={manejarCambio}
+                required
+              >
+                <option value="">Seleccioná una planilla</option>
+                {planillas.map((planilla) => (
+                  <option key={planilla.id_planilla} value={planilla.id_planilla}>
+                    {planilla.numero_planilla} - Orden{" "}
+                    {planilla.numero_orden || planilla.orden || "-"}
+                  </option>
+                ))}
+              </Selector>
+              <small id="uso-planilla-ayuda" className="uso-campo-ayuda">
+                Elegí la planilla y la orden a las que corresponde este uso.
+              </small>
+            </div>
 
-              value={form.planilla_produccion_id_planilla}
-              onChange={manejarCambio}
-              required
-            >
-              <option value="">Seleccione planilla</option>
+            <div className="uso-campo">
+              <label htmlFor="uso-lote">Material recibido / lote</label>
+              <Selector
+                id="uso-lote"
+                aria-describedby="uso-lote-ayuda"
+                name="lote_materiales_id_lote"
+                value={form.lote_materiales_id_lote}
+                onChange={manejarCambio}
+                required
+              >
+                <option value="">Seleccioná un material recibido</option>
+                {lotes.map((lote) => (
+                  <option
+                    key={lote.id_lote_materiales || lote.id_lote}
+                    value={lote.id_lote_materiales || lote.id_lote}
+                  >
+                    Remito {lote.numero_remito || "-"} -{" "}
+                    {lote.nombre_proveedor || lote.proveedor || "Proveedor"} -{" "}
+                    {lote.material || "Material"}{" "}
+                    {lote.color ? `(${lote.color})` : ""} - Recibido:{" "}
+                    {lote.cantidad_recibida ?? "-"}
+                  </option>
+                ))}
+              </Selector>
+              <small id="uso-lote-ayuda" className="uso-campo-ayuda">
+                Identificá el lote por remito, proveedor, material y color. “Recibido” indica la cantidad de la recepción, no el saldo disponible.
+              </small>
+            </div>
 
-              {planillas.map((planilla) => (
-                <option key={planilla.id_planilla} value={planilla.id_planilla}>
-                  {planilla.numero_planilla} - Orden{" "}
-                  {planilla.numero_orden || planilla.orden || "-"}
-                </option>
-              ))}
-            </Selector>
-
-            <Selector
-              name="lote_materiales_id_lote"
-
-              value={form.lote_materiales_id_lote}
-              onChange={manejarCambio}
-              required
-            >
-              <option value="">Seleccione material recibido</option>
-
-              {lotes.map((lote) => (
-                <option
-                  key={lote.id_lote_materiales || lote.id_lote}
-                  value={lote.id_lote_materiales || lote.id_lote}
-                >
-                  Remito {lote.numero_remito || "-"} -{" "}
-                  {lote.nombre_proveedor || lote.proveedor || "Proveedor"} -{" "}
-                  {lote.material || "Material"}{" "}
-                  {lote.color ? `(${lote.color})` : ""} - Recibido:{" "}
-                  {lote.cantidad_recibida ?? "-"}
-                </option>
-              ))}
-            </Selector>
-
-            <label>
-              <span>Cantidad usada</span>
+            <div className="uso-campo">
+              <label htmlFor="uso-cantidad">Cantidad utilizada</label>
               <input
+                id="uso-cantidad"
+                aria-describedby="uso-cantidad-ayuda"
                 type="number"
                 step="0.01"
                 name="cantidad_usada"
-                placeholder="Cantidad usada"
+                placeholder="Cantidad utilizada"
                 value={form.cantidad_usada}
-
                 onChange={manejarCambio}
                 required
               />
-            </label>
+              <small id="uso-cantidad-ayuda" className="uso-campo-ayuda">
+                Ingresá la cantidad total utilizada del lote seleccionado.
+              </small>
+            </div>
 
             <div className="ui-form-actions">
               <button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>
@@ -348,7 +365,7 @@ export default function UsoMateriales() {
 
       {(mostrarFormulario) && <SeparadorListado titulo="Usos de materiales registrados" descripcion="Consultá los usos de materiales guardados." />}
 
-      {cargando && !error && <p>Cargando usos de materiales...</p>}
+      {cargando && !error && <p role="status">Cargando usos de materiales...</p>}
 
       {error && <RetryMessage message={error} onRetry={cargarDatos} retrying={cargando} />}
 
@@ -359,13 +376,24 @@ export default function UsoMateriales() {
           value={busqueda}
           onChange={setBusqueda}
         />
+        {planillaParametro && (
+          <p className="uso-filtro-contexto">
+            Filtrando por planilla: <strong>{planillaParametro}</strong>.
+          </p>
+        )}
         {sinResultados ? (
-          <div className="ui-empty-state">
-            <strong>No se encontraron usos de materiales con “{textoBusqueda}”.</strong>
-            <span>Probá con otra planilla, orden, remito, proveedor, material o color.</span>
+          <div className="ui-empty-state" role="status">
+            <strong>{planillaParametro
+              ? "No se encontraron usos de materiales con estos filtros."
+              : <>No se encontraron usos de materiales con “{textoBusqueda}”.</>}
+            </strong>
+            <span>{planillaParametro
+              ? "Revisá la búsqueda o abrí otra planilla para consultar sus materiales."
+              : "Probá con otra planilla, orden, remito, proveedor, material o color."}
+            </span>
           </div>
         ) : sinUsos ? (
-          <div className="ui-empty-state">
+          <div className="ui-empty-state" role="status">
             <strong>Todavía no hay usos de materiales cargados.</strong>
             <span>Registrá un uso para vincular materiales con una planilla de producción.</span>
           </div>

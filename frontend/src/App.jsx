@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 
 import RecepcionCortes from "./pages/RecepcionCortes";
 import Sidebar from "./components/Sidebar";
+import RetryMessage from "./components/RetryMessage";
 
 import Dashboard from "./pages/Dashboard";
 import Estadisticas from "./pages/Estadisticas";
@@ -57,9 +58,51 @@ function Aplicacion({ usuario, onLogout }) {
 function App() {
   useEnterToNextField();
   const [usuario,setUsuario]=useState(undefined);
-  useEffect(()=>{axios.get("/api/auth/me").then(r=>setUsuario(r.data)).catch(()=>setUsuario(null));},[]);
+  const [errorSesion, setErrorSesion] = useState(false);
+  const [intentoSesion, setIntentoSesion] = useState(0);
+
+  useEffect(() => {
+    try {
+      const tema = localStorage.getItem("tema");
+      if (tema === "dia" || tema === "noche") document.documentElement.dataset.theme = tema;
+    } catch {
+      // Si el navegador bloquea el almacenamiento, conservar el tema actual.
+    }
+  }, []);
+
+  useEffect(() => {
+    let vigente = true;
+    axios.get("/api/auth/me")
+      .then(({ data }) => { if (vigente) setUsuario(data); })
+      .catch((error) => {
+        if (!vigente) return;
+        if (error.response?.status === 401) setUsuario(null);
+        else setErrorSesion(true);
+      });
+    return () => { vigente = false; };
+  }, [intentoSesion]);
+
+  const reintentarSesion = () => {
+    setErrorSesion(false);
+    setIntentoSesion((actual) => actual + 1);
+  };
   useEffect(()=>{ if(usuario) { document.documentElement.dataset.rol=usuario.rol; document.documentElement.dataset.usuarioId=usuario.id; } else { delete document.documentElement.dataset.rol; delete document.documentElement.dataset.usuarioId; } window.dispatchEvent(new Event("identidad-actualizada")); },[usuario]);
-  if(usuario===undefined)return null;
+  if (usuario === undefined) return (
+    <main className="app-session">
+      <section className="app-session-card" aria-labelledby="app-session-title">
+        <h1 id="app-session-title">Orden de Fabricación</h1>
+        {errorSesion ? (
+          <RetryMessage
+            title="No se pudo comprobar la sesión"
+            message="No pudimos conectarnos con el servidor o completar la consulta. Revisá la conexión e intentá nuevamente."
+            onRetry={reintentarSesion}
+          />
+        ) : (
+          <p role="status">Comprobando sesión…</p>
+        )}
+      </section>
+    </main>
+  );
   if(!usuario)return <Login onLogin={(datos) => { window.history.replaceState(window.history.state, "", "/"); setUsuario(datos); }}/>;
 
   return <Aplicacion usuario={usuario} onLogout={()=>axios.post("/api/auth/logout").finally(()=>setUsuario(null))}/>;

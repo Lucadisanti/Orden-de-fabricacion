@@ -44,21 +44,23 @@ def asegurar_esquema(cursor):
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
 
 
-def registrar_evento(cursor, recurso, registro_id, usuario, accion):
+def registrar_evento(cursor, recurso, registro_id, usuario, accion, usar_marca_compartida=False):
+    fecha_sql = "@registro_ocurrido_en" if usar_marca_compartida else "UTC_TIMESTAMP(6)"
     cursor.execute("""INSERT INTO registro_historial
         (recurso,registro_id,usuario_id,usuario,accion,ocurrido_en)
-        VALUES (%s,%s,%s,%s,%s,UTC_TIMESTAMP(6))""",
+        VALUES (%s,%s,%s,%s,%s,""" + fecha_sql + ")",
         (recurso, registro_id, usuario["id"], usuario["nombre"], accion))
 
 
 def registrar_actualizacion(cursor, recurso, registro_id, usuario):
+    cursor.execute("SET @registro_ocurrido_en = UTC_TIMESTAMP(6)")
     cursor.execute("""INSERT INTO registro_actualizacion
         (recurso,registro_id,usuario_id,usuario,actualizado_en)
-        VALUES (%s,%s,%s,%s,UTC_TIMESTAMP(6))
+        VALUES (%s,%s,%s,%s,@registro_ocurrido_en)
         ON DUPLICATE KEY UPDATE usuario_id=VALUES(usuario_id),
         usuario=VALUES(usuario), actualizado_en=VALUES(actualizado_en)""",
         (recurso, registro_id, usuario["id"], usuario["nombre"]))
-    registrar_evento(cursor, recurso, registro_id, usuario, "Actualizó")
+    registrar_evento(cursor, recurso, registro_id, usuario, "Actualizó", usar_marca_compartida=True)
 
 
 def obtener_historial(recurso, registro_id):
@@ -69,6 +71,18 @@ def obtener_historial(recurso, registro_id):
     conn = get_connection(); cursor = conn.cursor(dictionary=True)
     try:
         asegurar_esquema(cursor)
+        cursor.execute("""DELETE h FROM registro_historial h
+            INNER JOIN registro_autoria a
+              ON a.recurso=h.recurso AND a.registro_id=h.registro_id AND a.usuario_id=h.usuario_id
+            WHERE h.recurso=%s AND h.registro_id=%s AND h.accion='Creó'
+              AND h.ocurrido_en<>a.creado_en
+              AND ABS(TIMESTAMPDIFF(MICROSECOND,h.ocurrido_en,a.creado_en))<1000000""", (recurso, registro_id))
+        cursor.execute("""DELETE h FROM registro_historial h
+            INNER JOIN registro_actualizacion a
+              ON a.recurso=h.recurso AND a.registro_id=h.registro_id AND a.usuario_id=h.usuario_id
+            WHERE h.recurso=%s AND h.registro_id=%s AND h.accion='Actualizó'
+              AND h.ocurrido_en<>a.actualizado_en
+              AND ABS(TIMESTAMPDIFF(MICROSECOND,h.ocurrido_en,a.actualizado_en))<1000000""", (recurso, registro_id))
         cursor.execute("""INSERT IGNORE INTO registro_historial
             (recurso,registro_id,usuario_id,usuario,accion,ocurrido_en)
             SELECT recurso,registro_id,usuario_id,autor,'Creó',creado_en
@@ -146,18 +160,19 @@ def enriquecer_respuesta(response):
             try:
                 asegurar_esquema(cursor)
                 usuario = session["usuario"]
+                cursor.execute("SET @registro_ocurrido_en = UTC_TIMESTAMP(6)")
                 cursor.execute("""INSERT INTO registro_autoria (recurso,registro_id,usuario_id,autor,creado_en)
-                    VALUES (%s,%s,%s,%s,UTC_TIMESTAMP(6))""", (recurso, registro_id, usuario["id"], usuario["nombre"]))
-                registrar_evento(cursor, recurso, registro_id, usuario, "Creó")
+                    VALUES (%s,%s,%s,%s,@registro_ocurrido_en)""", (recurso, registro_id, usuario["id"], usuario["nombre"]))
+                registrar_evento(cursor, recurso, registro_id, usuario, "Creó", usar_marca_compartida=True)
                 if recurso == "ordenes" and datos.get("id_planilla"):
                     cursor.execute("""INSERT INTO registro_autoria (recurso,registro_id,usuario_id,autor,creado_en)
-                        VALUES ('planillas',%s,%s,%s,UTC_TIMESTAMP(6))""", (datos["id_planilla"], usuario["id"], usuario["nombre"]))
-                    registrar_evento(cursor, "planillas", datos["id_planilla"], usuario, "Creó")
+                        VALUES ('planillas',%s,%s,%s,@registro_ocurrido_en)""", (datos["id_planilla"], usuario["id"], usuario["nombre"]))
+                    registrar_evento(cursor, "planillas", datos["id_planilla"], usuario, "Creó", usar_marca_compartida=True)
                 if recurso == "produccion-diaria":
                     for id_planilla in datos.get("planillas_creadas", []):
                         cursor.execute("""INSERT INTO registro_autoria (recurso,registro_id,usuario_id,autor,creado_en)
-                            VALUES ('planillas',%s,%s,%s,UTC_TIMESTAMP(6))""", (id_planilla, usuario["id"], usuario["nombre"]))
-                        registrar_evento(cursor, "planillas", id_planilla, usuario, "Creó")
+                            VALUES ('planillas',%s,%s,%s,@registro_ocurrido_en)""", (id_planilla, usuario["id"], usuario["nombre"]))
+                        registrar_evento(cursor, "planillas", id_planilla, usuario, "Creó", usar_marca_compartida=True)
                     for id_planilla in set(datos.get("planillas_afectadas_ids", [])) - set(datos.get("planillas_creadas", [])):
                         registrar_actualizacion(cursor, "planillas", id_planilla, usuario)
                 conn.commit()

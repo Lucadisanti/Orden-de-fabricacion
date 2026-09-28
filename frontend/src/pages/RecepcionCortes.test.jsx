@@ -2,10 +2,16 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import axios from "axios";
-import { MemoryRouter } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import RecepcionCortes from "./RecepcionCortes";
 
 vi.mock("axios");
+
+// useBlocker necesita un router de datos; MemoryRouter no aporta ese contexto.
+function renderizarRecepcionCortes() {
+  const router = createMemoryRouter([{ path: "/", element: <RecepcionCortes /> }]);
+  return render(<RouterProvider router={router} />);
+}
 beforeEach(() => {
   vi.resetAllMocks(); Element.prototype.scrollIntoView = vi.fn();
   document.documentElement.dataset.rol = "admin";
@@ -24,7 +30,7 @@ it("muestra las órdenes como filas y filtra cada detalle de la recepción", asy
       {id_linea:2,numero_orden:"0122",articulo:"20009",producto:"Zapato",color:"Negro",remito:"REM-B",cantidad:10,estado:"No conforme",observaciones:"Corte marcado"},
     ],
   }] : []}));
-  render(<MemoryRouter><RecepcionCortes /></MemoryRouter>);
+  renderizarRecepcionCortes();
   const tabla = await screen.findByRole("table");
   expect(within(tabla).getAllByRole("row")).toHaveLength(3);
   expect(within(tabla).getByText("Corte marcado")).toBeInTheDocument();
@@ -38,7 +44,7 @@ it("muestra las órdenes como filas y filtra cada detalle de la recepción", asy
 });
 
 it("guarda varias órdenes con pares totales, controlador y observación condicional", async () => {
-  const user = userEvent.setup(); render(<MemoryRouter><RecepcionCortes /></MemoryRouter>);
+  const user = userEvent.setup(); renderizarRecepcionCortes();
   const nuevo = await screen.findByRole("button",{name:/Nueva recepción/});
   await waitFor(() => expect(nuevo).toBeEnabled()); await user.click(nuevo);
   expect(screen.queryByRole("heading", {name:"Orden 1"})).not.toBeInTheDocument();
@@ -75,7 +81,7 @@ it("descuenta tandas previas y devuelve su cupo al editar", async () => {
       {id_linea:1,orden_id:1,numero_orden:"0121",articulo:"10009",producto:"Bota",color:"Negro",remito:"0001",cantidad:100,estado:"Conforme",observaciones:""},
     ],
   }] : url === "/api/ordenes/" ? [{id_orden:1,total_pares:180,numero_orden:"0121",producto:"Bota",color:"Negro"}] : []}));
-  render(<MemoryRouter><RecepcionCortes /></MemoryRouter>);
+  renderizarRecepcionCortes();
   await screen.findByRole("table");
   await user.click(screen.getByRole("button",{name:/Nueva recepción/}));
   await user.click(screen.getByRole("combobox",{name:"Número de orden"}));

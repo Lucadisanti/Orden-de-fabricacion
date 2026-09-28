@@ -1,11 +1,17 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import axios from "axios";
 import Planillas from "./Planillas";
 
 vi.mock("axios");
+
+// useBlocker necesita un router de datos; MemoryRouter no aporta ese contexto.
+function renderizarPlanillas() {
+  const router = createMemoryRouter([{ path: "/", element: <Planillas /> }]);
+  return render(<RouterProvider router={router} />);
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -31,9 +37,9 @@ beforeEach(() => {
 
 it("consulta sin copiar cantidades y edita la registrada sin crear otra producción", async () => {
   const user = userEvent.setup();
-  render(<MemoryRouter><Planillas /></MemoryRouter>);
+  renderizarPlanillas();
   await user.click(await screen.findByRole("button", { name: "Editar" }));
-  const nuevaProduccion = await screen.findByRole("button", { name: /Producción 3/ });
+  const nuevaProduccion = await screen.findByRole("button", { name: "Cargar nueva producción" });
   expect(screen.queryByRole("textbox", { name: "Cantidad producida para talle 35" })).not.toBeInTheDocument();
   await user.click(nuevaProduccion);
   const carga = await screen.findByRole("textbox", { name: "Cantidad producida para talle 35" });
@@ -55,16 +61,16 @@ it("consulta sin copiar cantidades y edita la registrada sin crear otra producci
   await user.click(screen.getByRole("button", { name: "Guardar producciones" }));
   await waitFor(() => expect(axios.put).toHaveBeenCalledWith("/api/produccion-diaria/linea/1", expect.objectContaining({ fecha: "2026-09-04", linea: expect.objectContaining({ talles: [{ talle: "35", cantidad_pares: 25 }, { talle: "36", cantidad_pares: 5 }] }) })));
   expect(axios.post).not.toHaveBeenCalled();
-  await screen.findByRole("button", { name: /Producción 3/ });
+  await screen.findByRole("button", { name: "Cargar nueva producción" });
   expect(screen.queryByRole("textbox", { name: "Cantidad producida para talle 35" })).not.toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: /Producción 3/ }));
+  await user.click(screen.getByRole("button", { name: "Cargar nueva producción" }));
   expect(screen.getByRole("textbox", { name: "Cantidad producida para talle 35" })).toHaveValue("");
 }, 10000);
 
 
 it("mantiene el orden y conserva la fecha editada al alternar producciones", async () => {
   const user = userEvent.setup();
-  render(<MemoryRouter><Planillas /></MemoryRouter>);
+  renderizarPlanillas();
   await user.click(await screen.findByRole("button", { name: "Editar" }));
   await user.click(await screen.findByRole("button", { name: /Producción 1/ }));
   const encabezados = () => screen.getAllByRole("button").filter((button) => button.classList.contains("planilla-produccion-acordeon"));
@@ -76,13 +82,14 @@ it("mantiene el orden y conserva la fecha editada al alternar producciones", asy
   expect(cargarNueva.closest(".planilla-talles-comparacion")).toBeNull();
   expect(encabezados()[1].compareDocumentPosition(cargarNueva) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   const fecha = screen.getByLabelText("Fecha de producción");
-  expect(fecha).toHaveValue("2026-09-04");
-  fireEvent.change(fecha, { target: { value: "2026-09-03" } });
+  // El campo muestra dd/mm/aa; los asserts del guardado conservan el formato ISO.
+  expect(fecha).toHaveValue("04/09/26");
+  fireEvent.change(fecha, { target: { value: "03/09/26" } });
   expect(fecha.compareDocumentPosition(encabezados()[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   await user.click(encabezados()[1]);
-  expect(screen.getByLabelText("Fecha de producción")).toHaveValue("2026-09-07");
+  expect(screen.getByLabelText("Fecha de producción")).toHaveValue("07/09/26");
   await user.click(encabezados()[0]);
-  expect(screen.getByLabelText("Fecha de producción")).toHaveValue("2026-09-03");
+  expect(screen.getByLabelText("Fecha de producción")).toHaveValue("03/09/26");
   await user.click(screen.getByRole("button", { name: "Guardar producciones" }));
   await waitFor(() => expect(axios.put).toHaveBeenCalledWith("/api/produccion-diaria/linea/1", expect.objectContaining({ fecha: "2026-09-03" })));
   expect(axios.put).toHaveBeenCalledWith("/api/produccion-diaria/linea/2", expect.objectContaining({ fecha: "2026-09-07", linea: expect.objectContaining({ lote_puntera_id: null, lote_pu_id: null }) }));

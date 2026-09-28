@@ -9,22 +9,22 @@
 }
 
 
-.uso-fila-abierta { background: #eff6ff !important; }
+.uso-fila-abierta { background: var(--primary-soft) !important; }
 .uso-fila-abierta + tr { scroll-margin-block: 12px; }
 .uso-materiales .listado-desplegable { max-height: calc(100vh - 250px) !important; scroll-margin-top: 18px; }
-.uso-grupo-header td { padding: 11px 16px !important; border-top: 2px solid #cbdcf0; background: #eaf2ff !important; text-align: left !important; }
+.uso-grupo-header td { padding: 11px 16px !important; border-top: 2px solid var(--border); background: var(--primary-soft) !important; text-align: left !important; overflow-wrap: anywhere; }
 .uso-grupo-header:first-child td { border-top: 0; }
-.uso-grupo-header strong { margin-right: 12px; color: #1e3a5f; font-size: 14px; }
-.uso-grupo-header span { color: #64748b; font-size: 12px; font-weight: 700; }
+.uso-grupo-header strong { margin-right: 12px; color: var(--text-main); font-size: 14px; }
+.uso-grupo-header span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
 .uso-flecha { display: inline-block; width: 15px; margin-right: 6px; color: var(--primary); font-size: 10px; }
-.uso-detalle-compacto { margin: 4px; padding: 18px; border: 1px solid #dbe5f1; border-radius: 14px; background: #f8fbff; text-align: left; }
+.uso-detalle-compacto { min-width: 0; margin: 4px; padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-soft); text-align: left; overflow-wrap: anywhere; }
 .uso-detalle-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
 .uso-detalle-header span, .uso-datos-grid span, .uso-observaciones span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
-.uso-detalle-header h3 { margin-top: 2px; color: var(--text-main); font-size: 18px; }
+.uso-detalle-header h3 { min-width: 0; margin-top: 2px; color: var(--text-main); font-size: 18px; overflow-wrap: anywhere; }
 .uso-datos-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 18px; }
 .uso-datos-grid > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .uso-datos-grid strong { overflow-wrap: anywhere; color: var(--text-main); font-size: 14px; }
-.uso-observaciones { margin-top: 13px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
+.uso-observaciones { margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--border); }
 .uso-observaciones p { margin-top: 3px; color: var(--text-main); line-height: 1.45; }
 
 .detalle-card{
@@ -61,6 +61,15 @@
     color:#111827;
     font-weight:700;
 }
+
+/* Los detalles de lotes usan la misma paleta que los bloques nuevos de stock. */
+:root[data-theme="noche"] .uso-materiales .uso-fila-abierta,
+:root[data-theme="noche"] .uso-materiales .uso-grupo-header td { background: var(--primary-soft) !important; }
+:root[data-theme="noche"] .uso-materiales .uso-grupo-header td,
+:root[data-theme="noche"] .uso-materiales .uso-observaciones { border-color: var(--border); }
+:root[data-theme="noche"] .uso-materiales .uso-grupo-header strong { color: var(--text-main); }
+:root[data-theme="noche"] .uso-materiales .uso-grupo-header span { color: var(--text-muted); }
+:root[data-theme="noche"] .uso-materiales .uso-detalle-compacto { background: var(--bg-soft); border-color: var(--border); }
 
 @media (max-width: 420px) {
   .uso-detalle-compacto { padding: 14px; }

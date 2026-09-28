@@ -116,8 +116,10 @@
 .recepcion-observaciones { margin-top: 13px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
 .recepcion-observaciones p { margin-top: 3px; color: var(--text-main); line-height: 1.45; }
 .recepcion-materiales .ui-data-table th:last-child { text-align: right; }
-.recepcion-acciones-tabla { display: flex; align-items: center; justify-content: flex-end; gap: 8px; white-space: nowrap; }
-.recepcion-acciones-tabla .ui-btn { padding: 8px 12px; }
+.recepcion-acciones-tabla { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; width: 100%; min-width: 0; white-space: normal; }
+.recepcion-acciones-tabla .ui-btn { flex-shrink: 0; margin: 0 !important; padding: 8px 12px; }
+.recepcion-acciones-tabla .ui-registro-autoria { flex: 0 0 100%; width: 100%; margin-top: 0; }
+.recepcion-acciones-tabla .ui-registro-autoria small { overflow-wrap: normal; word-break: normal; }
 
 .detalle-card {
   background: #ffffff;

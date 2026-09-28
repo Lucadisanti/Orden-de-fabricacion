@@ -45,19 +45,30 @@ it("mantiene Editar para un registro antiguo", () => {
   expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
 });
 
-it("muestra la carga y la última modificación en líneas separadas", () => {
+it("muestra solamente la actividad más reciente", () => {
+  document.documentElement.dataset.rol = "admin";
   render(<AutoriaRegistro registro={{
     autor: "Ana", creado_en: "2026-09-17T12:00:00Z",
     actualizado_por: "Luis", actualizado_en: "2026-09-17T16:00:00Z",
   }} />);
-  expect(screen.getByText(/Cargó: Ana/)).toBeInTheDocument();
+  expect(screen.queryByText(/Cargó: Ana/)).not.toBeInTheDocument();
   expect(screen.getByText(/Actualizó: Luis/)).toBeInTheDocument();
-  expect(document.querySelectorAll(".ui-registro-autoria small")).toHaveLength(2);
+  expect(document.querySelectorAll(".ui-registro-autoria small")).toHaveLength(1);
 });
 
 it("muestra la actualización con hora de 24 horas y sin a. m. ni p. m.", () => {
+  document.documentElement.dataset.rol = "maestro";
   const actualizado_en = new Date(2026, 8, 17, 17, 45).toISOString();
   render(<AutoriaRegistro registro={{ actualizado_por: "Luis", actualizado_en }} />);
   expect(screen.getByText(/17:45/)).toBeInTheDocument();
   expect(document.querySelector(".ui-registro-autoria")?.textContent).not.toMatch(/[ap]\.\s*m\./i);
+});
+
+it("oculta la autoría y el historial a los empleados", () => {
+  document.documentElement.dataset.rol = "empleado";
+  render(<AutoriaRegistro registro={{
+    autor: "Ana", creado_en: "2026-09-17T12:00:00Z",
+    _historial_recurso: "ordenes", _historial_id: 5,
+  }} />);
+  expect(document.querySelector(".ui-registro-autoria")).not.toBeInTheDocument();
 });

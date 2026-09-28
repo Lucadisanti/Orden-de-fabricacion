@@ -113,14 +113,20 @@ def _asegurar_forrado(cursor):
         cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN es_forrado TINYINT(1) NOT NULL DEFAULT 0")
 
 
+def _asegurar_composite(cursor):
+    cursor.execute("SHOW COLUMNS FROM orden_fabricacion LIKE 'es_composite'")
+    if not cursor.fetchone():
+        cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN es_composite TINYINT(1) NOT NULL DEFAULT 0")
+
+
 def _agregar_datos_corte_aparado(respuesta):
     response, status = respuesta
     if status != 200:
         return respuesta
     conn = get_connection(); cursor = conn.cursor(dictionary=True)
     try:
-        _asegurar_fecha_aparado(cursor); _asegurar_forrado(cursor)
-        cursor.execute("SELECT id_orden, fecha_aparado, es_forrado FROM orden_fabricacion")
+        _asegurar_fecha_aparado(cursor); _asegurar_forrado(cursor); _asegurar_composite(cursor)
+        cursor.execute("SELECT id_orden, fecha_aparado, es_forrado, es_composite FROM orden_fabricacion")
         fechas = {fila['id_orden']: fila for fila in cursor.fetchall()}
         cursor.execute("""SELECT pp.orden_fabricacion_id_orden AS id_orden, op.etapa, op.nombre_operario
             FROM planilla_produccion pp
@@ -139,6 +145,7 @@ def _agregar_datos_corte_aparado(respuesta):
             datos_orden = fechas.get(fila['id_orden'], {})
             fila['fecha_aparado'] = datos_orden.get('fecha_aparado').isoformat() if datos_orden.get('fecha_aparado') else None
             fila['es_forrado'] = bool(datos_orden.get('es_forrado'))
+            fila['es_composite'] = bool(datos_orden.get('es_composite'))
             fila['operario_corte'] = ' / '.join(responsables.get((fila['id_orden'], 'corte'), []))
             fila['operario_aparado'] = ' / '.join(responsables.get((fila['id_orden'], 'aparado'), []))
         return jsonify(datos), status
@@ -164,7 +171,7 @@ def _guardar_orden(id_orden=None):
         return jsonify({"error": "La fecha de aparado no puede ser anterior a la fecha de corte."}), 400
     conn = get_connection(); cursor = conn.cursor(dictionary=True)
     try:
-        _asegurar_fecha_aparado(cursor); _asegurar_forrado(cursor)
+        _asegurar_fecha_aparado(cursor); _asegurar_forrado(cursor); _asegurar_composite(cursor)
         materiales = _normalizar_materiales(data.get("materiales"))
         id_planilla_existente = None
         if materiales and id_orden:
@@ -175,9 +182,9 @@ def _guardar_orden(id_orden=None):
         if faltantes and not data.get("confirmar_stock_insuficiente"):
             conn.rollback()
             return jsonify({"error": "El cuero seleccionado no alcanza para esta orden.", "requiere_confirmacion": True, "faltantes": faltantes}), 409
-        valores = (data.get("producto_id_producto"), data.get("numero_orden"), fecha_corte, 1 if data.get("es_forrado") else 0)
-        if id_orden: cursor.execute("UPDATE orden_fabricacion SET producto_id_producto=%s,numero_orden=%s,fecha=%s,es_forrado=%s WHERE id_orden=%s", (*valores, id_orden))
-        else: cursor.execute("INSERT INTO orden_fabricacion (producto_id_producto,numero_orden,fecha,es_forrado) VALUES (%s,%s,%s,%s)", valores); id_orden = cursor.lastrowid
+        valores = (data.get("producto_id_producto"), data.get("numero_orden"), fecha_corte, 1 if data.get("es_forrado") else 0, 1 if data.get("es_composite") else 0)
+        if id_orden: cursor.execute("UPDATE orden_fabricacion SET producto_id_producto=%s,numero_orden=%s,fecha=%s,es_forrado=%s,es_composite=%s WHERE id_orden=%s", (*valores, id_orden))
+        else: cursor.execute("INSERT INTO orden_fabricacion (producto_id_producto,numero_orden,fecha,es_forrado,es_composite) VALUES (%s,%s,%s,%s,%s)", valores); id_orden = cursor.lastrowid
         if "fecha_aparado" in data:
             cursor.execute("UPDATE orden_fabricacion SET fecha_aparado=%s WHERE id_orden=%s", (fecha_aparado, id_orden))
         _guardar_talles(cursor, id_orden, talles); id_planilla = _guardar_r013(cursor, id_orden, fecha_corte, data, consumos); conn.commit()

@@ -664,7 +664,7 @@ export default function RecepcionMateriales() {
         ) : (
           <>
         <div className="ui-table-card recepcion-listado-desplegable">
-          <table className="ui-data-table ui-listado-ajustado"><colgroup>{[10,20,20,12,10,12,16].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
+          <table className="ui-data-table ui-listado-ajustado"><colgroup>{[10,18,19,11,10,12,20].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
               <tr>
                 <th>Remito</th>

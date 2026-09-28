@@ -330,6 +330,9 @@ def migrate_schema(connection=None):
         if not _column_definition(cursor, "orden_fabricacion", "es_forrado"):
             cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN es_forrado TINYINT(1) NOT NULL DEFAULT 0")
             LOGGER.info("Agregado el indicador de forrado en órdenes.")
+        if not _column_definition(cursor, "orden_fabricacion", "es_composite"):
+            cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN es_composite TINYINT(1) NOT NULL DEFAULT 0")
+            LOGGER.info("Agregado el indicador de composite en órdenes.")
         if not _column_definition(cursor, "producto", "consumo_cuero_por_par"):
             cursor.execute("ALTER TABLE producto ADD COLUMN consumo_cuero_por_par DECIMAL(10,4) NOT NULL DEFAULT 0.25")
             LOGGER.info("Agregado el consumo de cuero predeterminado por producto.")

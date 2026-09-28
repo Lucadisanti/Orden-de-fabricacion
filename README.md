@@ -20,6 +20,10 @@ Aplicación para administrar órdenes de fabricación de calzado, planificación
 - Trazabilidad completa por orden.
 - Interfaz responsive para computadora, tablet y celular.
 
+## Documentación útil
+
+- [Flujo de stock de cuero](docs/flujo-stock-cuero.md)
+
 ## Requisitos
 
 - XAMPP con MySQL iniciado.

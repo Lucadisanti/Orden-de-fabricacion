@@ -14,6 +14,8 @@ export default function Login({ onLogin }) {
   const [mensaje, setMensaje] = useState("");
   const [ingresando, setIngresando] = useState(false);
   const ingresoEnCurso = useRef(false);
+  const [actualizando, setActualizando] = useState(false);
+  const recuperacionEnCurso = useRef(false);
 
   const entrar = async (event) => {
     event.preventDefault();
@@ -34,6 +36,9 @@ export default function Login({ onLogin }) {
 
   const recuperar = async (event) => {
     event.preventDefault();
+    if (recuperacionEnCurso.current) return;
+    recuperacionEnCurso.current = true;
+    setActualizando(true);
     setError("");
     try {
       await axios.post("/api/auth/recuperar", { usuario, codigo, contrasena });
@@ -43,11 +48,14 @@ export default function Login({ onLogin }) {
       setMensaje("Contraseña actualizada. Ingresá con tu nueva contraseña.");
     } catch (err) {
       setError(obtenerMensajeError(err, "usuario", "No se pudo recuperar el acceso."));
+    } finally {
+      recuperacionEnCurso.current = false;
+      setActualizando(false);
     }
   };
 
   const cambiarVista = () => {
-    if (ingresoEnCurso.current) return;
+    if (ingresoEnCurso.current || recuperacionEnCurso.current) return;
     setRecuperando(!recuperando);
     setError("");
     setMensaje("");
@@ -81,8 +89,8 @@ export default function Login({ onLogin }) {
           <label>{recuperando ? "Nueva contraseña" : "Contraseña"}
             <input name={recuperando ? "new-password" : "password"} type="password" minLength={recuperando ? 8 : undefined} value={contrasena} onChange={(event) => setContrasena(event.target.value)} onKeyDown={enviarConEnter} autoComplete={recuperando ? "new-password" : "current-password"} required />
           </label>
-          <button className="ui-btn ui-btn-primary" type="submit" disabled={ingresando}>{recuperando ? "Cambiar contraseña" : ingresando ? "Ingresando…" : "Ingresar"}</button>
-          <button className="login-switch" type="button" onClick={cambiarVista} disabled={ingresando}>{recuperando ? "Volver al ingreso" : "¿Olvidaste la contraseña?"}</button>
+          <button className="ui-btn ui-btn-primary" type="submit" disabled={ingresando || actualizando}>{recuperando ? (actualizando ? "Actualizando…" : "Cambiar contraseña") : ingresando ? "Ingresando…" : "Ingresar"}</button>
+          <button className="login-switch" type="button" onClick={cambiarVista} disabled={ingresando || actualizando}>{recuperando ? "Volver al ingreso" : "¿Olvidaste la contraseña?"}</button>
           {recuperando && <small className="login-help">Si no tenés el código, usá “Recuperar acceso administrador” en la computadora donde está instalado el sistema.</small>}
         </form>
       </section>

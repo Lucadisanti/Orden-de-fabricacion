@@ -105,4 +105,51 @@ it.each([
   fireEvent.click(screen.getByRole("button", { name: "Cambiar contraseña" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(mensaje);
   expect(screen.getByLabelText("Código de recuperación")).toHaveValue("codigo-de-prueba");
+  expect(screen.getByLabelText("Usuario")).toHaveValue("Admin");
+  expect(screen.getByLabelText("Nueva contraseña")).toHaveValue("NuevaClave123");
+  expect(screen.getByRole("button", { name: "Cambiar contraseña" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Volver al ingreso" })).toBeEnabled();
+
+  axios.post.mockResolvedValueOnce({ data: { mensaje: "ok" } });
+  fireEvent.keyDown(screen.getByLabelText("Nueva contraseña"), { key: "Enter" });
+  expect(await screen.findByRole("status")).toHaveTextContent("Contraseña actualizada.");
+  expect(axios.post).toHaveBeenCalledTimes(2);
+  expect(axios.post).toHaveBeenNthCalledWith(2, "/api/auth/recuperar", {
+    usuario: "Admin", codigo: "codigo-de-prueba", contrasena: "NuevaClave123",
+  });
+});
+
+
+it.each(["clic", "Enter"])("evita recuperaciones repetidas por %s mientras actualiza la contraseña", async (metodo) => {
+  let resolver;
+  axios.post.mockReturnValueOnce(new Promise((resolve) => { resolver = resolve; }));
+  const onLogin = vi.fn();
+  render(<Login onLogin={onLogin} />);
+  fireEvent.click(screen.getByRole("button", { name: "¿Olvidaste la contraseña?" }));
+  fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Admin" } });
+  fireEvent.change(screen.getByLabelText("Código de recuperación"), { target: { value: "codigo-de-prueba" } });
+  const clave = screen.getByLabelText("Nueva contraseña");
+  fireEvent.change(clave, { target: { value: "NuevaClave123" } });
+  const boton = screen.getByRole("button", { name: "Cambiar contraseña" });
+  const volver = screen.getByRole("button", { name: "Volver al ingreso" });
+  const enviar = () => metodo === "clic" ? fireEvent.click(boton) : fireEvent.keyDown(clave, { key: "Enter" });
+  act(() => {
+    enviar();
+    enviar();
+    fireEvent.submit(boton.form);
+    fireEvent.click(volver);
+  });
+  expect(axios.post).toHaveBeenCalledExactlyOnceWith("/api/auth/recuperar", {
+    usuario: "Admin", codigo: "codigo-de-prueba", contrasena: "NuevaClave123",
+  });
+  expect(screen.getByRole("button", { name: "Actualizando…" })).toBeDisabled();
+  expect(volver).toBeDisabled();
+  expect(screen.getByLabelText("Nueva contraseña")).toHaveValue("NuevaClave123");
+
+  await act(async () => { resolver({ data: { mensaje: "ok" } }); });
+  expect(screen.getByRole("status")).toHaveTextContent("Contraseña actualizada. Ingresá con tu nueva contraseña.");
+  expect(screen.getByLabelText("Contraseña")).toHaveValue("");
+  expect(screen.getByRole("button", { name: "Ingresar" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "¿Olvidaste la contraseña?" })).toBeEnabled();
+  expect(onLogin).not.toHaveBeenCalled();
 });

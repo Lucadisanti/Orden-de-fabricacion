@@ -109,6 +109,10 @@
 .recepcion-cantidades .con-pendiente { border-color: #fde68a; background: #fffbeb; }
 .recepcion-cantidades .con-pendiente strong { color: #92400e; }
 .recepcion-cantidades .sin-pendiente { border-color: #bbf7d0; background: #f0fdf4; }
+.recepcion-stock-cuero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: center; gap: 10px; margin-top: 10px; }
+.recepcion-stock-cuero > div { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid #dce5f0; border-radius: 10px; background: #fff; }
+.recepcion-stock-cuero span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.recepcion-lote-cerrado { color: #b45309; font-weight: 700; }
 .recepcion-observaciones { margin-top: 13px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
 .recepcion-observaciones p { margin-top: 3px; color: var(--text-main); line-height: 1.45; }
 .recepcion-materiales .ui-data-table th:last-child { text-align: right; }
@@ -157,6 +161,7 @@
 @media (max-width: 760px) {
   .recepcion-datos-grid { grid-template-columns: 1fr 1fr; }
   .recepcion-cantidades { grid-template-columns: 1fr; }
+  .recepcion-stock-cuero { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {

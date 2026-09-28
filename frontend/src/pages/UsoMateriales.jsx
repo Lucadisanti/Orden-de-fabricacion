@@ -27,7 +27,7 @@ export default function UsoMateriales() {
   const [toast, setToast] = useState(null);
   const [confirmacion, setConfirmacion] = useState(null);
   const formRef = useRef(null);
-  const listadoRef = useRef(null);
+  const detalleAbiertoRef = useRef(null);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -80,7 +80,7 @@ export default function UsoMateriales() {
 
   useEffect(() => {
     if (!filaAbierta) return;
-    const desplazamiento = window.setTimeout(() => listadoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    const desplazamiento = window.setTimeout(() => detalleAbiertoRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 80);
     return () => window.clearTimeout(desplazamiento);
   }, [filaAbierta]);
 
@@ -228,11 +228,7 @@ export default function UsoMateriales() {
   const sinResultados = hayBusqueda && usosFiltrados.length === 0;
   const sinUsos = !hayBusqueda && usos.length === 0;
 
-  const usosOrdenados = filaAbierta
-    ? [...usosFiltrados].sort((a, b) => Number(String(b.id_uso) === String(filaAbierta)) - Number(String(a.id_uso) === String(filaAbierta)))
-    : usosFiltrados;
-
-  const gruposUsos = Object.values(usosOrdenados.reduce((grupos, uso) => {
+  const gruposUsos = Object.values(usosFiltrados.reduce((grupos, uso) => {
     const orden = uso.numero_orden || uso.orden || "Sin orden";
     const planilla = uso.numero_planilla || uso.planilla || "Sin planilla";
     const clave = `${orden}-${planilla}`;
@@ -375,7 +371,7 @@ export default function UsoMateriales() {
           </div>
         ) : (
           <>
-        <div ref={listadoRef} className="ui-table-card listado-desplegable">
+        <div className="ui-table-card listado-desplegable">
           <table className="ui-data-table ui-listado-ajustado"><colgroup>{[12,22,22,12,14,18].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
             <thead>
               <tr>
@@ -431,7 +427,7 @@ export default function UsoMateriales() {
                   </tr>
 
                   {filaAbierta === uso.id_uso && (
-                <tr>
+                <tr ref={detalleAbiertoRef}>
                     <td colSpan="6">
                       <div className="uso-detalle-compacto">
                         <div className="uso-detalle-header">
@@ -446,7 +442,7 @@ export default function UsoMateriales() {
                           <div><span>Estado de recepción</span><strong>{uso.estado_recepcion || "-"}</strong></div>
                           <div><span>Fecha de entrega</span><strong>{formatearFecha(uso.fecha_entrega)}</strong></div>
                           <div><span>Recibido por</span><strong>{uso.recibido_por || "-"}</strong></div>
-                          <div><span>Cantidad recibida</span><strong>{uso.cantidad_recibida ?? "-"}</strong></div>
+                          <div><span>Cantidad utilizada</span><strong>{uso.cantidad_usada ?? "-"}</strong></div>
                         </div>
                         <div className="uso-observaciones"><span>Observaciones de recepción</span><p>{uso.observaciones || "Sin observaciones."}</p></div>
                       </div>

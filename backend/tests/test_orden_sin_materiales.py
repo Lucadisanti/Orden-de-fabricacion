@@ -1,6 +1,17 @@
 from unittest.mock import MagicMock, patch
 import pytest
 
+from controllers.ordenes_controller import _es_material_consumible
+
+
+@pytest.mark.parametrize("nombre", ["Cuero flor", "Cromo", "Doble Frontura", "Vaqueta", "Flóter", "Piqué"])
+def test_reconoce_materiales_con_consumo_por_par(nombre):
+    assert _es_material_consumible(nombre)
+
+
+def test_no_aplica_consumo_por_par_a_otros_materiales():
+    assert not _es_material_consumible("Puntera de acero")
+
 
 @pytest.mark.parametrize("metodo,ruta,estado", [("post", "/api/ordenes/", 201), ("put", "/api/ordenes/1", 200)])
 def test_guarda_orden_sin_operarios_ni_materiales(client, metodo, ruta, estado):

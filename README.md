@@ -22,6 +22,7 @@ Aplicación para administrar órdenes de fabricación de calzado, planificación
 
 ## Documentación útil
 
+- [Guía de presentación](docs/guia-presentacion.md): recorrido de demo y preparación para profesor o empresa.
 - [Instalación, actualización, backup y recuperación](docs/guia-instalacion-actualizacion.md): requisitos, configuración, actualización desde GitHub, usuarios iniciales, recuperación de acceso y pruebas básicas.
 - [Flujo de stock de cuero](docs/flujo-stock-cuero.md).
 - [Documento del proyecto](docs/proyecto_orden_fabricacion.docx).

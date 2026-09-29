@@ -70,7 +70,7 @@ async function elegirProducto(user, nombre) {
   await user.click(screen.getByRole("option", { name: nombre }));
 }
 
-async function completarNuevaOrden(user) {
+async function completarNuevaOrden(user, material = "Cuero vacuno") {
   await renderizarOrdenes();
   await user.click(screen.getByRole("button", { name: /Nueva orden/ }));
   await user.type(screen.getByLabelText("Fecha", { selector: "input" }), "280926");
@@ -79,12 +79,12 @@ async function completarNuevaOrden(user) {
   await user.type(screen.getByLabelText("Talle 35"), "20");
   await user.type(screen.getByRole("combobox", { name: "Operario para corte" }), "Ana");
   await user.click(screen.getByRole("combobox", { name: "Buscar por material, remito o proveedor" }));
-  await user.click(screen.getByRole("option", { name: /Cuero vacuno.*REM-001/ }));
+  await user.click(screen.getByRole("option", { name: `${material} (Negro) · Remito REM-001 · Proveedor de prueba` }));
 }
 
 const datosNuevaOrden = {
   producto_id_producto: 1, numero_orden: "OF-002", fecha: "2026-09-28",
-  fecha_aparado: "", es_forrado: false,
+  fecha_aparado: "", es_forrado: false, es_composite: false,
   talles: [{ talle: "35", cantidad_pares: 20 }],
   operario_corte: "Ana", operario_aparado: "",
   materiales: [{ lote_id: 31, consumo_por_par: 0.25 }],
@@ -102,7 +102,7 @@ async function abrirConfirmacionStock(user) {
   } });
   await completarNuevaOrden(user);
   await user.click(screen.getByRole("button", { name: "Guardar" }));
-  const titulo = await screen.findByRole("heading", { name: "Stock de cuero insuficiente" });
+  const titulo = await screen.findByRole("heading", { name: "Stock de material insuficiente" });
   // El modal actual no tiene role="dialog"; su título permite acotar el botón Cancelar.
   return within(titulo.parentElement);
 }
@@ -151,7 +151,7 @@ it("cancelar el aviso de stock no fuerza el guardado y conserva el formulario", 
   const user = userEvent.setup();
   const confirmacion = await abrirConfirmacionStock(user);
   await user.click(confirmacion.getByRole("button", { name: "Cancelar" }));
-  expect(screen.queryByRole("heading", { name: "Stock de cuero insuficiente" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Stock de material insuficiente" })).not.toBeInTheDocument();
   expect(screen.getByLabelText("Número de orden")).toHaveValue("OF-002");
   expect(screen.getByLabelText("Talle 35")).toHaveValue(20);
   expect(screen.getByRole("spinbutton", { name: /^Consumo por par/ })).toHaveValue(0.25);
@@ -170,7 +170,7 @@ it("Guardar igualmente reenvía los mismos datos con la confirmación de stock",
     ...datosNuevaOrden, confirmar_stock_insuficiente: true,
   });
   expect(await screen.findByRole("status")).toHaveTextContent("Orden guardada");
-  expect(screen.queryByRole("heading", { name: "Stock de cuero insuficiente" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Stock de material insuficiente" })).not.toBeInTheDocument();
   expect(axios.put).not.toHaveBeenCalled();
 });
 
@@ -195,4 +195,89 @@ it.each([0, 5])("editar con saldo libre %s reconoce el consumo propio y envía u
   }));
   expect(await screen.findByRole("status")).toHaveTextContent("Orden guardada");
   expect(axios.post).not.toHaveBeenCalled();
+});
+
+
+it.each(["Cromo", "Doble frontura", "Vaqueta", "Floter", "Piqué"])(
+  "conserva el control ampliado de consumo para %s",
+  async (material) => {
+    const user = userEvent.setup();
+    respuestas["/api/lotes/"][0].material = material;
+    await completarNuevaOrden(user, material);
+    expect(screen.getByText("Material recibido 1")).toBeInTheDocument();
+    expect(screen.getByText(/Usará 5\.00.*Disponible 10\.00.*Quedará 5\.00/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(axios.post).toHaveBeenCalledExactlyOnceWith("/api/ordenes/", datosNuevaOrden));
+  },
+);
+
+it("filtra los materiales iniciales y permite buscar otros sin ofrecer lotes agotados", async () => {
+  const user = userEvent.setup();
+  respuestas["/api/lotes/"].push(
+    { id_lote: 32, material: "Cromo", numero_remito: "REM-002", cantidad_disponible: 4 },
+    { id_lote: 33, material: "Piqué agotado", numero_remito: "REM-003", cantidad_disponible: 0 },
+    { id_lote: 34, material: "Adhesivo", numero_remito: "REM-004", cantidad_disponible: 10 },
+  );
+  await renderizarOrdenes();
+  await user.click(screen.getByRole("button", { name: /Nueva orden/ }));
+  const selector = screen.getByRole("combobox", { name: "Buscar por material, remito o proveedor" });
+  await user.click(selector);
+  expect(screen.getByRole("option", { name: /Cuero vacuno/ })).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: /Cromo/ })).toBeInTheDocument();
+  expect(screen.queryByRole("option", { name: /Piqué agotado/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("option", { name: /Adhesivo/ })).not.toBeInTheDocument();
+  await user.type(selector, "Adhesivo");
+  expect(screen.getByRole("option", { name: /Adhesivo/ })).toBeInTheDocument();
+});
+
+it("envía Composite y Forrado al crear una orden", async () => {
+  const user = userEvent.setup();
+  await completarNuevaOrden(user);
+  await user.click(screen.getByText("Composite"));
+  await user.click(screen.getByText("Forrado"));
+  await user.click(screen.getByRole("button", { name: "Guardar" }));
+  await waitFor(() => expect(axios.post).toHaveBeenCalledExactlyOnceWith("/api/ordenes/", {
+    ...datosNuevaOrden, es_composite: true, es_forrado: true,
+  }));
+});
+
+it("muestra y conserva Composite y Forrado al editar", async () => {
+  const user = userEvent.setup();
+  Object.assign(respuestas["/api/ordenes/"][0], { es_composite: true, es_forrado: true });
+  await renderizarOrdenes();
+  await user.click(screen.getByText("OF-001"));
+  expect(await screen.findByText("Composite · Forrado")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Editar" }));
+  expect(await screen.findByLabelText("Talle 35")).toHaveValue(20);
+  expect(screen.getByRole("checkbox", { name: "Composite" })).toBeChecked();
+  expect(screen.getByRole("checkbox", { name: "Forrado" })).toBeChecked();
+  await user.click(screen.getByRole("button", { name: "Actualizar" }));
+  await waitFor(() => expect(axios.put).toHaveBeenCalledExactlyOnceWith("/api/ordenes/11", {
+    ...datosNuevaOrden, numero_orden: "OF-001", es_composite: true, es_forrado: true,
+    operario_corte: "", materiales: [],
+  }));
+});
+
+it("un doble clic al guardar no duplica el envío pendiente", async () => {
+  const user = userEvent.setup();
+  let resolver;
+  axios.post.mockImplementationOnce(() => new Promise(resolve => { resolver = resolve; }));
+  await completarNuevaOrden(user);
+  await user.dblClick(screen.getByRole("button", { name: "Guardar" }));
+  expect(axios.post).toHaveBeenCalledExactlyOnceWith("/api/ordenes/", datosNuevaOrden);
+  expect(screen.getByRole("button", { name: "Guardando..." })).toBeDisabled();
+  resolver({ data: { id_orden: 12 } });
+  expect(await screen.findByRole("status")).toHaveTextContent("Orden guardada");
+});
+
+it("conserva la búsqueda con X y el estado sin coincidencias", async () => {
+  const user = userEvent.setup();
+  await renderizarOrdenes();
+  const buscador = screen.getByPlaceholderText("Buscar orden, producto, color o estado...");
+  await user.type(buscador, "inexistente");
+  expect(screen.getByText("No se encontraron órdenes con “inexistente”.")).toBeInTheDocument();
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: /Limpiar/ }));
+  expect(buscador).toHaveValue("");
+  expect(screen.getByText("OF-001")).toBeInTheDocument();
 });

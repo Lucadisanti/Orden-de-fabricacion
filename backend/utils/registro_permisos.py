@@ -34,15 +34,74 @@ def asegurar_esquema(cursor):
         actualizado_en DATETIME(6) NOT NULL,
         PRIMARY KEY (recurso, registro_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+    cursor.execute("""CREATE TABLE IF NOT EXISTS registro_historial (
+        id_evento BIGINT AUTO_INCREMENT PRIMARY KEY,
+        recurso VARCHAR(50) NOT NULL, registro_id INT NOT NULL,
+        usuario_id INT NOT NULL, usuario VARCHAR(120) NOT NULL,
+        accion VARCHAR(30) NOT NULL, ocurrido_en DATETIME(6) NOT NULL,
+        KEY idx_historial_registro (recurso, registro_id, ocurrido_en),
+        UNIQUE KEY uq_historial_evento (recurso, registro_id, accion, ocurrido_en)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+
+
+def registrar_evento(cursor, recurso, registro_id, usuario, accion, usar_marca_compartida=False):
+    fecha_sql = "@registro_ocurrido_en" if usar_marca_compartida else "UTC_TIMESTAMP(6)"
+    cursor.execute("""INSERT INTO registro_historial
+        (recurso,registro_id,usuario_id,usuario,accion,ocurrido_en)
+        VALUES (%s,%s,%s,%s,%s,""" + fecha_sql + ")",
+        (recurso, registro_id, usuario["id"], usuario["nombre"], accion))
 
 
 def registrar_actualizacion(cursor, recurso, registro_id, usuario):
+    cursor.execute("SET @registro_ocurrido_en = UTC_TIMESTAMP(6)")
     cursor.execute("""INSERT INTO registro_actualizacion
         (recurso,registro_id,usuario_id,usuario,actualizado_en)
-        VALUES (%s,%s,%s,%s,UTC_TIMESTAMP(6))
+        VALUES (%s,%s,%s,%s,@registro_ocurrido_en)
         ON DUPLICATE KEY UPDATE usuario_id=VALUES(usuario_id),
         usuario=VALUES(usuario), actualizado_en=VALUES(actualizado_en)""",
         (recurso, registro_id, usuario["id"], usuario["nombre"]))
+    registrar_evento(cursor, recurso, registro_id, usuario, "Actualizó", usar_marca_compartida=True)
+
+
+def obtener_historial(recurso, registro_id):
+    if session.get("usuario", {}).get("rol") not in {"admin", "maestro"}:
+        return jsonify({"error": "Solo administradores y maestros pueden consultar el historial."}), 403
+    if recurso not in RECURSOS:
+        return jsonify({"error": "Recurso no válido."}), 404
+    conn = get_connection(); cursor = conn.cursor(dictionary=True)
+    try:
+        asegurar_esquema(cursor)
+        cursor.execute("""DELETE h FROM registro_historial h
+            INNER JOIN registro_autoria a
+              ON a.recurso=h.recurso AND a.registro_id=h.registro_id AND a.usuario_id=h.usuario_id
+            WHERE h.recurso=%s AND h.registro_id=%s AND h.accion='Creó'
+              AND h.ocurrido_en<>a.creado_en
+              AND ABS(TIMESTAMPDIFF(MICROSECOND,h.ocurrido_en,a.creado_en))<1000000""", (recurso, registro_id))
+        cursor.execute("""DELETE h FROM registro_historial h
+            INNER JOIN registro_actualizacion a
+              ON a.recurso=h.recurso AND a.registro_id=h.registro_id AND a.usuario_id=h.usuario_id
+            WHERE h.recurso=%s AND h.registro_id=%s AND h.accion='Actualizó'
+              AND h.ocurrido_en<>a.actualizado_en
+              AND ABS(TIMESTAMPDIFF(MICROSECOND,h.ocurrido_en,a.actualizado_en))<1000000""", (recurso, registro_id))
+        cursor.execute("""INSERT IGNORE INTO registro_historial
+            (recurso,registro_id,usuario_id,usuario,accion,ocurrido_en)
+            SELECT recurso,registro_id,usuario_id,autor,'Creó',creado_en
+            FROM registro_autoria WHERE recurso=%s AND registro_id=%s""", (recurso, registro_id))
+        cursor.execute("""INSERT IGNORE INTO registro_historial
+            (recurso,registro_id,usuario_id,usuario,accion,ocurrido_en)
+            SELECT recurso,registro_id,usuario_id,usuario,'Actualizó',actualizado_en
+            FROM registro_actualizacion WHERE recurso=%s AND registro_id=%s""", (recurso, registro_id))
+        cursor.execute("""SELECT id_evento,usuario,accion,ocurrido_en
+            FROM registro_historial
+            WHERE recurso=%s AND registro_id=%s
+            ORDER BY ocurrido_en DESC,id_evento DESC""", (recurso, registro_id))
+        eventos = cursor.fetchall()
+        for evento in eventos:
+            evento["ocurrido_en"] = evento["ocurrido_en"].replace(tzinfo=timezone.utc).isoformat()
+        conn.commit()
+        return jsonify(eventos), 200
+    finally:
+        cursor.close(); conn.close()
 
 
 def recurso_actual():
@@ -101,15 +160,19 @@ def enriquecer_respuesta(response):
             try:
                 asegurar_esquema(cursor)
                 usuario = session["usuario"]
+                cursor.execute("SET @registro_ocurrido_en = UTC_TIMESTAMP(6)")
                 cursor.execute("""INSERT INTO registro_autoria (recurso,registro_id,usuario_id,autor,creado_en)
-                    VALUES (%s,%s,%s,%s,UTC_TIMESTAMP(6))""", (recurso, registro_id, usuario["id"], usuario["nombre"]))
+                    VALUES (%s,%s,%s,%s,@registro_ocurrido_en)""", (recurso, registro_id, usuario["id"], usuario["nombre"]))
+                registrar_evento(cursor, recurso, registro_id, usuario, "Creó", usar_marca_compartida=True)
                 if recurso == "ordenes" and datos.get("id_planilla"):
                     cursor.execute("""INSERT INTO registro_autoria (recurso,registro_id,usuario_id,autor,creado_en)
-                        VALUES ('planillas',%s,%s,%s,UTC_TIMESTAMP(6))""", (datos["id_planilla"], usuario["id"], usuario["nombre"]))
+                        VALUES ('planillas',%s,%s,%s,@registro_ocurrido_en)""", (datos["id_planilla"], usuario["id"], usuario["nombre"]))
+                    registrar_evento(cursor, "planillas", datos["id_planilla"], usuario, "Creó", usar_marca_compartida=True)
                 if recurso == "produccion-diaria":
                     for id_planilla in datos.get("planillas_creadas", []):
                         cursor.execute("""INSERT INTO registro_autoria (recurso,registro_id,usuario_id,autor,creado_en)
-                            VALUES ('planillas',%s,%s,%s,UTC_TIMESTAMP(6))""", (id_planilla, usuario["id"], usuario["nombre"]))
+                            VALUES ('planillas',%s,%s,%s,@registro_ocurrido_en)""", (id_planilla, usuario["id"], usuario["nombre"]))
+                        registrar_evento(cursor, "planillas", id_planilla, usuario, "Creó", usar_marca_compartida=True)
                     for id_planilla in set(datos.get("planillas_afectadas_ids", [])) - set(datos.get("planillas_creadas", [])):
                         registrar_actualizacion(cursor, "planillas", id_planilla, usuario)
                 conn.commit()
@@ -131,7 +194,17 @@ def enriquecer_respuesta(response):
         finally:
             cursor.close()
             conn.close()
+    if request.method == "DELETE" and identificador and str(identificador).isdigit():
+        conn = get_connection(); cursor = conn.cursor(dictionary=True)
+        try:
+            asegurar_esquema(cursor)
+            registrar_evento(cursor, recurso, int(identificador), session["usuario"], "Eliminó")
+            conn.commit()
+        finally:
+            cursor.close(); conn.close()
     if request.method != "GET" or tipo != "principal":
+        return response
+    if session.get("usuario", {}).get("rol") not in {"admin", "maestro"}:
         return response
     filas = datos if isinstance(datos, list) else [datos] if isinstance(datos, dict) else []
     ids = [fila[RECURSOS[recurso]] for fila in filas if isinstance(fila, dict) and fila.get(RECURSOS[recurso]) is not None]
@@ -164,6 +237,8 @@ def enriquecer_respuesta(response):
             fila["autor_id"] = dato["usuario_id"] if dato else None
             fila["actualizado_por"] = actualizacion["usuario"] if actualizacion else None
             fila["actualizado_en"] = actualizacion["actualizado_en"].replace(tzinfo=timezone.utc).isoformat() if actualizacion else None
+            fila["_historial_recurso"] = recurso
+            fila["_historial_id"] = fila.get(RECURSOS[recurso])
         response.set_data(jsonify(datos).get_data())
     finally:
         cursor.close()

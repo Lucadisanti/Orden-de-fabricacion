@@ -116,7 +116,7 @@ def test_get_muestra_autor_y_ultima_actualizacion(monkeypatch):
     aplicacion = Flask(__name__)
     aplicacion.secret_key = "pruebas"
     with aplicacion.test_request_context("/api/ordenes/", method="GET"):
-        session["usuario"] = {"id": 7, "nombre": "Ana", "rol": "empleado"}
+        session["usuario"] = {"id": 7, "nombre": "Ana", "rol": "admin"}
         respuesta = registro_permisos.enriquecer_respuesta(jsonify([{"id_orden": 5}]))
         orden = respuesta.get_json()[0]
         assert orden["autor"] == "Ana"

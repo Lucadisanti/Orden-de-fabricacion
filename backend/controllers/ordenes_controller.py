@@ -1,10 +1,19 @@
 from flask import jsonify, request
 from datetime import date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+import unicodedata
 
 from db.connection import get_connection
 from utils.db_helpers import responder_lista, responder_uno
 from utils.forced_deletes import eliminar_orden as eliminar_orden_forzada, responder_borrado_forzado, responder_borrado_simple
+
+
+PALABRAS_CONSUMO = ("cuero", "cromo", "doble frontura", "vaqueta", "floter", "pique")
+
+
+def _es_material_consumible(nombre):
+    texto = unicodedata.normalize("NFD", str(nombre or "")).encode("ascii", "ignore").decode().lower()
+    return any(palabra in texto for palabra in PALABRAS_CONSUMO)
 
 
 def _normalizar_talles(talles):
@@ -43,7 +52,7 @@ def _asegurar_stock_lotes(cursor):
             cursor.execute(f"ALTER TABLE lote_materiales ADD {columna} {definicion}")
 
 
-def _calcular_consumos_cuero(cursor, materiales, total_pares, id_planilla=None):
+def _calcular_consumos_materiales(cursor, materiales, total_pares, id_planilla=None):
     if materiales:
         _asegurar_stock_lotes(cursor)
     consumos, faltantes = [], []
@@ -65,8 +74,8 @@ def _calcular_consumos_cuero(cursor, materiales, total_pares, id_planilla=None):
               AND (%s IS NULL OR planilla_produccion_id_planilla <> %s)
         """, (material["lote_id"], id_planilla, id_planilla))
         uso = cursor.fetchone() or {}
-        es_cuero = "cuero" in str(lote.get("material") or "").lower()
-        cantidad = (Decimal(total_pares) * material["consumo_por_par"]).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if es_cuero else Decimal("0")
+        controla_consumo = _es_material_consumible(lote.get("material"))
+        cantidad = (Decimal(total_pares) * material["consumo_por_par"]).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if controla_consumo else Decimal("0")
         disponible = Decimal("0") if lote.get("lote_cerrado") else max(Decimal(str(lote.get("cantidad_recibida") or 0)) - Decimal(str(lote.get("cantidad_descartada") or 0)) - Decimal(str(uso.get("usado_otros") or 0)), Decimal("0"))
         consumos.append((material["lote_id"], cantidad))
         if cantidad > disponible:
@@ -113,14 +122,20 @@ def _asegurar_forrado(cursor):
         cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN es_forrado TINYINT(1) NOT NULL DEFAULT 0")
 
 
+def _asegurar_composite(cursor):
+    cursor.execute("SHOW COLUMNS FROM orden_fabricacion LIKE 'es_composite'")
+    if not cursor.fetchone():
+        cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN es_composite TINYINT(1) NOT NULL DEFAULT 0")
+
+
 def _agregar_datos_corte_aparado(respuesta):
     response, status = respuesta
     if status != 200:
         return respuesta
     conn = get_connection(); cursor = conn.cursor(dictionary=True)
     try:
-        _asegurar_fecha_aparado(cursor); _asegurar_forrado(cursor)
-        cursor.execute("SELECT id_orden, fecha_aparado, es_forrado FROM orden_fabricacion")
+        _asegurar_fecha_aparado(cursor); _asegurar_forrado(cursor); _asegurar_composite(cursor)
+        cursor.execute("SELECT id_orden, fecha_aparado, es_forrado, es_composite FROM orden_fabricacion")
         fechas = {fila['id_orden']: fila for fila in cursor.fetchall()}
         cursor.execute("""SELECT pp.orden_fabricacion_id_orden AS id_orden, op.etapa, op.nombre_operario
             FROM planilla_produccion pp
@@ -139,6 +154,7 @@ def _agregar_datos_corte_aparado(respuesta):
             datos_orden = fechas.get(fila['id_orden'], {})
             fila['fecha_aparado'] = datos_orden.get('fecha_aparado').isoformat() if datos_orden.get('fecha_aparado') else None
             fila['es_forrado'] = bool(datos_orden.get('es_forrado'))
+            fila['es_composite'] = bool(datos_orden.get('es_composite'))
             fila['operario_corte'] = ' / '.join(responsables.get((fila['id_orden'], 'corte'), []))
             fila['operario_aparado'] = ' / '.join(responsables.get((fila['id_orden'], 'aparado'), []))
         return jsonify(datos), status
@@ -164,20 +180,20 @@ def _guardar_orden(id_orden=None):
         return jsonify({"error": "La fecha de aparado no puede ser anterior a la fecha de corte."}), 400
     conn = get_connection(); cursor = conn.cursor(dictionary=True)
     try:
-        _asegurar_fecha_aparado(cursor); _asegurar_forrado(cursor)
+        _asegurar_fecha_aparado(cursor); _asegurar_forrado(cursor); _asegurar_composite(cursor)
         materiales = _normalizar_materiales(data.get("materiales"))
         id_planilla_existente = None
         if materiales and id_orden:
             cursor.execute("SELECT id_planilla FROM planilla_produccion WHERE orden_fabricacion_id_orden=%s AND (UPPER(numero_planilla)='R013' OR tipo_planilla='Corte y Aparado') ORDER BY id_planilla LIMIT 1", (id_orden,))
             planilla_existente = cursor.fetchone()
             id_planilla_existente = planilla_existente["id_planilla"] if planilla_existente else None
-        consumos, faltantes = _calcular_consumos_cuero(cursor, materiales, sum(cantidad for _, cantidad in talles), id_planilla_existente)
+        consumos, faltantes = _calcular_consumos_materiales(cursor, materiales, sum(cantidad for _, cantidad in talles), id_planilla_existente)
         if faltantes and not data.get("confirmar_stock_insuficiente"):
             conn.rollback()
-            return jsonify({"error": "El cuero seleccionado no alcanza para esta orden.", "requiere_confirmacion": True, "faltantes": faltantes}), 409
-        valores = (data.get("producto_id_producto"), data.get("numero_orden"), fecha_corte, 1 if data.get("es_forrado") else 0)
-        if id_orden: cursor.execute("UPDATE orden_fabricacion SET producto_id_producto=%s,numero_orden=%s,fecha=%s,es_forrado=%s WHERE id_orden=%s", (*valores, id_orden))
-        else: cursor.execute("INSERT INTO orden_fabricacion (producto_id_producto,numero_orden,fecha,es_forrado) VALUES (%s,%s,%s,%s)", valores); id_orden = cursor.lastrowid
+            return jsonify({"error": "El material seleccionado no alcanza para esta orden.", "requiere_confirmacion": True, "faltantes": faltantes}), 409
+        valores = (data.get("producto_id_producto"), data.get("numero_orden"), fecha_corte, 1 if data.get("es_forrado") else 0, 1 if data.get("es_composite") else 0)
+        if id_orden: cursor.execute("UPDATE orden_fabricacion SET producto_id_producto=%s,numero_orden=%s,fecha=%s,es_forrado=%s,es_composite=%s WHERE id_orden=%s", (*valores, id_orden))
+        else: cursor.execute("INSERT INTO orden_fabricacion (producto_id_producto,numero_orden,fecha,es_forrado,es_composite) VALUES (%s,%s,%s,%s,%s)", valores); id_orden = cursor.lastrowid
         if "fecha_aparado" in data:
             cursor.execute("UPDATE orden_fabricacion SET fecha_aparado=%s WHERE id_orden=%s", (fecha_aparado, id_orden))
         _guardar_talles(cursor, id_orden, talles); id_planilla = _guardar_r013(cursor, id_orden, fecha_corte, data, consumos); conn.commit()

@@ -10,5 +10,9 @@ if (-not (Test-Path $EnvFile)) {
   exit 1
 }
 
-Get-ChildItem -LiteralPath ".\imagenes" -Filter "*.tar" | ForEach-Object { docker load -i $_.FullName }
+Get-ChildItem -LiteralPath ".\imagenes" -Filter "*.tar" | ForEach-Object {
+  docker load -i $_.FullName
+  if ($LASTEXITCODE -ne 0) { throw "No se pudo cargar la imagen $($_.Name)." }
+}
 docker compose -f compose.yaml --env-file $EnvFile up -d
+if ($LASTEXITCODE -ne 0) { throw "No se pudo iniciar el sistema." }

@@ -24,10 +24,20 @@ if ($availableVersion -ne $installedVersion) {
   & "$PSScriptRoot\actualizar-paquete.ps1"
   if ($LASTEXITCODE -ne 0) { throw "No se pudo actualizar el sistema." }
 } else {
+  $requiredImages = Get-Content -LiteralPath $envFile | Where-Object { $_ -match '^ORDEN_(DATABASE|BACKEND|FRONTEND)_IMAGE=' }
+  foreach ($imageLine in $requiredImages) {
+    $imageName = ($imageLine -split '=', 2)[1].Trim()
+    docker image inspect $imageName *> $null
+    if ($LASTEXITCODE -ne 0) {
+      & "$PSScriptRoot\iniciar-paquete.ps1"
+      if ($LASTEXITCODE -ne 0) { throw "No se pudieron cargar las imagenes del sistema." }
+      break
+    }
+  }
   docker compose -f compose.yaml --env-file .env.cliente up -d
   if ($LASTEXITCODE -ne 0) { throw "No se pudo iniciar el sistema." }
 }
 
 $portLine = Get-Content $envFile | Where-Object { $_ -match '^APP_PORT=' } | Select-Object -First 1
-$appPort = if ($portLine) { ($portLine -split '=', 2)[1].Trim() } else { "8080" }
+$appPort = if ($portLine) { ($portLine -split '=', 2)[1].Trim() } else { "8081" }
 Start-Process "http://localhost:$appPort"

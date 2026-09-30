@@ -4,18 +4,29 @@ from utils.db_helpers import responder_lista, responder_uno, responder_accion
 from utils.forced_deletes import eliminar_producto as eliminar_producto_forzado, responder_borrado_forzado, responder_borrado_simple
 
 
-def _asegurar_consumo_cuero(cursor):
-    cursor.execute("SHOW COLUMNS FROM producto LIKE %s", ("consumo_cuero_por_par",))
-    if not cursor.fetchone():
-        cursor.execute("ALTER TABLE producto ADD consumo_cuero_por_par DECIMAL(10,4) NOT NULL DEFAULT 0.25")
+TIPOS_CONSUMO = ("cuero", "cromo", "doble_frontura", "vaqueta", "floter", "pique")
+CAMPOS_CONSUMO = tuple(f"consumo_{tipo}_por_par" for tipo in TIPOS_CONSUMO)
 
 
-def _consumo_cuero(data):
-    try:
-        valor = float(data.get("consumo_cuero_por_par", 0.25))
-        return valor if valor > 0 else 0.25
-    except (TypeError, ValueError):
-        return 0.25
+def _asegurar_consumos(cursor):
+    for campo in CAMPOS_CONSUMO:
+        cursor.execute("SHOW COLUMNS FROM producto LIKE %s", (campo,))
+        if not cursor.fetchone():
+            valor_inicial = "0.25" if campo == "consumo_cuero_por_par" else "0"
+            cursor.execute(f"ALTER TABLE producto ADD {campo} DECIMAL(10,4) NOT NULL DEFAULT {valor_inicial}")
+
+
+def _consumos_producto(data):
+    consumos = {}
+    for campo in CAMPOS_CONSUMO:
+        valor_inicial = 0.25 if campo == "consumo_cuero_por_par" else 0
+        try:
+            valor_bruto = data.get(campo, valor_inicial)
+            valor = float(valor_bruto) if valor_bruto not in (None, "") else 0
+            consumos[campo] = valor if valor >= 0 else valor_inicial
+        except (TypeError, ValueError):
+            consumos[campo] = valor_inicial
+    return consumos
 
 
 def validar_producto(data):
@@ -50,7 +61,7 @@ def _guardar_producto_base(data, id_producto=None):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        _asegurar_consumo_cuero(cursor)
+        _asegurar_consumos(cursor)
         cursor.execute("""
           SELECT m.codigo_modelo,m.nombre_modelo,c.codigo_color
           FROM modelos_calzado m INNER JOIN colores c ON c.id_color=%s
@@ -61,11 +72,15 @@ def _guardar_producto_base(data, id_producto=None):
             return jsonify({"mensaje": "El modelo o el color no tienen un código válido"}), 400
         articulo_base = f"BASE-{componentes['codigo_modelo']}{componentes['codigo_color']}"
         nombre = str(data.get("nombre_producto") or componentes["nombre_modelo"]).strip()
+        consumos = _consumos_producto(data)
         if id_producto is None:
-            cursor.execute("INSERT INTO producto (articulo_producto,nombre_producto,colores_id_color,modelos_calzado_id_modelo,punteras_id_puntera,consumo_cuero_por_par) VALUES (%s,%s,%s,%s,NULL,%s)", (articulo_base,nombre,data.get("colores_id_color"),data.get("modelos_calzado_id_modelo"),_consumo_cuero(data)))
+            columnas = ",".join(CAMPOS_CONSUMO)
+            marcadores = ",".join(["%s"] * len(CAMPOS_CONSUMO))
+            cursor.execute(f"INSERT INTO producto (articulo_producto,nombre_producto,colores_id_color,modelos_calzado_id_modelo,punteras_id_puntera,{columnas}) VALUES (%s,%s,%s,%s,NULL,{marcadores})", (articulo_base,nombre,data.get("colores_id_color"),data.get("modelos_calzado_id_modelo"),*[consumos[campo] for campo in CAMPOS_CONSUMO]))
             id_producto = cursor.lastrowid
         else:
-            cursor.execute("UPDATE producto SET articulo_producto=%s,nombre_producto=%s,colores_id_color=%s,modelos_calzado_id_modelo=%s,punteras_id_puntera=NULL,consumo_cuero_por_par=%s WHERE id_producto=%s", (articulo_base,nombre,data.get("colores_id_color"),data.get("modelos_calzado_id_modelo"),_consumo_cuero(data),id_producto))
+            asignaciones = ",".join(f"{campo}=%s" for campo in CAMPOS_CONSUMO)
+            cursor.execute(f"UPDATE producto SET articulo_producto=%s,nombre_producto=%s,colores_id_color=%s,modelos_calzado_id_modelo=%s,punteras_id_puntera=NULL,{asignaciones} WHERE id_producto=%s", (articulo_base,nombre,data.get("colores_id_color"),data.get("modelos_calzado_id_modelo"),*[consumos[campo] for campo in CAMPOS_CONSUMO],id_producto))
         conn.commit()
         return jsonify({"id_producto": id_producto, "mensaje": "Producto base guardado correctamente"}), 201 if data.get("_creando") else 200
     except Exception as error:
@@ -163,11 +178,14 @@ def listar_productos():
     productos = respuesta.get_json()
     conn = get_connection(); cursor = conn.cursor(dictionary=True)
     try:
-        _asegurar_consumo_cuero(cursor)
-        cursor.execute("SELECT id_producto,consumo_cuero_por_par FROM producto")
-        consumos = {int(fila["id_producto"]): float(fila["consumo_cuero_por_par"] or 0.25) for fila in cursor.fetchall()}
+        _asegurar_consumos(cursor)
+        cursor.execute(f"SELECT id_producto,{','.join(CAMPOS_CONSUMO)} FROM producto")
+        consumos = {int(fila["id_producto"]): fila for fila in cursor.fetchall()}
         for producto in productos:
-            producto["consumo_cuero_por_par"] = consumos.get(int(producto["id_producto"]), 0.25)
+            valores = consumos.get(int(producto["id_producto"]), {})
+            for campo in CAMPOS_CONSUMO:
+                valor_inicial = 0.25 if campo == "consumo_cuero_por_par" else 0
+                producto[campo] = float(valores.get(campo) if valores.get(campo) is not None else valor_inicial)
         conn.commit()
         return jsonify(productos), 200
     finally:

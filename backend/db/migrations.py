@@ -333,9 +333,12 @@ def migrate_schema(connection=None):
         if not _column_definition(cursor, "orden_fabricacion", "es_composite"):
             cursor.execute("ALTER TABLE orden_fabricacion ADD COLUMN es_composite TINYINT(1) NOT NULL DEFAULT 0")
             LOGGER.info("Agregado el indicador de composite en órdenes.")
-        if not _column_definition(cursor, "producto", "consumo_cuero_por_par"):
-            cursor.execute("ALTER TABLE producto ADD COLUMN consumo_cuero_por_par DECIMAL(10,4) NOT NULL DEFAULT 0.25")
-            LOGGER.info("Agregado el consumo de cuero predeterminado por producto.")
+        for tipo_consumo in ("cuero", "cromo", "doble_frontura", "vaqueta", "floter", "pique"):
+            campo_consumo = f"consumo_{tipo_consumo}_por_par"
+            if not _column_definition(cursor, "producto", campo_consumo):
+                valor_inicial = "0.25" if tipo_consumo == "cuero" else "0"
+                cursor.execute(f"ALTER TABLE producto ADD COLUMN {campo_consumo} DECIMAL(10,4) NOT NULL DEFAULT {valor_inicial}")
+                LOGGER.info("Agregado %s predeterminado por producto.", campo_consumo)
 
         for campo in ("lote_puntera_id", "lote_pu_id"):
             columna = _column_definition(cursor, "produccion_diaria_linea", campo)

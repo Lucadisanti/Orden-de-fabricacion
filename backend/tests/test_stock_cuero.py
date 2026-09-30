@@ -1,7 +1,7 @@
 from decimal import Decimal
 from unittest.mock import MagicMock
 
-from controllers.ordenes_controller import _calcular_consumos_cuero, _normalizar_materiales
+from controllers.ordenes_controller import _calcular_consumos_materiales, _normalizar_materiales
 
 
 def test_calcula_consumo_y_faltante_de_cuero():
@@ -11,7 +11,7 @@ def test_calcula_consumo_y_faltante_de_cuero():
         {"usado_otros": Decimal("0.50")},
     ]
 
-    consumos, faltantes = _calcular_consumos_cuero(
+    consumos, faltantes = _calcular_consumos_materiales(
         cursor,
         [{"lote_id": 7, "consumo_por_par": Decimal("0.25")}],
         total_pares=10,

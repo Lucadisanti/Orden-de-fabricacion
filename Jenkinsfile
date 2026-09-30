@@ -15,7 +15,7 @@ pipeline {
               -v jenkins_home:/var/jenkins_home \
               -w "$WORKSPACE/backend" \
               python:3.12-slim \
-              sh -c "pip install --no-cache-dir -r requirements-test.txt && PYTHONPATH=. pytest"
+             sh -c "pip install --no-cache-dir -r requirements-test.txt && TESTING=1 PYTHONPATH=. pytest"
         '''
     }
 }

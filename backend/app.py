@@ -27,7 +27,8 @@ from utils.registro_permisos import autorizar_cambio, enriquecer_respuesta, obte
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "bohm-cambiar-esta-clave-en-produccion")
 CORS(app, supports_credentials=True)
-configurar_admin()
+if os.getenv("TESTING") != "1":
+    configurar_admin()
 @app.before_request
 def proteger_api():
     if request.method == "OPTIONS" or not request.path.startswith("/api/") or request.path in {"/api/auth/login", "/api/auth/me", "/api/auth/logout", "/api/auth/recuperar"}: return None

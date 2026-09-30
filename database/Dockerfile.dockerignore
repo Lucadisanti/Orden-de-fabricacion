@@ -1,0 +1,7 @@
+**
+!database/
+!database/Dockerfile
+!docs/
+!docs/modelo_base_datos/
+!docs/modelo_base_datos/bd_orden_fabricacion.sql
+!docs/modelo_base_datos/stored_procedures.sql

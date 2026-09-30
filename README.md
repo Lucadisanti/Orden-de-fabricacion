@@ -27,6 +27,16 @@ Aplicación para administrar órdenes de fabricación de calzado, planificación
 - Node.js y npm.
 - Git.
 
+## Instalacion para cliente con Docker
+
+La version instalable incluye frontend, backend y MariaDB administrados con Docker Compose. En la computadora cliente no es necesario instalar Python, Node.js, XAMPP ni MySQL.
+
+La entrega se genera desde `main`: ver [ENTREGA_CLIENTE.md](ENTREGA_CLIENTE.md).
+Una vez generadas las imagenes, copiar la carpeta `entrega-cliente` completa a la otra PC
+y seguir [LEEME.md](entrega-cliente/LEEME.md). Los archivos `.tar` son locales y no se suben a GitHub.
+
+Para ejecutar Docker desde el repositorio completo, ver [INSTALACION_DOCKER.md](INSTALACION_DOCKER.md).
+
 ## Instalación desde cero
 
 ### 1. Descargar el proyecto

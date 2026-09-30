@@ -27,8 +27,9 @@ if ($availableVersion -ne $installedVersion) {
   $requiredImages = Get-Content -LiteralPath $envFile | Where-Object { $_ -match '^ORDEN_(DATABASE|BACKEND|FRONTEND)_IMAGE=' }
   foreach ($imageLine in $requiredImages) {
     $imageName = ($imageLine -split '=', 2)[1].Trim()
-    docker image inspect $imageName *> $null
-    if ($LASTEXITCODE -ne 0) {
+    $localImage = docker image ls --quiet --filter "reference=$imageName"
+    if ($LASTEXITCODE -ne 0) { throw "No se pudo consultar Docker. Verifique que Docker Desktop este iniciado." }
+    if (-not $localImage) {
       & "$PSScriptRoot\iniciar-paquete.ps1"
       if ($LASTEXITCODE -ne 0) { throw "No se pudieron cargar las imagenes del sistema." }
       break

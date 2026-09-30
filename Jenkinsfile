@@ -9,16 +9,16 @@ pipeline {
         }
 
         stage('Backend - Tests') {
-            steps {
-                sh '''
-                    docker run --rm \
-                      -v "$WORKSPACE:/app" \
-                      -w /app/backend \
-                      python:3.12-slim \
-                      sh -c "pip install --no-cache-dir -r requirements-test.txt && pytest"
-                '''
-            }
-        }
+    steps {
+        sh '''
+            docker run --rm \
+              -v jenkins_home:/var/jenkins_home \
+              -w "$WORKSPACE/backend" \
+              python:3.12-slim \
+              sh -c "pip install --no-cache-dir -r requirements-test.txt && pytest"
+        '''
+    }
+}
 
         stage('Frontend - Install') {
             steps {

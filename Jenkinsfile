@@ -9,23 +9,23 @@ pipeline {
         }
 
         stage('Backend - Tests') {
-    steps {
-        sh '''
-            docker run --rm \
-              -v jenkins_home:/var/jenkins_home \
-              -w "$WORKSPACE/backend" \
-              python:3.12-slim \
-             sh -c "pip install --no-cache-dir -r requirements-test.txt && TESTING=1 PYTHONPATH=. pytest"
-        '''
-    }
-}
+            steps {
+                sh '''
+                    docker run --rm \
+                      -v jenkins_home:/var/jenkins_home \
+                      -w "$WORKSPACE/backend" \
+                      python:3.12-slim \
+                      sh -c "pip install --no-cache-dir -r requirements-test.txt && TESTING=1 PYTHONPATH=. pytest"
+                '''
+            }
+        }
 
         stage('Frontend - Install') {
             steps {
                 sh '''
                     docker run --rm \
-                      -v "$WORKSPACE:/app" \
-                      -w /app/frontend \
+                      -v jenkins_home:/var/jenkins_home \
+                      -w "$WORKSPACE/frontend" \
                       node:20 \
                       npm ci
                 '''
@@ -36,8 +36,8 @@ pipeline {
             steps {
                 sh '''
                     docker run --rm \
-                      -v "$WORKSPACE:/app" \
-                      -w /app/frontend \
+                      -v jenkins_home:/var/jenkins_home \
+                      -w "$WORKSPACE/frontend" \
                       node:20 \
                       npm test
                 '''
@@ -48,8 +48,8 @@ pipeline {
             steps {
                 sh '''
                     docker run --rm \
-                      -v "$WORKSPACE:/app" \
-                      -w /app/frontend \
+                      -v jenkins_home:/var/jenkins_home \
+                      -w "$WORKSPACE/frontend" \
                       node:20 \
                       npm run lint
                 '''
@@ -60,8 +60,8 @@ pipeline {
             steps {
                 sh '''
                     docker run --rm \
-                      -v "$WORKSPACE:/app" \
-                      -w /app/frontend \
+                      -v jenkins_home:/var/jenkins_home \
+                      -w "$WORKSPACE/frontend" \
                       node:20 \
                       npm run build
                 '''

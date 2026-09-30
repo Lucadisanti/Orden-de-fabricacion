@@ -11,6 +11,13 @@
 
 .productos .form-producto > label { display: flex; flex-direction: column; gap: 7px; color: var(--text-main); font-weight: 700; }
 .producto-ayuda { color: var(--text-muted); font-size: 12px; font-weight: 400; }
+.producto-consumos { margin: 2px 0; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
+.producto-consumos legend { padding: 0 6px; color: var(--text-main); font-weight: 700; }
+.producto-consumos > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.producto-consumos label { display: flex; flex-direction: column; gap: 6px; color: var(--text-main); font-size: 13px; font-weight: 700; }
+.producto-consumos .producto-ayuda { display: block; margin-top: 10px; }
+.producto-consumos-resumen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 10px; font-size: 12px; }
+.producto-consumos-resumen span { white-space: nowrap; }
 .catalogo-selector-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; align-items: center; }
 .catalogo-acciones { display: flex; gap: 5px; }
 .catalogo-icon-btn { width: 34px; height: 34px; display: inline-grid; place-items: center; padding: 0; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #334155; font-size: 18px; font-weight: 800; line-height: 1; cursor: pointer; }
@@ -53,6 +60,7 @@
 :root[data-theme="noche"] .articulo-preview small { color: #91a7c4; }
 
 :root[data-theme="noche"] .articulo-preview strong { color: #7db4ff; }
+:root[data-theme="noche"] .producto-consumos { border-color: #34465f; background: #111d31; }
 
 .productos .color-row {
   display: flex;
@@ -69,6 +77,7 @@
 }
 
 @media (max-width: 700px) {
+  .producto-consumos > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .catalogo-selector-row { grid-template-columns: 1fr; }
   .articulo-preview { grid-template-columns: 1fr; }
   .articulo-preview strong { grid-row: auto; }
@@ -80,6 +89,10 @@
   .productos .color-row button {
     width: 100%;
   }
+}
+
+@media (max-width: 460px) {
+  .producto-consumos > div, .producto-consumos-resumen { grid-template-columns: 1fr; }
 }
 
 .productos .catalogo-selector-row:has(button[aria-label="Editar modelo seleccionado"]) { grid-template-columns: minmax(0, 1fr) 42px 42px; }

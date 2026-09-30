@@ -113,6 +113,10 @@
 .recepcion-stock-cuero > div { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid #dce5f0; border-radius: 10px; background: #fff; }
 .recepcion-stock-cuero span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
 .recepcion-lote-cerrado { color: #b45309; font-weight: 700; }
+:root[data-theme="noche"] .recepcion-stock-cuero > div { border-color: #34465f; background: #111d31; }
+:root[data-theme="noche"] .recepcion-stock-cuero > div strong { color: #f1f5f9; }
+:root[data-theme="noche"] .recepcion-stock-cuero span { color: #9fb0c6; }
+:root[data-theme="noche"] .recepcion-lote-cerrado { color: #fbbf24; }
 .recepcion-observaciones { margin-top: 13px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
 .recepcion-observaciones p { margin-top: 3px; color: var(--text-main); line-height: 1.45; }
 .recepcion-materiales .ui-data-table th:last-child { text-align: right; }

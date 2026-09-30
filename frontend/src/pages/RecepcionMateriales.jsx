@@ -18,6 +18,7 @@ import RetryMessage from "../components/RetryMessage";
 import { esRegistroEnUso, obtenerMensajeError } from "../utils/errorMessages";
 import { formatearFecha } from "../utils/dateFormat";
 import DateInput from "../components/DateInput";
+import { esMaterialConConsumo } from "../utils/materialConsumption";
 import "../styles/RecepcionMateriales.css";
 
 const crearLineaVacia = () => ({
@@ -390,7 +391,7 @@ export default function RecepcionMateriales() {
   const cambiarEstadoStockLote = (lote) => {
     const cerrar = !lote.lote_cerrado;
     setConfirmacion({
-      title: cerrar ? "Cerrar lote de cuero" : "Reabrir lote de cuero",
+      title: cerrar ? "Cerrar lote de material" : "Reabrir lote de material",
       message: cerrar
         ? `Se retirarán ${Number(lote.cantidad_disponible || 0).toFixed(2)} unidades disponibles del remito ${lote.numero_remito || "seleccionado"}. El lote dejará de aparecer en órdenes nuevas.`
         : `El lote del remito ${lote.numero_remito || "seleccionado"} volverá a estar disponible con el remanente que corresponda.`,
@@ -751,7 +752,7 @@ export default function RecepcionMateriales() {
                                 <div><span>Recibido</span><strong>{lote.cantidad_recibida ?? "-"}</strong></div>
                                 <div className={Number(lote.pendiente) > 0 ? "con-pendiente" : "sin-pendiente"}><span>Pendiente</span><strong>{lote.pendiente ?? "-"}</strong></div>
                               </div>
-                              {String(lote.material || "").toLowerCase().includes("cuero") && <div className="recepcion-stock-cuero"><div><span>Utilizado en órdenes</span><strong>{Number(lote.cantidad_usada || 0).toFixed(2)}</strong></div><div><span>Disponible</span><strong>{Number(lote.cantidad_disponible || 0).toFixed(2)}</strong></div><button type="button" className={`ui-btn ${lote.lote_cerrado ? "ui-btn-secondary" : "ui-btn-danger"}`} onClick={() => cambiarEstadoStockLote(lote)}>{lote.lote_cerrado ? "Reabrir lote" : "Cerrar lote"}</button></div>}
+                              {esMaterialConConsumo(lote) && <div className="recepcion-stock-cuero"><div><span>Utilizado en órdenes</span><strong>{Number(lote.cantidad_usada || 0).toFixed(2)}</strong></div><div><span>Disponible</span><strong>{Number(lote.cantidad_disponible || 0).toFixed(2)}</strong></div><button type="button" className={`ui-btn ${lote.lote_cerrado ? "ui-btn-secondary" : "ui-btn-danger"}`} onClick={() => cambiarEstadoStockLote(lote)}>{lote.lote_cerrado ? "Reabrir lote" : "Cerrar lote"}</button></div>}
                               {lote.lote_cerrado && <p className="recepcion-lote-cerrado">Lote cerrado: {lote.motivo_cierre || "Remanente no utilizable"}.</p>}
                               <p>{lote.observaciones || "Sin observaciones."}</p>
                             </div>

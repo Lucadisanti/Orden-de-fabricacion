@@ -79,10 +79,6 @@ export default function Estadisticas() {
         <article className="estadisticas-panel"><h2>Inspección final</h2><p>Estado actual de los pares producidos en el período.</p>{paresEstado("Sin desglose") > 0 && <p>Hay producciones anteriores no conformes sin cantidad defectuosa indicada. Editalas desde R013/1 para completar el desglose.</p>}<div className="estadisticas-inspeccion">{["Conforme", "No conforme", "Pendiente", ...(paresEstado("Sin desglose") ? ["Sin desglose"] : [])].map((estado, i) => <div key={estado}><span className={`estadisticas-estado estado-${i}`}>{estado}</span><strong>{numero(paresEstado(estado))} pares</strong><small>{resumen.total ? Math.round(paresEstado(estado) / resumen.total * 100) : 0}% del total</small></div>)}</div></article>
         <article className="estadisticas-panel"><h2>Productos y colores</h2><p>Participación de cada producto y color en el total producido.</p><Dona filas={resumen.productos} /></article>
       </div>
-      <div className="estadisticas-etapas"><div className="estadisticas-titulo"><h2>Corte y aparado</h2><p>Cada orden se cuenta según su fecha de corte o de aparado dentro del período seleccionado.</p></div><div className="estadisticas-graficos">
-        <article className="estadisticas-panel"><h3>Órdenes por fecha de corte</h3><strong className="estadisticas-cifra">{numero(resumen.corte)}</strong><p>Sin fecha de corte en todo el historial: {resumen.sinCorte}</p></article>
-        <article className="estadisticas-panel"><h3>Órdenes por fecha de aparado</h3><strong className="estadisticas-cifra">{numero(resumen.aparado)}</strong><p>Sin fecha de aparado en todo el historial: {resumen.sinAparado}</p></article>
-      </div></div>
     </>}
   </section>;
 }

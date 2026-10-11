@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import "../styles/SortControls.css";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useNativeTableSorting(selector, orden, campos) {
   useEffect(() => {
     const tabla = document.querySelector(selector);

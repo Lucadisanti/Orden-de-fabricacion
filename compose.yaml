@@ -33,7 +33,7 @@ services:
       DB_PASSWORD: ${MYSQL_PASSWORD}
       DB_NAME: orden_fabricacion
       DB_PORT: 3306
-      CORS_ORIGINS: http://localhost:${APP_PORT:-8080}
+      CORS_ORIGINS: http://localhost:${APP_PORT:-8081}
     depends_on:
       database:
         condition: service_healthy
@@ -45,7 +45,7 @@ services:
       context: ./frontend
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-8080}:80"
+      - "${APP_PORT:-8081}:80"
     depends_on:
       - backend
     networks:

@@ -29,7 +29,7 @@ No es necesario instalar Python, Node.js, XAMPP ni MySQL.
    powershell -ExecutionPolicy Bypass -File .\scripts\iniciar.ps1
    ```
 
-7. Abrir `http://localhost:8080`.
+7. Abrir `http://localhost:8081`.
 
 La base y los procedimientos se crean automaticamente solo la primera vez que el volumen esta vacio.
 
@@ -38,10 +38,10 @@ La base y los procedimientos se crean automaticamente solo la primera vez que el
 Las computadoras deben estar en la misma red. En la PC principal ejecutar `ipconfig`, buscar la direccion IPv4 y abrir desde el otro equipo:
 
 ```text
-http://IP-DE-LA-PC:8080
+http://IP-DE-LA-PC:8081
 ```
 
-Puede ser necesario permitir el puerto 8080 en el Firewall de Windows. La PC principal y Docker Desktop deben permanecer encendidos.
+Puede ser necesario permitir el puerto 8081 en el Firewall de Windows. La PC principal y Docker Desktop deben permanecer encendidos.
 
 ## Detener e iniciar
 
@@ -72,10 +72,10 @@ El archivo se guarda dentro de `backups`. Esta carpeta debe copiarse periódicam
 ## Actualizar
 
 1. Cerrar la aplicacion en los navegadores.
-2. Abrir PowerShell dentro de la carpeta del proyecto y descargar la ultima version de la rama Docker:
+2. Abrir PowerShell dentro de la carpeta del proyecto y descargar la ultima version de main:
 
    ```powershell
-   git pull origin docker-presentacion
+   git pull origin main
    ```
 
 3. Ejecutar:

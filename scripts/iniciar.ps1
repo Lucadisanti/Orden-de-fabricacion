@@ -13,6 +13,6 @@ if (-not (Test-Path $EnvFile)) {
 docker compose --env-file $EnvFile up -d --build
 
 $portLine = Get-Content $EnvFile | Where-Object { $_ -match '^APP_PORT=' } | Select-Object -First 1
-$appPort = if ($portLine) { ($portLine -split '=', 2)[1].Trim() } else { "8080" }
+$appPort = if ($portLine) { ($portLine -split '=', 2)[1].Trim() } else { "8081" }
 
 Write-Host "Sistema iniciado en http://localhost:$appPort" -ForegroundColor Green

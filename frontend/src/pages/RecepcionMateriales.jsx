@@ -697,7 +697,7 @@ export default function RecepcionMateriales() {
                     <td>{recepcion.nombre_proveedor || recepcion.proveedor || "-"}</td>
                     <td>{esMultiple ? `${recepcion.materiales.length} materiales` : recepcion.material}</td>
                     <td>{esMultiple ? "Varios" : recepcion.color}</td>
-                    <td>{totalRecibido}</td>
+                    <td>{totalRecibido.toFixed(2)}</td>
                     <td>{formatearFecha(recepcion.fecha_entrega || recepcion.fecha_solicitud)}</td>
                     <td className="recepcion-acciones-tabla">
                       <PermisoRegistro registro={recepcion} completar><button

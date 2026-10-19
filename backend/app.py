@@ -24,9 +24,10 @@ from routes.auth_routes import auth_bp
 from controllers.auth_controller import configurar_admin
 from utils.registro_permisos import autorizar_cambio, enriquecer_respuesta, obtener_historial
 from utils.security_headers import aplicar_cabeceras_api
+from utils.session_config import configurar_clave_sesion
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "bohm-cambiar-esta-clave-en-produccion")
+configurar_clave_sesion(app)
 CORS(app, origins=os.getenv("CORS_ORIGINS", "*").split(","), supports_credentials=True)
 if os.getenv("TESTING") != "1":
     configurar_admin()

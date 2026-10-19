@@ -1,4 +1,5 @@
 import os
+import secrets
 from unittest.mock import patch
 
 import mysql.connector
@@ -12,6 +13,8 @@ def impedir_conexion_real(*args, **kwargs):
 # app inicializa cuentas al importarse fuera de TESTING. El bloqueo también
 # protege esa importación si en el futuro aparece otro acceso a la base.
 os.environ["TESTING"] = "1"
+os.environ["ORDEN_ENV"] = "testing"
+os.environ["FLASK_SECRET_KEY"] = secrets.token_hex(32)
 with patch.object(mysql.connector, "connect", side_effect=impedir_conexion_real):
     from app import app
 

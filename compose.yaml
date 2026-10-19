@@ -29,6 +29,7 @@ services:
     restart: unless-stopped
     environment:
       DB_HOST: database
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:?Configure una clave de sesion privada y aleatoria}
       DB_USER: orden_app
       DB_PASSWORD: ${MYSQL_PASSWORD}
       DB_NAME: orden_fabricacion

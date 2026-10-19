@@ -68,6 +68,33 @@ pipeline {
             }
         }
 
+        stage('Docker - Build Images') {
+            steps {
+                sh '''
+                    docker run --rm \
+                      -v jenkins_home:/var/jenkins_home \
+                      -v /var/run/docker.sock:/var/run/docker.sock \
+                      -e BUILD_NUMBER="$BUILD_NUMBER" \
+                      -e GIT_COMMIT="$GIT_COMMIT" \
+                      -e WORKSPACE="$WORKSPACE" \
+                      docker:27-cli \
+                      sh -c '
+                        set -e
+
+                        docker build \
+                          -t orden-fabricacion-backend:ci-${BUILD_NUMBER} \
+                          -t orden-fabricacion-backend:ci-${GIT_COMMIT} \
+                          "$WORKSPACE/backend"
+
+                        docker build \
+                          -t orden-fabricacion-frontend:ci-${BUILD_NUMBER} \
+                          -t orden-fabricacion-frontend:ci-${GIT_COMMIT} \
+                          "$WORKSPACE/frontend"
+                      '
+                '''
+            }
+        }
+
         stage('Archive Build') {
             steps {
                 archiveArtifacts artifacts: 'frontend/dist/**', fingerprint: true
@@ -77,7 +104,7 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline completado: tests y build OK.'
+            echo 'Pipeline completado: tests, build e imagenes Docker OK.'
         }
 
         failure {

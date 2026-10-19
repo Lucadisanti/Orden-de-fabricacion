@@ -7,7 +7,12 @@ GitHub guarda los scripts, pero no guarda esas imagenes.
 1. Instalar e iniciar Docker Desktop en la otra PC.
 2. Copiar esta carpeta completa a una ubicacion estable.
 3. Ejecutar `Abrir sistema.cmd`. En el primer inicio crea `.env.cliente`.
-4. Completar las dos contrasenas en `.env.cliente`. `APP_PORT` define el puerto:
+4. Completar las dos contrasenas de base de datos y `FLASK_SECRET_KEY` con una clave
+   privada aleatoria de al menos 32 bytes en `.env.cliente`. Para una instalacion
+   nueva sin usuarios, definir tambien `ORDEN_INITIAL_ADMIN_PASSWORD` (al menos
+   12 caracteres, privada y fuerte); `ORDEN_INITIAL_ADMIN_USER` permite elegir
+   el usuario inicial. No hay una contrasena de aplicacion predeterminada.
+   `APP_PORT` define el puerto:
    por defecto 8081; puede cambiarse a 8099 si se prefiere.
 5. Ejecutar otra vez `Abrir sistema.cmd` y esperar el inicio.
 6. Abrir `http://localhost:8081` (o el puerto elegido).
@@ -20,6 +25,13 @@ datos de otra instalacion: eso requiere un backup y su restauracion.
 Para una instalacion nueva no copiar un `.env.cliente` ni backups de otra PC.
 
 ## Actualizar una instalacion existente
+
+Antes de actualizar desde una version anterior, agregar `FLASK_SECRET_KEY` al
+archivo privado existente, sin reemplazar sus demas variables. Conservar esa
+clave entre reinicios. Los usuarios y contrasenas existentes no se cambian;
+las sesiones anteriores deben volver a iniciar sesion. La contrasena inicial
+no se exige ni se aplica cuando ya existen usuarios. No usarla para recuperar
+acceso a una cuenta existente.
 
 Conservar su `.env.cliente` y su carpeta `backups`. Copiar los scripts actualizados,
 `compose.yaml`, los archivos `.cmd` y las nuevas imagenes. Ejecutar `Abrir sistema.cmd`:

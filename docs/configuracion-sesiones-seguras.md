@@ -41,3 +41,13 @@ Al iniciar sesión se guarda una huella HMAC del hash de contraseña. La cookie 
 Las cookies anteriores a esta versión requieren un nuevo login. Los usuarios y contraseñas existentes siguen siendo válidos si la cuenta está activa; si una pantalla ya estaba abierta, recargarla o usar Salir para volver a iniciar sesión. Si MySQL falla, se deniega la operación con 503 sin borrar la cookie; se puede reintentar cuando se recupere el servicio.
 
 La revalidación añade una lectura de cuenta por petición protegida. No elimina una operación que ya estaba en curso cuando cambió el estado de la cuenta. Logout borra la cookie de ese navegador; una revocación individual centralizada y un límite de inactividad siguen siendo mejoras independientes pendientes.
+
+## Primera cuenta en una instalación nueva
+
+Solo si la tabla de usuarios está vacía, configurar `ORDEN_INITIAL_ADMIN_PASSWORD` con una contraseña privada fuerte de al menos 12 caracteres. `ORDEN_INITIAL_ADMIN_USER` permite elegir el nombre inicial; si se omite se conserva el nombre inicial tradicional. Se crea una única cuenta maestra con hash, sin otras cuentas ni contraseñas compartidas. Un bloqueo exclusivo de MySQL serializa la comprobación y el alta para evitar inicializaciones simultáneas.
+
+Si ya hay usuarios, estas variables no crean cuentas ni sobrescriben nombres, roles o contraseñas. No son una herramienta de recuperación. Después del primer alta, retirar la contraseña inicial del archivo privado en una ventana de mantenimiento; no hace falta conservarla para reiniciar una instalación con usuarios.
+
+Las instalaciones antiguas que no tengan ninguna cuenta maestra conservan sus cuentas y roles actuales. La decisión de elevar una cuenta requiere una revisión autorizada; el arranque ya no promueve por nombre. Las contraseñas débiles o predeterminadas que puedan existir de versiones anteriores tampoco se cambian automáticamente: deben revisarse con el titular y el procedimiento de recuperación existente.
+
+Las nuevas regresiones verifican que una base con usuarios no recibe INSERT/UPDATE/DELETE de cuentas ni ALTER de roles; una base vacía sin configuración válida no crea accesos conocidos. No se ejecutaron estas operaciones contra una base real.

@@ -87,6 +87,24 @@ def test_reduccion_de_rol_impide_gestion_con_cookie_anterior(cuentas):
     assert cuentas["commits"] == 0
 
 
+def test_maestro_degradado_no_puede_emitir_codigos_con_cookie_anterior(cuentas):
+    cuentas["fila"]["rol"] = "maestro"
+    cliente = app.test_client()
+    assert login(cliente).status_code == 200
+    cuentas["fila"]["rol"] = "admin"
+    assert cliente.post("/api/auth/usuarios/41/recuperacion").status_code == 403
+    assert cuentas["commits"] == 0
+
+
+def test_password_existente_corta_sigue_permitiendo_login_legitimo(cuentas):
+    # La política fuerte es para nuevas altas iniciales, no cambia contraseñas
+    # de instalaciones anteriores sin coordinación con su titular.
+    cuentas["fila"]["password_hash"] = generate_password_hash("Vieja123")
+    cliente = app.test_client()
+    assert login(cliente, "Vieja123").status_code == 200
+    assert cliente.get("/api/auth/me").status_code == 200
+
+
 def test_rol_y_nombre_vigentes_se_reflejan_sin_recrear_la_cuenta(cuentas):
     cuentas["fila"]["rol"] = "empleado"
     cliente = app.test_client()

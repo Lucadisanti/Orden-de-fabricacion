@@ -40,6 +40,8 @@ El proyecto contempla dos modalidades:
 
 ## Instalación para el cliente con Docker
 
+Antes de actualizar o instalar, seguir la [configuración de sesiones seguras](docs/configuracion-sesiones-seguras.md): preparar una clave de firma privada y, solo en una base nueva sin usuarios, la contraseña de la primera cuenta. Las cuentas existentes se conservan; las sesiones anteriores requieren un nuevo login.
+
 La entrega se genera desde `main` siguiendo [ENTREGA_CLIENTE.md](ENTREGA_CLIENTE.md). Una vez generadas las imágenes, copiá la carpeta `entrega-cliente` completa a la otra PC y seguí [LEEME.md](entrega-cliente/LEEME.md): ejecutar `Abrir sistema.cmd`, completar las contraseñas de `.env.cliente` y volver a abrir el sistema. El puerto predeterminado es 8081. Los archivos `.tar` son locales y no se suben a GitHub.
 
 Para ejecutar Docker desde el repositorio completo, consultá [INSTALACION_DOCKER.md](INSTALACION_DOCKER.md). El repositorio ahora incluye Dockerfiles, `compose.yaml` y `frontend/nginx.conf`; estos documentos reemplazan los pendientes de empaquetado de la [guía operativa](docs/guia-instalacion-actualizacion.md).

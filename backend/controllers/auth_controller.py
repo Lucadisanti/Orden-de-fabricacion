@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import os
 import secrets
 
 from flask import jsonify, request, session
@@ -41,37 +42,41 @@ def _actor():
 
 
 def configurar_admin():
+    """Inicializa solo una base sin usuarios, nunca modifica cuentas existentes."""
     conn = get_connection()
     cur = conn.cursor(dictionary=True)
+    bloqueo = False
     try:
+        cur.execute("SELECT GET_LOCK(SHA2(CONCAT(DATABASE(), ':admin-bootstrap'), 256), 10) AS adquirido")
+        bloqueo = (cur.fetchone() or {}).get("adquirido") == 1
+        if not bloqueo:
+            raise RuntimeError("No se pudo bloquear la inicialización de usuarios; reintentá el inicio.")
         _usuarios(cur)
-        _migraciones(cur)
-        cur.execute("ALTER TABLE usuarios MODIFY COLUMN rol ENUM('maestro','admin','empleado') NOT NULL DEFAULT 'empleado'")
         cur.execute("SELECT COUNT(*) AS cantidad FROM usuarios")
-        if not cur.fetchone()["cantidad"]:
-            cur.execute("INSERT INTO usuarios (usuario,nombre,password_hash,rol) VALUES (%s,%s,%s,'maestro')", ("Admin", "Administrador maestro", generate_password_hash("Admin1234")))
-        cur.execute("SELECT id_usuario FROM usuarios WHERE BINARY usuario='Admin'")
-        if not cur.fetchone():
-            cur.execute("UPDATE usuarios SET usuario='Admin' WHERE BINARY usuario='admin'")
-        cur.execute("UPDATE usuarios SET rol='maestro' WHERE BINARY usuario='Admin'")
-        cur.execute("SELECT clave FROM migraciones_sistema WHERE clave='usuarios_iniciales_v1'")
-        if not cur.fetchone():
-            # Esta carga se ejecuta una sola vez por base de datos. INSERT IGNORE
-            # preserva cualquier cuenta previa con el mismo usuario.
-            for usuario, nombre, rol in (
-                ("Admin", "Administrador maestro", "maestro"),
-                ("Ariel_disanti@bohm.com", "Ariel Disanti", "admin"),
-                ("Usuario", "Usuario", "empleado"),
-            ):
-                cur.execute(
-                    "INSERT IGNORE INTO usuarios (usuario,nombre,password_hash,rol) VALUES (%s,%s,%s,%s)",
-                    (usuario, nombre, generate_password_hash("Admin1234"), rol),
-                )
-            cur.execute("INSERT INTO migraciones_sistema (clave,aplicado_en) VALUES ('usuarios_iniciales_v1',UTC_TIMESTAMP(6))")
+        if cur.fetchone()["cantidad"]:
+            return
+
+        usuario = os.getenv("ORDEN_INITIAL_ADMIN_USER", "Admin").strip()
+        contrasena = os.getenv("ORDEN_INITIAL_ADMIN_PASSWORD", "")
+        if not 3 <= len(usuario) <= 60 or len(contrasena) < 12 or len(set(contrasena)) < 8 or contrasena.strip() != contrasena:
+            raise RuntimeError("Una instalación sin usuarios requiere ORDEN_INITIAL_ADMIN_PASSWORD privada de al menos 12 caracteres y un usuario válido.")
+        cur.execute(
+            "INSERT INTO usuarios (usuario,nombre,password_hash,rol) VALUES (%s,%s,%s,'maestro')",
+            (usuario, "Administrador maestro", generate_password_hash(contrasena)),
+        )
         conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
-        cur.close()
-        conn.close()
+        try:
+            if bloqueo:
+                cur.execute("DO RELEASE_LOCK(SHA2(CONCAT(DATABASE(), ':admin-bootstrap'), 256))")
+        finally:
+            try:
+                cur.close()
+            finally:
+                conn.close()
 
 
 def iniciar_sesion():

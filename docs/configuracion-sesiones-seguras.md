@@ -30,6 +30,8 @@ En Windows CMD, establecer `set ORDEN_ENV=development` antes del arranque. Estos
 
 La suite declara `ORDEN_ENV=testing`, `TESTING=1` y una clave aleatoria por proceso antes de importar Flask. No usa secretos reales. Mantiene el bloqueo de conexiones MySQL y los mocks de persistencia. El modo `testing` requiere el indicador explícito `TESTING=1`.
 
+`TESTING=1` por sí solo no permite una clave temporal en el modo production, ya sea explícito o predeterminado. El entorno debe declararse correctamente; producción siempre exige su clave privada.
+
 La configuración rechaza producción sin clave, claves cortas/triviales y entornos desconocidos. Las regresiones prueban que una cookie firmada con una clave ajena es rechazada y que una clave privada estable se conserva entre instancias.
 
 ## Revalidación y compatibilidad

@@ -16,7 +16,7 @@ def configurar_clave_sesion(app):
     if clave:
         if len(clave.encode("utf-8")) < 32 or clave.strip() != clave or len(set(clave)) < 8:
             raise RuntimeError("FLASK_SECRET_KEY debe ser una clave aleatoria de al menos 32 bytes, sin espacios externos.")
-    elif es_test or entorno == "development":
+    elif entorno in {"development", "testing"}:
         clave = secrets.token_hex(32)
     else:
         raise RuntimeError("Falta FLASK_SECRET_KEY: configure una clave aleatoria privada y persistente antes de iniciar producción.")

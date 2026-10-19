@@ -17,6 +17,15 @@ def test_produccion_sin_clave_no_arranca():
         configurar_clave_sesion(Flask(__name__))
 
 
+@pytest.mark.parametrize("explicito", [False, True])
+def test_indicador_testing_no_rebaja_el_modo_produccion(monkeypatch, explicito):
+    monkeypatch.setenv("TESTING", "1")
+    if explicito:
+        monkeypatch.setenv("ORDEN_ENV", "production")
+    with pytest.raises(RuntimeError, match="Falta FLASK_SECRET_KEY"):
+        configurar_clave_sesion(Flask(__name__))
+
+
 @pytest.mark.parametrize("clave", ["", "secret", "x" * 64, " cambiar-esta-clave-antes-de-usar-123456 "])
 def test_produccion_rechaza_claves_vacias_cortas_o_triviales(monkeypatch, clave):
     monkeypatch.setenv("FLASK_SECRET_KEY", clave)

@@ -36,7 +36,7 @@ La gravedad considera el código y la configuración revisados originalmente. La
 - Impacto: quien conoce ese valor puede firmar una sesión con identidad y rol arbitrarios. La autorización confía en el contenido de la cookie.
 - Comprobación aislada: una cookie firmada por una instancia Flask independiente, usando el valor predeterminado extraído del código, fue aceptada con estado 200 en `/api/auth/usuarios`. No se accedió a ninguna cuenta real ni se imprimió la cookie.
 - Corrección `982ba7d`: se retiró el fallback y se añadió `utils/session_config.py`. Producción exige una clave externa no vacía, de al menos 32 bytes, sin espacios externos ni composición trivial. No es una prueba matemática de entropía: el operador debe generarla criptográficamente. Desarrollo y tests son explícitos y usan claves aleatorias temporales cuando corresponde. Ambos Compose exigen la variable y los ejemplos la dejan vacía.
-- Pruebas: diez casos de configuración y una regresión HTTP de la API rechazan cookies firmadas con una clave ajena; una clave privada estable funciona entre instancias. No se usaron secretos reales.
+- Pruebas: doce casos de configuración y una regresión HTTP de la API rechazan cookies firmadas con una clave ajena; una clave privada estable funciona entre instancias. Los dos casos adicionales de cierre comprueban que `TESTING=1` no relaja production, explícito ni predeterminado. No se usaron secretos reales.
 - Pendiente operativo: preparar un secreto privado persistente antes de desplegar y volver a iniciar sesión tras actualizar. No se hizo una rotación ni se alteró la configuración privada. Ver [configuración y compatibilidad](configuracion-sesiones-seguras.md).
 
 ### SEC-02 — Alta original: cuentas iniciales — bootstrap corregido, contraseñas históricas pendientes
@@ -149,7 +149,7 @@ Las verificaciones finales pasaron. Las consultas de dependencias con avisos dev
 | `npm test -- --maxWorkers=2` desde frontend | Código 0: 173 aprobados, 0 fallidos, 19 archivos; 26,01 s en la continuación |
 | `npm run lint` desde frontend | Código 0, sin errores ni advertencias |
 | `npm run build` desde frontend | Código 0; advertencia de bundles mayores a 500 kB; 1,20 s en la continuación |
-| `python -m pytest backend/tests -q --tb=short` con herramientas temporales y plugins externos desactivados | Código 0: 131 aprobados, 0 fallidos; 6,54 s. Son 35 más que los 96 del primer bloque; sin MySQL real |
+| `python -m pytest backend/tests -q --tb=short` con herramientas temporales y plugins externos desactivados | Código 0: 133 aprobados, 0 fallidos. Son 37 más que los 96 del primer bloque; sin MySQL real |
 | `docker compose --env-file /dev/null ... config --quiet` con valores sintéticos | Código 0 para Compose raíz y paquete; no se iniciaron servicios |
 | `git diff --check` y conflictos Git | Sin errores ni conflictos; MERGE_HEAD ya no existe |
 | Auditoría npm | 12 paquetes afectados; código 1 esperado |
@@ -174,6 +174,7 @@ Con pytest instalado en un entorno de desarrollo, el guard incorporado permite e
 - `207cc72`: `backend/utils/session_security.py`, middleware Flask, login, persistencia simulada de tests y `backend/tests/test_session_security.py`, sin desactivar la revalidación.
 - `82883b9`: bootstrap seguro en `auth_controller.py`, `backend/tests/test_bootstrap_seguro.py`, dos regresiones adicionales de sesiones y documentación/configuración de primeras instalaciones.
 - La actualización de este informe se confirma en un commit local final separado.
+- En el cierre se endureció además la prioridad del modo production: `TESTING=1` no permite una clave temporal sin declarar un entorno de pruebas. Se conservó el resto de la configuración y se repitió la suite backend completa.
 
 `AGENTS.md` era un archivo no versionado al comenzar; se conserva intacto y no se añade al índice. No se realizaron push, cambios de rama, operaciones destructivas ni modificaciones sobre la base real.
 

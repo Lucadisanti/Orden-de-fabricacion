@@ -3,7 +3,7 @@ const ERROR_CONEXION = "Verificá que el servidor esté iniciado e intentá nuev
 const ERROR_RED = /network\s*(?:error|request failed)|failed to fetch|fetch failed|load failed|ECONN\w*|ENOTFOUND|ERR_NETWORK|timeout|timed out/i;
 const ERROR_TECNICO = /axios|\b\w+Error\b|^\s*Error\s*[:.!]?\s*$|request failed|status\s*code|\bHTTP\s*\d{3}|traceback|stack\s*trace|ERR_\w+|internal server error|bad gateway|service unavailable|gateway timeout|unauthorized|forbidden|bad request/i;
 const ERROR_SQL = /^\s*\d{4}\s*(?:\([A-Z0-9]{5}\))?(?:\s*:|$)|\bSQL\b|SQLSTATE|mysql|mariadb|sqlite|psycopg|duplicate entry|foreign key|constraint fails|unknown column|unknown table|doesn't exist|does not exist|data too long|cannot be null|incorrect .{0,40} value|syntax error|\b(?:SELECT\s+.+\s+FROM|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|ALTER\s+TABLE)\b/i;
-const DETALLE_INTERNO = /https?:\/\/|(?:^|[\s"'(])\/[\w.-]+|[a-z]:\\|(?:^|\n)\s*(?:at\s+|File\s+")|\.[jt]sx?:\d+|\.py:\d+|<!doctype|<\/?[a-z][^>]*>|^\s*[\[{]/i;
+const DETALLE_INTERNO = /https?:\/\/|(?:^|[\s"'(])\/[\w.-]+|[a-z]:\\|(?:^|\n)\s*(?:at\s+|File\s+")|\.[jt]sx?:\d+|\.py:\d+|<!doctype|<\/?[a-z][^>]*>|^\s*[[{]/i;
 
 export function filtrarMensajeError(texto, alternativa = ERROR_GENERAL) {
   if (typeof texto !== "string" || !texto.trim() || texto.length > 400) return alternativa;

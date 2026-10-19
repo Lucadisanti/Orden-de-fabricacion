@@ -36,9 +36,15 @@ Aplicación para administrar órdenes de fabricación de calzado, planificación
 El proyecto contempla dos modalidades:
 
 - **Modo desarrollo/local manual:** para programar, depurar, diagnosticar problemas y preparar una recuperación si Docker falla. Requiere instalar las herramientas indicadas en la guía manual.
-- **Modo empaquetado/entrega con Docker:** previsto para entregar backend y frontend preparados y reducir instalaciones manuales en la PC cliente. Los requisitos y pasos concretos quedan como **verificar según empaquetado final**.
+- **Modo empaquetado/entrega con Docker:** incluye frontend, backend y MariaDB administrados con Docker Compose. En la PC cliente requiere Docker Desktop; no hace falta instalar Python, Node.js, XAMPP ni MySQL.
 
-En esta copia del repositorio no se encontraron Dockerfiles, `docker-compose.yml`, archivos Compose alternativos ni `frontend/nginx.conf`. Por eso todavía no hay un procedimiento Docker verificable para indicar comandos de construcción o arranque. La [guía operativa](docs/guia-instalacion-actualizacion.md) incluye la sección «Uso con Docker / empaquetado», los pendientes y su checklist de prueba. Los backups de MySQL siguen siendo necesarios con Docker.
+## Instalación para el cliente con Docker
+
+La entrega se genera desde `main` siguiendo [ENTREGA_CLIENTE.md](ENTREGA_CLIENTE.md). Una vez generadas las imágenes, copiá la carpeta `entrega-cliente` completa a la otra PC y seguí [LEEME.md](entrega-cliente/LEEME.md): ejecutar `Abrir sistema.cmd`, completar las contraseñas de `.env.cliente` y volver a abrir el sistema. El puerto predeterminado es 8081. Los archivos `.tar` son locales y no se suben a GitHub.
+
+Para ejecutar Docker desde el repositorio completo, consultá [INSTALACION_DOCKER.md](INSTALACION_DOCKER.md). El repositorio ahora incluye Dockerfiles, `compose.yaml` y `frontend/nginx.conf`; estos documentos reemplazan los pendientes de empaquetado de la [guía operativa](docs/guia-instalacion-actualizacion.md).
+
+Los backups siguen siendo necesarios con Docker. Una instalación nueva crea una base nueva: copiar el paquete no transfiere datos existentes. Para actualizar, conservá `.env.cliente` y los backups de la instalación. Ver también [Recuperar acceso](entrega-cliente/RECUPERAR_ACCESO.md) y [Validación del empaquetado](PRUEBA_EMPAQUETADO.md).
 
 ## Instalación y actualización en modo desarrollo/manual
 
@@ -88,7 +94,7 @@ python -m pip install -r requirements-test.txt
 python -m pytest -v
 ```
 
-Pendiente conocido: `backend/tests/test_recuperacion_local.py` referencia `entrega-cliente/scripts/recuperar-admin.py`, ausente en esta copia del proyecto. Esa prueba no puede completarse tal como está. Ver la sección de recuperación de acceso de la guía.
+La herramienta `entrega-cliente/scripts/recuperar-admin.py`, referenciada por `backend/tests/test_recuperacion_local.py`, ahora está incluida. Para el procedimiento del paquete, consultá [Recuperar acceso](entrega-cliente/RECUPERAR_ACCESO.md); la guía operativa conserva el contexto de recuperación manual.
 
 ### Frontend: Vitest y React Testing Library
 
@@ -103,6 +109,10 @@ Para volver a ejecutar las pruebas al guardar cambios:
 ```bash
 npm run test:watch
 ```
+
+### Integración continua con Jenkins
+
+El [Jenkinsfile](Jenkinsfile) ejecuta checkout, pruebas del backend con `TESTING=1`, instalación del frontend con `npm ci`, pruebas, lint y build. Finalmente archiva `frontend/dist/**`. Usa contenedores Python 3.12 y Node 20, y requiere un agente Jenkins con acceso a Docker y al volumen `jenkins_home` donde se encuentra el workspace.
 
 ## Antes de compartir cambios
 

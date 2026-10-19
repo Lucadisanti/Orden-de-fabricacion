@@ -26,8 +26,9 @@ from utils.registro_permisos import autorizar_cambio, enriquecer_respuesta, obte
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "bohm-cambiar-esta-clave-en-produccion")
-CORS(app, supports_credentials=True)
-configurar_admin()
+CORS(app, origins=os.getenv("CORS_ORIGINS", "*").split(","), supports_credentials=True)
+if os.getenv("TESTING") != "1":
+    configurar_admin()
 @app.before_request
 def proteger_api():
     if request.method == "OPTIONS" or not request.path.startswith("/api/") or request.path in {"/api/auth/login", "/api/auth/me", "/api/auth/logout", "/api/auth/recuperar"}: return None
@@ -88,4 +89,8 @@ def home():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(
+        host=os.getenv("FLASK_HOST", "127.0.0.1"),
+        port=int(os.getenv("FLASK_PORT", "5000")),
+        debug=os.getenv("FLASK_DEBUG", "false").lower() == "true",
+    )

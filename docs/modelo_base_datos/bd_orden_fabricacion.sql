@@ -82,6 +82,12 @@ CREATE TABLE producto (
   modelos_calzado_id_modelo INT NULL,
   punteras_id_puntera INT NULL,
   colores_id_color INT NULL,
+  consumo_cuero_por_par DECIMAL(10,4) NOT NULL DEFAULT 0.25,
+  consumo_cromo_por_par DECIMAL(10,4) NOT NULL DEFAULT 0,
+  consumo_doble_frontura_por_par DECIMAL(10,4) NOT NULL DEFAULT 0,
+  consumo_vaqueta_por_par DECIMAL(10,4) NOT NULL DEFAULT 0,
+  consumo_floter_por_par DECIMAL(10,4) NOT NULL DEFAULT 0,
+  consumo_pique_por_par DECIMAL(10,4) NOT NULL DEFAULT 0,
 
   UNIQUE KEY uq_producto_articulo (articulo_producto),
   KEY idx_producto_color (colores_id_color),

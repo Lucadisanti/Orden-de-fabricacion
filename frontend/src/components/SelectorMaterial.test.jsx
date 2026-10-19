@@ -2,6 +2,39 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import SelectorMaterial from "./SelectorMaterial";
 
+it("muestra agotados solo al buscar y no permite elegirlos", () => {
+  const cambio = vi.fn();
+  const props = { opciones: [], opcionesSinStock: ["Cuero · Remito 0099"], onChange: cambio };
+  const { rerender } = render(<SelectorMaterial {...props} value="" />);
+  const input = screen.getByRole("combobox");
+  fireEvent.focus(input);
+  expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  rerender(<SelectorMaterial {...props} value="0099" />);
+  const agotado = screen.getByRole("option", { name: /Cuero · Remito 0099\s*· Sin stock/ });
+  expect(agotado).toHaveAttribute("aria-disabled", "true");
+  fireEvent.click(agotado);
+  fireEvent.mouseEnter(agotado);
+  fireEvent.keyDown(input, { key: "Enter" });
+  fireEvent.keyDown(input, { key: "ArrowDown" });
+  fireEvent.keyDown(input, { key: "Enter" });
+  expect(cambio).not.toHaveBeenCalled();
+  expect(screen.getByRole("listbox")).toBeInTheDocument();
+  rerender(<SelectorMaterial {...props} value="otro remito" />);
+  expect(screen.queryByRole("option")).not.toBeInTheDocument();
+});
+
+it("salta los remitos agotados al seleccionar con el teclado", () => {
+  Element.prototype.scrollIntoView = vi.fn();
+  const cambio = vi.fn();
+  render(<SelectorMaterial opciones={["Tela · Remito 0005"]} opcionesSinStock={["Cuero · Remito 0005"]} palabrasMuestra={["cuero"]} value="0005" onChange={cambio} />);
+  const input = screen.getByRole("combobox");
+  fireEvent.focus(input);
+  expect(screen.getAllByRole("option")[0]).toHaveAttribute("aria-disabled", "true");
+  fireEvent.keyDown(input, { key: "ArrowDown" });
+  fireEvent.keyDown(input, { key: "Enter" });
+  expect(cambio).toHaveBeenCalledWith({ target: { value: "Tela · Remito 0005" } });
+});
+
 it("selecciona un material con teclado y cierra el menú", () => {
   Element.prototype.scrollIntoView = vi.fn();
   const cambio = vi.fn();

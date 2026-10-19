@@ -29,17 +29,25 @@ export default function Usuarios() {
   const cargar = async (despuesDeGuardar = false) => {
     if (cargaEnCurso.current || (accionEnCurso.current && !despuesDeGuardar)) return;
     cargaEnCurso.current = true;
+    return axios.get("/api/auth/usuarios")
+      .then((response) => {
+        setUsuarios(response.data);
+        setErrorCarga("");
+      })
+      .catch(() => {
+        setErrorCarga("No se pudieron cargar los usuarios. Intentá nuevamente.");
+      })
+      .finally(() => {
+        cargaEnCurso.current = false;
+        setCargando(false);
+      });
+  };
+
+  // La carga inicial ya comienza con cargando=true; las recargas lo reactivan.
+  const recargar = async (despuesDeGuardar = false) => {
+    if (cargaEnCurso.current || (accionEnCurso.current && !despuesDeGuardar)) return;
     setCargando(true);
-    try {
-      const response = await axios.get("/api/auth/usuarios");
-      setUsuarios(response.data);
-      setErrorCarga("");
-    } catch {
-      setErrorCarga("No se pudieron cargar los usuarios. Intentá nuevamente.");
-    } finally {
-      cargaEnCurso.current = false;
-      setCargando(false);
-    }
+    await cargar(despuesDeGuardar);
   };
 
   const iniciarAccion = () => {
@@ -62,7 +70,7 @@ export default function Usuarios() {
       setMensaje("Usuario creado.");
       setForm(formularioVacio);
       setMostrar(false);
-      await cargar(true);
+      await recargar(true);
     } catch (err) {
       setMensaje(obtenerMensajeError(err, "usuario", "No se pudo crear."));
     } finally {
@@ -107,7 +115,7 @@ export default function Usuarios() {
       await axios.put(`/api/auth/usuarios/${edicion.id_usuario}`, datos);
       setMensaje("Usuario actualizado.");
       setEdicion(null);
-      await cargar(true);
+      await recargar(true);
     } catch (err) {
       setMensaje(obtenerMensajeError(err, "usuario", "No se pudo actualizar el usuario."));
     } finally {
@@ -122,7 +130,7 @@ export default function Usuarios() {
       await axios.delete(`/api/auth/usuarios/${confirmarEliminacion.id_usuario}`);
       setMensaje("Usuario eliminado.");
       setConfirmarEliminacion(null);
-      await cargar(true);
+      await recargar(true);
     } catch (err) {
       setMensaje(obtenerMensajeError(err, "usuario", "No se pudo eliminar el usuario."));
     } finally {
@@ -136,7 +144,7 @@ export default function Usuarios() {
       const response = await axios.post(`/api/auth/usuarios/${id}/recuperacion`);
       setCodigo(response.data);
       setMensaje("");
-      await cargar(true);
+      await recargar(true);
     } catch (err) {
       setMensaje(obtenerMensajeError(err, "usuario", "No se pudo generar el código."));
     } finally {
@@ -177,7 +185,7 @@ export default function Usuarios() {
     </div>}
     </div>}
     {mensaje && <p role="status">{mensaje}</p>}
-    {errorCarga && <RetryMessage message={errorCarga} onRetry={() => cargar()} retrying={ocupado} />}
+    {errorCarga && <RetryMessage message={errorCarga} onRetry={() => recargar()} retrying={ocupado} />}
     {cargando && !errorCarga && <p role="status">Cargando usuarios…</p>}
     {!cargando && !errorCarga && (usuarios.length === 0 ? (
       <div className="ui-empty-state" role="status"><strong>No hay usuarios para mostrar.</strong></div>

@@ -24,8 +24,18 @@ beforeEach(() => {
       producto: "Bota", color: "Negro", fecha: "2026-09-28", total_pares: 20, estado: "Pendiente",
     }],
     "/api/productos/": [
-      { id_producto: 1, nombre_producto: "Bota", color: "Negro", consumo_cuero_por_par: 0.25 },
-      { id_producto: 2, nombre_producto: "Zapato", color: "Marrón", consumo_cuero_por_par: 0.4 },
+      {
+        id_producto: 1, nombre_producto: "Bota", color: "Negro",
+        consumo_cuero_por_par: 0.25, consumo_cromo_por_par: 0.25,
+        consumo_doble_frontura_por_par: 0.25, consumo_vaqueta_por_par: 0.25,
+        consumo_floter_por_par: 0.25, consumo_pique_por_par: 0.25,
+      },
+      {
+        id_producto: 2, nombre_producto: "Zapato", color: "Marrón",
+        consumo_cuero_por_par: 0.4, consumo_cromo_por_par: 0.4,
+        consumo_doble_frontura_por_par: 0.4, consumo_vaqueta_por_par: 0.4,
+        consumo_floter_por_par: 0.4, consumo_pique_por_par: 0.4,
+      },
     ],
     "/api/lotes/": [{
       id_lote: 31, material: "Cuero vacuno", color: "Negro", numero_remito: "REM-001",

@@ -12,10 +12,12 @@ import Pagination from "../components/Pagination";
 import usePagination from "../hooks/usePagination";
 import PermisoRegistro, { AutoriaRegistro } from "../components/PermisoRegistro";
 import { obtenerMensajeError } from "../utils/errorMessages";
+import { TIPOS_CONSUMO_MATERIAL } from "../utils/materialConsumption";
 import "../styles/Productos.css";
 
 const API_URL = "/api";
-const vacio = () => ({ modelos_calzado_id_modelo: "", nombre_producto: "", colores_id_color: "", consumo_cuero_por_par: "0.25" });
+const campoConsumo = (clave) => `consumo_${clave}_por_par`;
+const vacio = () => ({ modelos_calzado_id_modelo: "", nombre_producto: "", colores_id_color: "", ...Object.fromEntries(TIPOS_CONSUMO_MATERIAL.map(({ clave }) => [campoConsumo(clave), clave === "cuero" ? "0.25" : ""])) });
 
 export default function Productos() {
   const navigate = useNavigate();
@@ -59,7 +61,7 @@ export default function Productos() {
   const color = colores.find((x) => String(x.id_color) === String(form.colores_id_color));
   const codigoBase = `${modelo?.codigo_modelo || ""}${color?.codigo_color || ""}`;
   const abrirNuevo = () => { versionFormulario.current += 1; setForm(vacio()); setIdEditando(null); setMostrar(true); setTimeout(() => formRef.current?.scrollIntoView(), 50); };
-  const editar = (producto) => { versionFormulario.current += 1; setForm({ modelos_calzado_id_modelo: producto.modelos_calzado_id_modelo || "", nombre_producto: producto.nombre_producto || "", colores_id_color: producto.colores_id_color || "", consumo_cuero_por_par: String(producto.consumo_cuero_por_par ?? 0.25) }); setIdEditando(producto.id_producto); setMostrar(true); };
+  const editar = (producto) => { versionFormulario.current += 1; setForm({ modelos_calzado_id_modelo: producto.modelos_calzado_id_modelo || "", nombre_producto: producto.nombre_producto || "", colores_id_color: producto.colores_id_color || "", ...Object.fromEntries(TIPOS_CONSUMO_MATERIAL.map(({ clave }) => { const valor = Number(producto[campoConsumo(clave)] ?? (clave === "cuero" ? 0.25 : 0)); return [campoConsumo(clave), valor > 0 ? String(valor) : ""]; })) }); setIdEditando(producto.id_producto); setMostrar(true); };
   const cancelar = () => { versionFormulario.current += 1; setMostrar(false); if (desdeOrden) navigate("/ordenes?producto=cancelado"); };
 
   const guardarCatalogo = async ({ codigo, nombre }) => {
@@ -128,7 +130,7 @@ export default function Productos() {
     {mostrar && <div className="ui-form-card" ref={formRef}><h2>{idEditando ? "Editar producto base" : "Nuevo producto base"}</h2><form className="form-producto" onSubmit={guardar}>
       <label>Modelo de calzado<div className="catalogo-selector-row"><Selector required value={form.modelos_calzado_id_modelo} onChange={(e) => { const elegido = modelos.find((x) => String(x.id_modelo) === e.target.value); setForm({ ...form, modelos_calzado_id_modelo: e.target.value, nombre_producto: elegido?.nombre_modelo || "" }); }}><option value="">Seleccione modelo</option>{modelos.map((x) => <option key={x.id_modelo} value={x.id_modelo}>{x.codigo_modelo} - {x.nombre_modelo}</option>)}</Selector><button type="button" className="catalogo-icon-btn" title="Agregar modelo" aria-label="Agregar modelo" onClick={() => setCatalogoModal("modelo")}>+</button>{modelo && <PermisoRegistro registro={modelo}><button type="button" className="catalogo-icon-btn" title="Editar modelo seleccionado" aria-label="Editar modelo seleccionado" onClick={() => setCatalogoModal("editar-modelo")}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z M14 5l5 5" /></svg></button></PermisoRegistro>}</div></label>
       <label>Color fijo<div className="catalogo-selector-row"><Selector required value={form.colores_id_color} onChange={(e) => setForm({ ...form, colores_id_color: e.target.value })}><option value="">Seleccione color</option>{colores.filter((x) => x.codigo_color).map((x) => <option key={x.id_color} value={x.id_color}>{x.codigo_color} - {x.color}</option>)}</Selector><button type="button" className="catalogo-icon-btn" title="Agregar color" aria-label="Agregar color" onClick={() => setCatalogoModal("color")}>+</button></div></label>
-      <label>Consumo de cuero por par<input type="number" min="0.001" step="0.001" required value={form.consumo_cuero_por_par} onChange={(e) => setForm({ ...form, consumo_cuero_por_par: e.target.value })} onWheel={(e) => e.currentTarget.blur()} /><small className="producto-ayuda">Se completa automáticamente al elegir este producto en una orden y puede modificarse allí.</small></label>
+      <fieldset className="producto-consumos"><legend>Consumos predeterminados por par</legend><div>{TIPOS_CONSUMO_MATERIAL.map(({ clave, etiqueta }) => { const campo = campoConsumo(clave); return <label key={clave}>{etiqueta}<input type="number" min="0.001" step="0.001" value={form[campo]} onChange={(e) => setForm({ ...form, [campo]: e.target.value })} onWheel={(e) => e.currentTarget.blur()} placeholder="Sin definir" /></label>; })}</div><small className="producto-ayuda">Solo completá los materiales que utiliza el producto. En la orden pueden corregirse.</small></fieldset>
       <div className="articulo-preview"><span>Código base</span><strong>{codigoBase || "Seleccioná modelo y color"}</strong><small>La puntera y los adicionales completarán el artículo en la orden.</small></div>
       <div className="ui-form-actions"><button type="submit" className="ui-btn ui-btn-primary" disabled={guardando}>{guardando ? (idEditando ? "Actualizando..." : "Guardando...") : (idEditando ? "Actualizar" : "Guardar")}</button><button type="button" className="ui-btn ui-btn-secondary" onClick={cancelar}>Cancelar</button></div>
     </form></div>}
@@ -159,13 +161,13 @@ export default function Productos() {
         ) : (
           <>
             <div className="ui-table-card">
-              <table className="ui-data-table ui-listado-ajustado"><colgroup>{[30,18,18,16,18].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
+              <table className="ui-data-table ui-listado-ajustado"><colgroup>{[24,14,14,30,18].map((ancho, indice) => <col key={indice} style={{ width: `${ancho}%` }} />)}</colgroup>
                 <thead>
                   <tr>
                     <th>Producto</th>
                     <th>Color</th>
                     <th>Artículo</th>
-                    <th>Cuero/par</th>
+                    <th>Consumos por par</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -175,7 +177,7 @@ export default function Productos() {
                       <td>{p.nombre_producto}</td>
                       <td>{p.color || "-"}</td>
                       <td>{String(p.articulo_producto || "").replace(/^\s*BASE\s*[-\u2010-\u2015]\s*/i, "")}</td>
-                      <td>{Number(p.consumo_cuero_por_par ?? 0.25).toLocaleString("es-AR", { maximumFractionDigits: 4 })}</td>
+                      <td><div className="producto-consumos-resumen">{TIPOS_CONSUMO_MATERIAL.some(({ clave }) => Number(p[campoConsumo(clave)] || 0) > 0) ? TIPOS_CONSUMO_MATERIAL.map(({ clave, etiqueta }) => { const valor = Number(p[campoConsumo(clave)] || 0); return valor > 0 ? <span key={clave}><strong>{etiqueta}:</strong> {valor.toLocaleString("es-AR", { maximumFractionDigits: 4 })}</span> : null; }) : <span>Sin consumos definidos</span>}</div></td>
                       <td>
                         <PermisoRegistro registro={p}><button className="ui-btn ui-btn-secondary" onClick={() => editar(p)}>
                           Editar

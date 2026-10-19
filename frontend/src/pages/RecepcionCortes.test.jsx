@@ -9,7 +9,7 @@ vi.mock("axios");
 
 // useBlocker necesita un router de datos; MemoryRouter no aporta ese contexto.
 function renderizarRecepcionCortes() {
-  const router = createMemoryRouter([{ path: "/", element: <RecepcionCortes /> }]);
+  const router = createMemoryRouter([{ path: "/", element: <RecepcionCortes /> }], { initialEntries: ["/"] });
   return render(<RouterProvider router={router} />);
 }
 beforeEach(() => {

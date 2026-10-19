@@ -9,7 +9,7 @@ vi.mock("axios");
 
 // useBlocker necesita un router de datos; MemoryRouter no aporta ese contexto.
 function renderizarPlanillas() {
-  const router = createMemoryRouter([{ path: "/", element: <Planillas /> }]);
+  const router = createMemoryRouter([{ path: "/", element: <Planillas /> }], { initialEntries: ["/"] });
   return render(<RouterProvider router={router} />);
 }
 
@@ -61,10 +61,10 @@ it("consulta sin copiar cantidades y edita la registrada sin crear otra producci
   await user.click(screen.getByRole("button", { name: "Guardar producciones" }));
   await waitFor(() => expect(axios.put).toHaveBeenCalledWith("/api/produccion-diaria/linea/1", expect.objectContaining({ fecha: "2026-09-04", linea: expect.objectContaining({ talles: [{ talle: "35", cantidad_pares: 25 }, { talle: "36", cantidad_pares: 5 }] }) })));
   expect(axios.post).not.toHaveBeenCalled();
-  await screen.findByRole("button", { name: "Cargar nueva producción" });
+  const cargarOtra = await screen.findByRole("button", { name: "Cargar nueva producción" });
   expect(screen.queryByRole("textbox", { name: "Cantidad producida para talle 35" })).not.toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Cargar nueva producción" }));
-  expect(screen.getByRole("textbox", { name: "Cantidad producida para talle 35" })).toHaveValue("");
+  await user.click(cargarOtra);
+  expect(await screen.findByRole("textbox", { name: "Cantidad producida para talle 35" })).toHaveValue("");
 }, 10000);
 
 
@@ -85,6 +85,7 @@ it("mantiene el orden y conserva la fecha editada al alternar producciones", asy
   // El campo muestra dd/mm/aa; los asserts del guardado conservan el formato ISO.
   expect(fecha).toHaveValue("04/09/26");
   fireEvent.change(fecha, { target: { value: "03/09/26" } });
+  expect(fecha).toHaveValue("03/09/26");
   expect(fecha.compareDocumentPosition(encabezados()[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   await user.click(encabezados()[1]);
   expect(screen.getByLabelText("Fecha de producción")).toHaveValue("07/09/26");

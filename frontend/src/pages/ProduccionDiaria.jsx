@@ -87,9 +87,7 @@ export default function ProduccionDiaria() {
     if (blocker.state === "blocked") blocker.reset();
   };
 
-  useEffect(() => {
-    if (blocker.state === "blocked") setSalidaPendiente(() => blocker.proceed);
-  }, [blocker]);
+
 
   useEffect(() => {
     if (!tieneCambiosSinGuardar) return undefined;

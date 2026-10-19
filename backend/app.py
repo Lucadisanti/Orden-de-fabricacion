@@ -23,6 +23,7 @@ from routes.sugerencias_routes import sugerencias_bp
 from routes.auth_routes import auth_bp
 from controllers.auth_controller import configurar_admin
 from utils.registro_permisos import autorizar_cambio, enriquecer_respuesta, obtener_historial
+from utils.security_headers import aplicar_cabeceras_api
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "bohm-cambiar-esta-clave-en-produccion")
@@ -60,6 +61,7 @@ app.register_blueprint(trazabilidad_bp, url_prefix="/api/trazabilidad")
 app.register_blueprint(dashboard_bp, url_prefix="/api/dashboard")
 app.register_blueprint(catalogos_bp, url_prefix="/api/catalogos")
 app.register_blueprint(produccion_diaria_bp, url_prefix="/api/produccion-diaria")
+app.after_request(aplicar_cabeceras_api)
 
 
 @app.get("/api/historial/<recurso>/<int:registro_id>")

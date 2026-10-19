@@ -54,6 +54,8 @@ Para este modo se necesitan Python con `pip` y entorno virtual, Node.js con npm,
 
 Seguí la [guía operativa](docs/guia-instalacion-actualizacion.md) para clonar el repositorio, preparar una base nueva, instalar dependencias y configurar `backend/.env`.
 
+Completá también la [configuración de sesiones y primera cuenta](docs/configuracion-sesiones-seguras.md). Producción requiere una clave de firma privada; para desarrollo local hay que declarar `ORDEN_ENV=development`. No hay contraseñas iniciales incorporadas en el código.
+
 Para actualizar, revisá primero `git status`, hacé backup antes de cualquier cambio de base de datos y seguí la secuencia `git fetch origin` / `git merge origin/main` explicada en la guía. El merge se aplica a la rama actual. No uses el SQL de instalación como actualización: contiene `DROP DATABASE`.
 
 ## Trabajo diario en modo desarrollo/manual

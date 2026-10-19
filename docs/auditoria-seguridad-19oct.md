@@ -4,9 +4,9 @@
 
 El merge de `origin/main` hacia `integracion-main-19oct` quedó confirmado localmente en `a43bf0b`. Sus padres son `0d7c854` y `423611f`. Se conservaron las resoluciones, los consumos por material, las mejoras visuales y los tests adaptados. Se eliminó únicamente un espacio sobrante en `frontend/src/pages/ProduccionDiaria.jsx:90` antes de confirmar.
 
-La integración funcional está verificada; **este resultado no habilita una publicación segura en producción**. Quedan riesgos críticos y altos documentados abajo, pendientes de autorización. No se cambiaron credenciales, claves, cuentas, permisos de producción ni datos reales.
+La integración funcional está verificada. En la continuación se corrigieron en código la firma de sesiones y la autorización contra cuentas vigentes; también se sustituyó el bootstrap inseguro de instalaciones nuevas. **Esto no equivale a haber actualizado una instalación real ni habilita por sí solo una publicación segura en producción**: siguen pendientes configuración privada, contraseñas históricas y los demás riesgos altos descritos abajo. No se cambiaron credenciales, claves, cuentas, permisos de producción ni datos reales.
 
-Inicio del bloque: **18:13:19 ART (UTC−3)**. Límite solicitado: 80 minutos, hasta las 19:33:19 ART. Se cerró la investigación y se pasó a verificación/documentación antes de consumir ese límite.
+Inicio del primer bloque: **18:13:19 ART (UTC−3)**; trabajo registrado: 43 minutos y 30 segundos. La continuación autorizada comenzó a las **19:02:53 ART**, con un máximo adicional de 36 minutos y 30 segundos, hasta las 19:39:23 ART. El presupuesto acumulado de trabajo activo es de 80 minutos; la pausa entre bloques no se cuenta como trabajo. Se reservó el cierre para verificación y documentación.
 
 Se revisaron Flask, MySQL/MariaDB, autenticación, sesiones, recuperación, roles, controles de API, React, SQL, configuración Docker, Nginx, Jenkins, scripts de instalación/backup y dependencias declaradas. La revisión de infraestructura fue estática: no se inició Docker, Jenkins, el servidor Flask ni MySQL; no se ejecutaron migraciones, importaciones SQL ni scripts operativos. El daemon Docker no permitió la consulta de imágenes, por lo que no se certifican sus versiones efectivas ni vulnerabilidades del sistema operativo de las imágenes.
 
@@ -19,28 +19,41 @@ Controles existentes que se conservaron:
 - Cookie HttpOnly, ausencia de tokens de autenticación en localStorage y renderizado JSX sin encontrar `dangerouslySetInnerHTML`, `eval` o sinks equivalentes en la aplicación revisada.
 - MySQL y backend sin puertos publicados directamente en los Compose; valores SQL parametrizados y archivos privados de entorno fuera del inventario versionado revisado.
 
-## Hallazgos pendientes de autorización
+## Hallazgos originales y estado actual
 
-La gravedad considera el código y la configuración entregados. Donde la explotación depende de exposición de red, navegador, módulos habilitados o código no confiable en CI, se indica expresamente.
+La gravedad considera el código y la configuración revisados originalmente. Las evidencias históricas de SEC-01/02/03 corresponden al corte `7ecd86b`, anterior a su corrección. Donde la explotación depende de exposición de red, navegador, módulos habilitados o código no confiable en CI, se indica expresamente.
 
-### SEC-01 — Crítica: clave de firma predeterminada en despliegue
+| Hallazgo | Estado tras la continuación |
+| --- | --- |
+| SEC-01: clave incorporada | Corregido en código; producción exige configuración privada antes del despliegue. |
+| SEC-03: sesiones con privilegios/contraseña anteriores | Corregido para cambios de actividad, rol y contraseña; sin migraciones. |
+| SEC-02: inicialización insegura | Corregidos el alta de bases vacías y la promoción automática; quedan pendientes las contraseñas históricas que puedan existir. |
+| SEC-04 a SEC-10 | Pendientes dentro de los límites y condiciones documentados. |
 
-- Evidencia: `backend/app.py:29` admite un valor fijo si falta `FLASK_SECRET_KEY`. Ninguno de los dos archivos Compose suministra esa variable al backend. La clave no se reproduce aquí.
+### SEC-01 — Crítica original: clave de firma predeterminada — corregida en código
+
+- Evidencia original: `backend/app.py` admitía un valor fijo si faltaba `FLASK_SECRET_KEY`. Ninguno de los dos archivos Compose suministraba esa variable al backend. La clave no se reproduce aquí.
 - Impacto: quien conoce ese valor puede firmar una sesión con identidad y rol arbitrarios. La autorización confía en el contenido de la cookie.
 - Comprobación aislada: una cookie firmada por una instancia Flask independiente, usando el valor predeterminado extraído del código, fue aceptada con estado 200 en `/api/auth/usuarios`. No se accedió a ninguna cuenta real ni se imprimió la cookie.
-- Pendiente: proporcionar un secreto persistente y distinto por instalación, exigirlo al iniciar producción y planificar la invalidación de sesiones existentes. No se hizo una rotación ni se alteró la configuración privada.
+- Corrección `982ba7d`: se retiró el fallback y se añadió `utils/session_config.py`. Producción exige una clave externa no vacía, de al menos 32 bytes, sin espacios externos ni composición trivial. No es una prueba matemática de entropía: el operador debe generarla criptográficamente. Desarrollo y tests son explícitos y usan claves aleatorias temporales cuando corresponde. Ambos Compose exigen la variable y los ejemplos la dejan vacía.
+- Pruebas: diez casos de configuración y una regresión HTTP de la API rechazan cookies firmadas con una clave ajena; una clave privada estable funciona entre instancias. No se usaron secretos reales.
+- Pendiente operativo: preparar un secreto privado persistente antes de desplegar y volver a iniciar sesión tras actualizar. No se hizo una rotación ni se alteró la configuración privada. Ver [configuración y compatibilidad](configuracion-sesiones-seguras.md).
 
-### SEC-02 — Alta: cuentas iniciales con contraseñas fijas y promoción al arrancar
+### SEC-02 — Alta original: cuentas iniciales — bootstrap corregido, contraseñas históricas pendientes
 
-- Evidencia: `backend/controllers/auth_controller.py:42-69`, función `configurar_admin()`. El arranque crea cuentas usando contraseñas fijas y promueve al rol maestro a la cuenta con el nombre reservado, aunque ya exista.
+- Evidencia original: `configurar_admin()` creaba cuentas usando contraseñas fijas y promovía al rol maestro a la cuenta con el nombre reservado, aunque ya existiera.
 - Impacto: una instalación nueva puede conservar accesos conocidos. La promoción basada en el nombre también merece una prueba específica de abuso antes de rediseñar el bootstrap.
-- Pendiente: alta inicial segura, eliminación de contraseñas predeterminadas, exigencia de cambio inicial y revisión de la promoción automática. No se muestran valores ni se modificaron usuarios.
+- Corrección `82883b9`: si hay usuarios, no hay escrituras de cuentas ni ALTER de roles. Si la base está vacía, exige una contraseña inicial privada fuerte de al menos 12 caracteres y crea una única cuenta maestra con hash. Se retiraron las contraseñas incorporadas, las cuentas adicionales y la promoción por nombre. El alta se protege con un bloqueo exclusivo por base y se libera también al fallar; su comportamiento se contrastó con [MySQL GET_LOCK](https://dev.mysql.com/doc/refman/8.4/en/locking-functions.html) y [MariaDB GET_LOCK](https://mariadb.com/docs/server/reference/sql-functions/secondary-functions/miscellaneous-functions/get_lock).
+- Pruebas: nueve regresiones de bootstrap verifican cuentas existentes intactas, configuración inicial ausente/débil rechazada, un único INSERT con hash, bloqueo exclusivo y rollback ante errores. No se ejecutó el alta real ni una prueba de concurrencia contra MySQL.
+- Pendiente: revisar con sus titulares contraseñas débiles o predeterminadas que ya existan. No se fuerzan cambios ni se pierden cuentas. Una instalación antigua sin maestro conserva acceso con sus roles actuales; elevar una cuenta requiere una intervención autorizada. No se implementó un cambio obligatorio en el primer login ni una migración de usuarios.
 
-### SEC-03 — Alta: las sesiones no se revocan al cambiar la cuenta
+### SEC-03 — Alta original: sesiones con permisos anteriores — corregida en código
 
-- Evidencia: `iniciar_sesion()` copia identidad y rol a `session`; `sesion_actual()` y `proteger_api()` consultan esa copia. No revalidan actividad, rol o versión de sesión en la base. Cambiar/restablecer una contraseña tampoco invalida las cookies de otros dispositivos.
+- Evidencia original: se copiaban identidad y rol a `session` sin revalidar la cuenta; cambiar/restablecer una contraseña tampoco invalidaba las cookies de otros dispositivos.
 - Comprobación aislada: después de un login simulado se cambió el registro ficticio a empleado inactivo; `/api/auth/me` siguió devolviendo el rol administrador y no consultó la cuenta.
-- Pendiente: definir revocación central, comprobar actividad/rol vigente y renovar o invalidar sesiones ante cambios de contraseña y privilegios. Requiere pruebas de concurrencia, roles y recuperación; puede requerir esquema nuevo. La [guía OWASP de sesiones](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html) fundamenta esa invalidación.
+- Corrección `207cc72`: cada petición protegida, incluido `/api/auth/me`, consulta por ID la cuenta vigente. Usuarios inactivos o eliminados reciben 401; el rol actual sustituye al de la cookie antes de autorizar. Una huella HMAC vinculada al hash de contraseña invalida sesiones anteriores al cambiar o recuperar la contraseña, sin nuevas columnas ni tablas y sin poner ese hash en la cookie. Una falla de MySQL devuelve 503 y conserva la cookie para reintentar.
+- Pruebas: 16 regresiones HTTP cubren cuenta existente, eliminación/desactivación, reducción y aumento de rol, degradación de maestro, cambios de nombre, cambio de contraseña en dos dispositivos, recuperación, cookies antiguas/falsificadas, huellas inválidas y fallas de base. Una contraseña existente corta continúa funcionando: la política de alta no se impone retroactivamente sobre cuentas reales.
+- Compatibilidad: las cookies de versiones anteriores requieren un nuevo login; no se modifican contraseñas existentes. Quedan como mejoras independientes la revocación individual centralizada tras logout y un límite explícito de inactividad. Una operación que ya pasó la autorización puede terminar aunque la cuenta cambie mientras está en curso. La [guía OWASP de sesiones](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html) fundamenta la invalidación aplicada.
 
 ### SEC-04 — Alta si se usa por red: HTTP y cookies sin Secure
 
@@ -93,7 +106,7 @@ Pendiente: límites de cuerpo y campos, throttling con almacenamiento compartido
 
 ### SEC-09 — Media: DDL dentro de solicitudes y privilegios de base
 
-`configurar_admin()` y varios helpers ejecutan CREATE/ALTER en tiempo de petición; `backend/server.py:8` ejecuta migraciones al arrancar. Esto exige a la identidad de ejecución permisos más amplios que CRUD y dificulta separar cambios de esquema de operaciones de negocio. Los GET de sugerencias/historial también pueden escribir metadatos.
+Varios helpers ejecutan CREATE/ALTER en tiempo de petición; `backend/server.py:8` ejecuta migraciones al arrancar. El bootstrap conserva CREATE TABLE IF NOT EXISTS, pero ya no realiza ALTER de roles ni cambios en cuentas existentes. La revalidación nueva de sesiones solo hace SELECT. Todavía se exigen a la identidad de ejecución permisos más amplios que CRUD y se dificulta separar esquema de negocio. Los GET de sugerencias/historial también pueden escribir metadatos.
 
 Se inspeccionaron **246 llamadas SQL** de controladores, rutas y utilidades. Los valores revisados usan parámetros; los identificadores dinámicos proceden de constantes/listas permitidas o generan placeholders. No se confirmó inyección SQL. Eso no reemplaza pruebas con una instancia desechable de MySQL/MariaDB ni verifica los GRANT reales.
 
@@ -133,10 +146,11 @@ Las verificaciones finales pasaron. Las consultas de dependencias con avisos dev
 
 | Comando / comprobación | Resultado |
 | --- | --- |
-| `npm test -- --maxWorkers=2` desde frontend | Código 0: 173 aprobados, 0 fallidos, 19 archivos; 26,16 s |
+| `npm test -- --maxWorkers=2` desde frontend | Código 0: 173 aprobados, 0 fallidos, 19 archivos; 26,01 s en la continuación |
 | `npm run lint` desde frontend | Código 0, sin errores ni advertencias |
-| `npm run build` desde frontend | Código 0; advertencia de bundles mayores a 500 kB; 1,33 s |
-| `python -m pytest backend/tests -q --tb=short` con herramientas temporales y plugins externos desactivados | Código 0: 96 aprobados, 0 fallidos; 1,61 s |
+| `npm run build` desde frontend | Código 0; advertencia de bundles mayores a 500 kB; 1,20 s en la continuación |
+| `python -m pytest backend/tests -q --tb=short` con herramientas temporales y plugins externos desactivados | Código 0: 131 aprobados, 0 fallidos; 6,54 s. Son 35 más que los 96 del primer bloque; sin MySQL real |
+| `docker compose --env-file /dev/null ... config --quiet` con valores sintéticos | Código 0 para Compose raíz y paquete; no se iniciaron servicios |
 | `git diff --check` y conflictos Git | Sin errores ni conflictos; MERGE_HEAD ya no existe |
 | Auditoría npm | 12 paquetes afectados; código 1 esperado |
 | Auditoría Python manual / Docker | Un aviso en Werkzeug en ambos inventarios; código 1 esperado |
@@ -155,15 +169,20 @@ Con pytest instalado en un entorno de desarrollo, el guard incorporado permite e
 - `ceaaadc`: `backend/tests/conftest.py`, `backend/tests/test_aislamiento_db.py`.
 - `514f2a3`: `backend/app.py`, `backend/utils/security_headers.py`, `backend/tests/test_security_headers.py`.
 - `849a897`: `backend/controllers/productos_controller.py`, `backend/controllers/ordenes_controller.py`, `backend/controllers/lotes_controller.py`, `backend/controllers/produccion_diaria_controller.py`, `backend/tests/test_errores_api_seguros.py`.
-- Este documento y la actualización del aviso de pruebas de `README.md` se registran en un commit local separado al finalizar la verificación.
+- `7ecd86b`: informe del primer bloque y aviso de pruebas seguras en README.
+- `982ba7d`: configuración privada de firma, `backend/utils/session_config.py`, `backend/tests/test_session_config.py`, preparación del entorno de tests, ejemplos privados vacíos, ambos Compose y nueva guía de sesiones.
+- `207cc72`: `backend/utils/session_security.py`, middleware Flask, login, persistencia simulada de tests y `backend/tests/test_session_security.py`, sin desactivar la revalidación.
+- `82883b9`: bootstrap seguro en `auth_controller.py`, `backend/tests/test_bootstrap_seguro.py`, dos regresiones adicionales de sesiones y documentación/configuración de primeras instalaciones.
+- La actualización de este informe se confirma en un commit local final separado.
 
 `AGENTS.md` era un archivo no versionado al comenzar; se conserva intacto y no se añade al índice. No se realizaron push, cambios de rama, operaciones destructivas ni modificaciones sobre la base real.
 
 ## Próximo trabajo, en orden
 
-1. Autorizar el tratamiento conjunto de SEC-01/02/03: secreto por instalación, bootstrap y revocación, con pruebas antes de cualquier despliegue o cambio de datos.
-2. Definir exposición local/LAN y resolver HTTPS, cookies, CORS y CSRF de forma coordinada.
-3. Aislar CI y actualizar dependencias/imágenes por cambios revisables, con nuevas auditorías y pruebas.
-4. Ensayar privilegios mínimos, migraciones separadas, límites de recursos, backups y restauración en infraestructura descartable.
+1. Preparar configuración privada y validar el despliegue en una instalación descartable antes de actualizar producción; las correcciones de código de SEC-01/02/03 ya están autorizadas y aplicadas. No se aplicaron a servicios reales.
+2. Coordinar la revisión de contraseñas históricas y cuentas antiguas sin maestro, sin sobrescribirlas automáticamente.
+3. Definir exposición local/LAN y resolver HTTPS, cookies, CORS y CSRF de forma coordinada.
+4. Aislar CI y actualizar dependencias/imágenes por cambios revisables, con nuevas auditorías y pruebas.
+5. Ensayar privilegios mínimos, migraciones separadas, límites de recursos, backups y restauración en infraestructura descartable.
 
 El repositorio puede conservar estos commits locales; no se recomienda publicar ni entregar a una red de producción hasta resolver los riesgos críticos y altos aplicables al entorno elegido.

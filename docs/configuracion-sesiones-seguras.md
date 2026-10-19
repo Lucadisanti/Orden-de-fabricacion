@@ -44,7 +44,7 @@ La revalidación añade una lectura de cuenta por petición protegida. No elimin
 
 ## Primera cuenta en una instalación nueva
 
-Solo si la tabla de usuarios está vacía, configurar `ORDEN_INITIAL_ADMIN_PASSWORD` con una contraseña privada fuerte de al menos 12 caracteres. `ORDEN_INITIAL_ADMIN_USER` permite elegir el nombre inicial; si se omite se conserva el nombre inicial tradicional. Se crea una única cuenta maestra con hash, sin otras cuentas ni contraseñas compartidas. Un bloqueo exclusivo de MySQL serializa la comprobación y el alta para evitar inicializaciones simultáneas.
+Solo si la tabla de usuarios está vacía, configurar `ORDEN_INITIAL_ADMIN_PASSWORD` con una contraseña privada fuerte de al menos 12 caracteres. `ORDEN_INITIAL_ADMIN_USER` permite elegir el nombre inicial; si se omite se conserva el nombre inicial tradicional. Se crea una única cuenta maestra con hash, sin otras cuentas ni contraseñas compartidas. Un bloqueo exclusivo de MySQL serializa la comprobación y el alta para evitar inicializaciones simultáneas. Ver [GET_LOCK en MySQL](https://dev.mysql.com/doc/refman/8.4/en/locking-functions.html) y [MariaDB](https://mariadb.com/docs/server/reference/sql-functions/secondary-functions/miscellaneous-functions/get_lock). No se probó concurrencia contra una base real durante esta tarea.
 
 Si ya hay usuarios, estas variables no crean cuentas ni sobrescriben nombres, roles o contraseñas. No son una herramienta de recuperación. Después del primer alta, retirar la contraseña inicial del archivo privado en una ventana de mantenimiento; no hace falta conservarla para reiniciar una instalación con usuarios.
 

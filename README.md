@@ -85,7 +85,7 @@ npm run build
 
 ### Backend: Flask y pytest
 
-**Usar una base de pruebas configurada en el entorno antes de ejecutar.** Aunque varias pruebas simulan consultas, `backend/tests/conftest.py` importa `app`, que llama a `configurar_admin()` y puede escribir en la base al importar. No se garantiza una ejecución sin MySQL ni sin efectos sobre los datos.
+La suite activa `TESTING` antes de importar la aplicación y bloquea conexiones reales a MySQL tanto durante esa importación como durante las pruebas. Cada caso debe simular la persistencia: un acceso sin mock falla en lugar de conectarse a la base configurada. No hace falta iniciar MySQL ni el backend para ejecutar estos tests.
 
 Desde `backend/`, con el entorno virtual activado:
 

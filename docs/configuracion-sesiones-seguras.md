@@ -1,5 +1,7 @@
 # Configurar sesiones seguras
 
+Antes de una entrega, seguir también el [cierre de seguridad y la secuencia de puesta en marcha](cierre-seguridad-entrega-19oct.md). La configuración de claves no resuelve por sí sola HTTPS, CSRF ni los riesgos pendientes del actualizador.
+
 ## Antes de actualizar una instalación
 
 La versión nueva deja de aceptar una clave incorporada en el código. No cambia usuarios, contraseñas ni datos existentes, pero las sesiones antiguas deben volver a iniciar sesión. Antes de actualizar, comprobar que se dispone de acceso legítimo y del procedimiento de recuperación ya existente.

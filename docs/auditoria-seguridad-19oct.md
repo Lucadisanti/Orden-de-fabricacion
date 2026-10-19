@@ -2,11 +2,15 @@
 
 ## Resultado y alcance
 
+**Cierre de la revisión:** ver [estado de entrega, riesgos de scripts y procedimiento seguro](cierre-seguridad-entrega-19oct.md). La suite final tiene **137 tests backend y 173 frontend aprobados**. Se identificaron además SEC-11A/B en los scripts, pendientes de corrección y prueba en PowerShell antes de usarlos para una entrega automatizada. No se considera producción lista.
+
 El merge de `origin/main` hacia `integracion-main-19oct` quedó confirmado localmente en `a43bf0b`. Sus padres son `0d7c854` y `423611f`. Se conservaron las resoluciones, los consumos por material, las mejoras visuales y los tests adaptados. Se eliminó únicamente un espacio sobrante en `frontend/src/pages/ProduccionDiaria.jsx:90` antes de confirmar.
 
 La integración funcional está verificada. En la continuación se corrigieron en código la firma de sesiones y la autorización contra cuentas vigentes; también se sustituyó el bootstrap inseguro de instalaciones nuevas. **Esto no equivale a haber actualizado una instalación real ni habilita por sí solo una publicación segura en producción**: siguen pendientes configuración privada, contraseñas históricas y los demás riesgos altos descritos abajo. No se cambiaron credenciales, claves, cuentas, permisos de producción ni datos reales.
 
 Inicio del primer bloque: **18:13:19 ART (UTC−3)**; trabajo registrado: 43 minutos y 30 segundos. La continuación autorizada comenzó a las **19:02:53 ART**, con un máximo adicional de 36 minutos y 30 segundos, hasta las 19:39:23 ART. El presupuesto acumulado de trabajo activo es de 80 minutos; la pausa entre bloques no se cuenta como trabajo. Se reservó el cierre para verificación y documentación.
+
+El usuario reanudó el cierre con **65 minutos y 6 segundos acumulados** y un máximo adicional de **14 minutos y 54 segundos**. Ese bloque comenzó a las **19:27:21 ART**, con límite a las **19:42:15 ART**; sustituye el límite horario anterior y conserva el máximo de 80 minutos activos.
 
 Se revisaron Flask, MySQL/MariaDB, autenticación, sesiones, recuperación, roles, controles de API, React, SQL, configuración Docker, Nginx, Jenkins, scripts de instalación/backup y dependencias declaradas. La revisión de infraestructura fue estática: no se inició Docker, Jenkins, el servidor Flask ni MySQL; no se ejecutaron migraciones, importaciones SQL ni scripts operativos. El daemon Docker no permitió la consulta de imágenes, por lo que no se certifican sus versiones efectivas ni vulnerabilidades del sistema operativo de las imágenes.
 
@@ -146,10 +150,10 @@ Las verificaciones finales pasaron. Las consultas de dependencias con avisos dev
 
 | Comando / comprobación | Resultado |
 | --- | --- |
-| `npm test -- --maxWorkers=2` desde frontend | Código 0: 173 aprobados, 0 fallidos, 19 archivos; 26,01 s en la continuación |
+| `npm test -- --maxWorkers=2` desde frontend | Código 0: 173 aprobados, 0 fallidos, 19 archivos; 28,30 s en el cierre |
 | `npm run lint` desde frontend | Código 0, sin errores ni advertencias |
 | `npm run build` desde frontend | Código 0; advertencia de bundles mayores a 500 kB; 1,20 s en la continuación |
-| `python -m pytest backend/tests -q --tb=short` con herramientas temporales y plugins externos desactivados | Código 0: 133 aprobados, 0 fallidos. Son 37 más que los 96 del primer bloque; sin MySQL real |
+| `python -m pytest backend/tests -q --tb=short` con herramientas temporales y plugins externos desactivados | Código 0: 137 aprobados, 0 fallidos. Son 41 más que los 96 del primer bloque; sin MySQL real |
 | `docker compose --env-file /dev/null ... config --quiet` con valores sintéticos | Código 0 para Compose raíz y paquete; no se iniciaron servicios |
 | `git diff --check` y conflictos Git | Sin errores ni conflictos; MERGE_HEAD ya no existe |
 | Auditoría npm | 12 paquetes afectados; código 1 esperado |
@@ -175,6 +179,9 @@ Con pytest instalado en un entorno de desarrollo, el guard incorporado permite e
 - `82883b9`: bootstrap seguro en `auth_controller.py`, `backend/tests/test_bootstrap_seguro.py`, dos regresiones adicionales de sesiones y documentación/configuración de primeras instalaciones.
 - La actualización de este informe se confirma en un commit local final separado.
 - En el cierre se endureció además la prioridad del modo production: `TESTING=1` no permite una clave temporal sin declarar un entorno de pruebas. Se conservó el resto de la configuración y se repitió la suite backend completa.
+- `bbd2d6f`: esa prioridad del modo production, con regresiones.
+- `1df47f5`: `backend/tests/test_arranque_aislado.py`, cuatro casos del punto de entrada con servidor y bootstrap simulados. No certifican la imagen de producción ni ejecutan migraciones.
+- La documentación final agrega SEC-11A/B, clasificación de bloqueantes y pasos de puesta en marcha en `docs/cierre-seguridad-entrega-19oct.md`.
 
 `AGENTS.md` era un archivo no versionado al comenzar; se conserva intacto y no se añade al índice. No se realizaron push, cambios de rama, operaciones destructivas ni modificaciones sobre la base real.
 

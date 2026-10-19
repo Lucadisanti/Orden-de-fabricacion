@@ -31,3 +31,13 @@ En Windows CMD, establecer `set ORDEN_ENV=development` antes del arranque. Estos
 La suite declara `ORDEN_ENV=testing`, `TESTING=1` y una clave aleatoria por proceso antes de importar Flask. No usa secretos reales. Mantiene el bloqueo de conexiones MySQL y los mocks de persistencia. El modo `testing` requiere el indicador explícito `TESTING=1`.
 
 La configuración rechaza producción sin clave, claves cortas/triviales y entornos desconocidos. Las regresiones prueban que una cookie firmada con una clave ajena es rechazada y que una clave privada estable se conserva entre instancias.
+
+## Revalidación y compatibilidad
+
+Cada petición protegida, incluido `/api/auth/me`, consulta la cuenta por su identificador antes de autorizar. El rol y nombre vigentes reemplazan la copia de la cookie. Una cuenta eliminada o inactiva pierde acceso; una reducción de rol se aplica en la siguiente petición.
+
+Al iniciar sesión se guarda una huella HMAC del hash de contraseña. La cookie no contiene el hash de contraseña. Cambiar o recuperar la contraseña invalida las sesiones emitidas con el hash anterior, incluso en otros dispositivos y mediante la recuperación local existente. No se agregan tablas, columnas ni migraciones.
+
+Las cookies anteriores a esta versión requieren un nuevo login. Los usuarios y contraseñas existentes siguen siendo válidos si la cuenta está activa; si una pantalla ya estaba abierta, recargarla o usar Salir para volver a iniciar sesión. Si MySQL falla, se deniega la operación con 503 sin borrar la cookie; se puede reintentar cuando se recupere el servicio.
+
+La revalidación añade una lectura de cuenta por petición protegida. No elimina una operación que ya estaba en curso cuando cambió el estado de la cuenta. Logout borra la cookie de ese navegador; una revocación individual centralizada y un límite de inactividad siguen siendo mejoras independientes pendientes.

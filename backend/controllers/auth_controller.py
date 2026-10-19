@@ -6,6 +6,7 @@ from flask import jsonify, request, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from db.connection import get_connection
+from utils.session_security import establecer_sesion
 
 
 ROLES_GESTION = {"maestro", "admin"}
@@ -85,8 +86,7 @@ def iniciar_sesion():
         fila = cur.fetchone()
         if not fila or not fila["activo"] or not check_password_hash(fila["password_hash"], clave):
             return jsonify({"error": "Usuario o contraseña incorrectos."}), 401
-        session.clear()
-        session["usuario"] = {"id": fila["id_usuario"], "usuario": fila["usuario"], "nombre": fila["nombre"], "rol": fila["rol"]}
+        establecer_sesion(fila)
         return jsonify(session["usuario"])
     finally:
         cur.close()

@@ -25,6 +25,7 @@ from controllers.auth_controller import configurar_admin
 from utils.registro_permisos import autorizar_cambio, enriquecer_respuesta, obtener_historial
 from utils.security_headers import aplicar_cabeceras_api
 from utils.session_config import configurar_clave_sesion
+from utils.session_security import revalidar_sesion
 
 app = Flask(__name__)
 configurar_clave_sesion(app)
@@ -33,8 +34,9 @@ if os.getenv("TESTING") != "1":
     configurar_admin()
 @app.before_request
 def proteger_api():
-    if request.method == "OPTIONS" or not request.path.startswith("/api/") or request.path in {"/api/auth/login", "/api/auth/me", "/api/auth/logout", "/api/auth/recuperar"}: return None
-    if not session.get("usuario"): return jsonify({"error":"Sesión requerida."}),401
+    if request.method == "OPTIONS" or not request.path.startswith("/api/") or request.path in {"/api/auth/login", "/api/auth/logout", "/api/auth/recuperar"}: return None
+    error_sesion = revalidar_sesion()
+    if error_sesion is not None: return error_sesion
     if request.path.startswith("/api/auth/usuarios") and session["usuario"]["rol"] not in {"maestro", "admin"}: return jsonify({"error":"Solo un administrador puede gestionar usuarios."}),403
     if request.method in {"PUT", "PATCH", "DELETE"} or (request.method == "POST" and request.path.startswith("/api/planillas/") and request.path.rstrip("/") != "/api/planillas"):
         return autorizar_cambio()

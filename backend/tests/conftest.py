@@ -1,6 +1,24 @@
+import os
+from unittest.mock import patch
+
+import mysql.connector
 import pytest
 
-from app import app
+
+def impedir_conexion_real(*args, **kwargs):
+    raise RuntimeError("Las pruebas no permiten conexiones reales a MySQL; usá un mock.")
+
+
+# app inicializa cuentas al importarse fuera de TESTING. El bloqueo también
+# protege esa importación si en el futuro aparece otro acceso a la base.
+os.environ["TESTING"] = "1"
+with patch.object(mysql.connector, "connect", side_effect=impedir_conexion_real):
+    from app import app
+
+
+@pytest.fixture(autouse=True)
+def bloquear_mysql_real(monkeypatch):
+    monkeypatch.setattr(mysql.connector, "connect", impedir_conexion_real)
 
 
 @pytest.fixture()

@@ -108,7 +108,7 @@ def cambiar_estado_stock(id_lote):
             cursor.execute("UPDATE lote_materiales SET cantidad_descartada=0,lote_cerrado=0,motivo_cierre=NULL WHERE id_lote=%s", (id_lote,))
         conn.commit()
         return jsonify({"mensaje": "Lote cerrado." if cerrar else "Lote reabierto."}), 200
-    except Exception as error:
-        conn.rollback(); return jsonify({"error": str(error)}), 500
+    except Exception:
+        conn.rollback(); return jsonify({"error": "No se pudo actualizar el estado del lote."}), 500
     finally:
         cursor.close(); conn.close()

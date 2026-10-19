@@ -198,7 +198,7 @@ def _guardar_orden(id_orden=None):
             cursor.execute("UPDATE orden_fabricacion SET fecha_aparado=%s WHERE id_orden=%s", (fecha_aparado, id_orden))
         _guardar_talles(cursor, id_orden, talles); id_planilla = _guardar_r013(cursor, id_orden, fecha_corte, data, consumos); conn.commit()
         return jsonify({"id_orden": id_orden, "id_planilla": id_planilla, "mensaje": "Orden guardada correctamente"}), 201 if request.method == "POST" else 200
-    except Exception as error: conn.rollback(); return jsonify({"error": str(error)}), 500
+    except Exception: conn.rollback(); return jsonify({"error": "No se pudo guardar la orden."}), 500
     finally: cursor.close(); conn.close()
 
 

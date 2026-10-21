@@ -85,7 +85,7 @@ def _guardar_producto_base(data, id_producto=None):
         return jsonify({"id_producto": id_producto, "mensaje": "Producto base guardado correctamente"}), 201 if data.get("_creando") else 200
     except Exception as error:
         conn.rollback()
-        return jsonify({"mensaje": "Ya existe ese producto y color" if "Duplicate entry" in str(error) else str(error)}), 409 if "Duplicate entry" in str(error) else 500
+        return jsonify({"mensaje": "Ya existe ese producto y color" if "Duplicate entry" in str(error) else "No se pudo guardar el producto."}), 409 if "Duplicate entry" in str(error) else 500
     finally:
         cursor.close(); conn.close()
 

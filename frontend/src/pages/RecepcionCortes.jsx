@@ -2,8 +2,10 @@ import NombreSugerido from "../components/NombreSugerido";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { obtenerMensajeError } from "../utils/errorMessages";
 import Selector from "../components/Selector";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
 import ClearableSearch from "../components/ClearableSearch";
 import { useNativeTableSorting } from "../components/SortableHeader";
@@ -61,7 +63,7 @@ export default function RecepcionCortes() {
     if (lineas.some((l,i) => Number(l.cantidad) > maximoFila(l,i))) { setToast({type:"error",title:"Cantidad excedida",message:"Los pares recibidos no pueden superar el corte de la orden, sumando todas las tandas y filas."}); return; }
     enviando.current = true; setGuardando(true);
     try { const datos = {fecha, controlador:controlador.trim(), lineas}; if(editando) await axios.put(`/api/recepcion-cortes/${editando}`,datos); else await axios.post("/api/recepcion-cortes/",datos); setAbierto(false); setToast({type:"success",title:"Recepción guardada",message:"Se guardaron todas las órdenes de la R018/1."}); await cargar(); }
-    catch(err) { setToast({type:"error",title:"No se pudo guardar",message:err.response?.data?.error || "Revisá la conexión. Los datos siguen en el formulario."}); }
+    catch(err) { setToast({type:"error",title:"No se pudo guardar",message:obtenerMensajeError(err, "recepción", "Revisá la conexión. Los datos siguen en el formulario.")}); }
     finally { enviando.current = false; setGuardando(false); }
   }
   return <section className="recepcion-cortes">
@@ -91,7 +93,7 @@ export default function RecepcionCortes() {
     </form>}
     {abierto && <SeparadorListado titulo="Recepciones registradas" descripcion="Historial de ingresos de cortes a fábrica." />}
     <div className="ui-list-tools"><ClearableSearch value={busqueda} onChange={setBusqueda} placeholder="Buscar orden, artículo, color, remito o controlador…" /></div>
-    {cargando ? <p>Cargando recepciones…</p> : error ? <div className="ui-empty-state"><p>No se pudieron cargar las recepciones.</p><button className="ui-btn ui-btn-secondary" onClick={cargar}>Reintentar</button></div> : !filtradas.length ? <p className="ui-empty-state">{busqueda ? "No hay coincidencias." : "Todavía no hay recepciones registradas."}</p> : <>
+    {cargando ? <p>Cargando recepciones…</p> : error ? <RetryMessage message="No se pudieron cargar las recepciones." onRetry={cargar} retrying={cargando} /> : !filtradas.length ? <p className="ui-empty-state">{busqueda ? "No hay coincidencias." : "Todavía no hay recepciones registradas."}</p> : <>
       <div className="ui-table-card"><table className="ui-data-table ui-listado-ajustado r018-tabla">
         <colgroup>{[12,9,14,11,7,11,16,10,10].map((ancho,i) => <col key={i} style={{width:ancho+"%"}} />)}</colgroup>
         <thead><tr><th>Fecha de recepción</th><th>N° orden</th><th>Artículo y color</th><th>N° remito</th><th>Pares</th><th>Estado</th><th>Observaciones</th><th>Controlador</th><th>Acciones</th></tr></thead>

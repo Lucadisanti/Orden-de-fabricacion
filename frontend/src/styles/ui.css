@@ -855,6 +855,9 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .ui-retry-message {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -866,10 +869,32 @@ input[type="number"]::-webkit-outer-spin-button {
   border-radius: 12px;
   background: var(--bg-card);
   color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: left;
 }
 
-.ui-retry-message > div { min-width: 0; overflow-wrap: anywhere; }
-.ui-retry-message p { margin: 0; color: var(--text-muted); }
+.ui-retry-message > div {
+  flex: 1 1 18rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+.ui-retry-message strong { font-size: 14px; font-weight: 700; color: var(--text-main); }
+.ui-retry-message p { margin: 0; font-size: 14px; font-weight: 400; color: var(--text-muted); }
+.ui-retry-message > .ui-btn {
+  flex: 0 0 auto;
+  align-self: center;
+  width: auto;
+  min-height: 36px;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .ui-retry-message .ui-btn:disabled { opacity: .6; cursor: wait; }
 
 .ui-empty-state {

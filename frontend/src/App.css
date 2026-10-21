@@ -34,3 +34,38 @@
     padding: 86px 16px 32px;
   }
 }
+
+.app-session {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px 16px;
+  background: var(--bg-page);
+  color: var(--text-main);
+}
+
+.app-session-card {
+  width: min(100%, 520px);
+  min-width: 0;
+  padding: clamp(20px, 4vw, 32px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  overflow-wrap: anywhere;
+}
+
+.app-session-card h1 {
+  margin: 0 0 16px;
+  font-size: clamp(20px, 4vw, 26px);
+}
+
+.app-session-card > p {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.app-session-card .ui-retry-message {
+  margin: 0;
+}

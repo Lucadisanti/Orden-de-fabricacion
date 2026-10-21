@@ -526,9 +526,9 @@ def actualizar_linea_produccion(id_linea):
     except ValueError as error:
         conn.rollback()
         return jsonify({"mensaje": str(error)}), 400
-    except Exception as error:
+    except Exception:
         conn.rollback()
-        return jsonify({"mensaje": f"No se pudo actualizar la producción: {error}"}), 500
+        return jsonify({"mensaje": "No se pudo actualizar la producción."}), 500
     finally:
         cursor.close()
         conn.close()
@@ -782,10 +782,10 @@ def crear_produccion_diaria():
         if conn:
             conn.rollback()
         return jsonify({"mensaje": str(error)}), 400
-    except Exception as error:
+    except Exception:
         if conn:
             conn.rollback()
-        return jsonify({"mensaje": f"No se pudo guardar la producción diaria: {error}"}), 500
+        return jsonify({"mensaje": "No se pudo guardar la producción diaria."}), 500
     finally:
         if cursor:
             cursor.close()

@@ -4,9 +4,9 @@ Aplicación para administrar órdenes de fabricación de calzado, planificación
 
 ## Tecnologías
 
-- Frontend: React + Vite
-- Backend: Python 3.12 + Flask
-- Base de datos: MySQL/MariaDB mediante XAMPP
+- Frontend: React + Vite.
+- Backend: Python + Flask.
+- Base de datos: MySQL. El proyecto también contempla MariaDB/XAMPP; verificar compatibilidad según entorno.
 
 ## Funcionalidades principales
 
@@ -17,185 +17,112 @@ Aplicación para administrar órdenes de fabricación de calzado, planificación
 - Carga de producción por talle con teclado y avance mediante Enter.
 - Comparación de pares esperados, realizados y pendientes.
 - Operarios por etapa y materiales utilizados.
-- Trazabilidad completa por orden.
+- Trazabilidad por orden.
 - Interfaz responsive para computadora, tablet y celular.
 
-## Requisitos
+## Documentación útil
 
-- XAMPP con MySQL iniciado.
-- Python 3.12.
-- Node.js y npm.
-- Git.
+- [Documentación técnica](docs/documentacion-tecnica.md): arquitectura, módulos, datos y limitaciones actuales.
+- [Manual de instalación para el cliente](docs/manual-instalacion-cliente.md): instalación, actualización, backups y puesta en marcha.
+- [Manual de usuario para el cliente](docs/manual-usuario-cliente.md): operación de las pantallas y resolución de errores habituales.
+- [Guía de presentación](docs/guia-presentacion.md): recorrido de demo y preparación para profesor o empresa.
+- [Instalación, actualización, backup y recuperación](docs/guia-instalacion-actualizacion.md): requisitos, configuración, actualización desde GitHub, usuarios iniciales, recuperación de acceso y pruebas básicas.
+- [Flujo de stock de cuero](docs/flujo-stock-cuero.md).
+- [Documento del proyecto](docs/proyecto_orden_fabricacion.docx).
+- [Modelo de base de datos y SQL existentes](docs/modelo_base_datos/): revisar la guía antes de importar archivos.
 
-## Instalacion para cliente con Docker
+## Formas de trabajo
 
-La version instalable incluye frontend, backend y MariaDB administrados con Docker Compose. En la computadora cliente no es necesario instalar Python, Node.js, XAMPP ni MySQL.
+El proyecto contempla dos modalidades:
 
-La entrega se genera desde `main`: ver [ENTREGA_CLIENTE.md](ENTREGA_CLIENTE.md).
-Una vez generadas las imagenes, copiar la carpeta `entrega-cliente` completa a la otra PC
-y seguir [LEEME.md](entrega-cliente/LEEME.md). Los archivos `.tar` son locales y no se suben a GitHub.
+- **Modo desarrollo/local manual:** para programar, depurar, diagnosticar problemas y preparar una recuperación si Docker falla. Requiere instalar las herramientas indicadas en la guía manual.
+- **Modo empaquetado/entrega con Docker:** incluye frontend, backend y MariaDB administrados con Docker Compose. En la PC cliente requiere Docker Desktop; no hace falta instalar Python, Node.js, XAMPP ni MySQL.
 
-Para ejecutar Docker desde el repositorio completo, ver [INSTALACION_DOCKER.md](INSTALACION_DOCKER.md).
+## Instalación para el cliente con Docker
 
-## Instalación desde cero
+Antes de actualizar o instalar, seguir la [configuración de sesiones seguras](docs/configuracion-sesiones-seguras.md): preparar una clave de firma privada y, solo en una base nueva sin usuarios, la contraseña de la primera cuenta. Las cuentas existentes se conservan; las sesiones anteriores requieren un nuevo login.
 
-### 1. Descargar el proyecto
+La entrega se genera desde `main` siguiendo [ENTREGA_CLIENTE.md](ENTREGA_CLIENTE.md). Una vez generadas las imágenes, copiá la carpeta `entrega-cliente` completa a la otra PC y seguí [LEEME.md](entrega-cliente/LEEME.md): ejecutar `Abrir sistema.cmd`, completar las contraseñas de `.env.cliente` y volver a abrir el sistema. El puerto predeterminado es 8081. Los archivos `.tar` son locales y no se suben a GitHub.
 
-```bash
-git clone https://github.com/Lucadisanti/Orden-de-fabricacion.git
-cd Orden-de-fabricacion
-```
+Para ejecutar Docker desde el repositorio completo, consultá [INSTALACION_DOCKER.md](INSTALACION_DOCKER.md). El repositorio ahora incluye Dockerfiles, `compose.yaml` y `frontend/nginx.conf`; estos documentos reemplazan los pendientes de empaquetado de la [guía operativa](docs/guia-instalacion-actualizacion.md).
 
-### 2. Crear la base de datos
+Los backups siguen siendo necesarios con Docker. Una instalación nueva crea una base nueva: copiar el paquete no transfiere datos existentes. Para actualizar, conservá `.env.cliente` y los backups de la instalación. Ver también [Recuperar acceso](entrega-cliente/RECUPERAR_ACCESO.md) y [Validación del empaquetado](PRUEBA_EMPAQUETADO.md).
 
-Abrir `http://localhost/phpmyadmin`, ingresar en **Importar** y ejecutar, en este orden:
+## Instalación y actualización en modo desarrollo/manual
 
-1. `docs/modelo_base_datos/bd_orden_fabricacion.sql`
-2. `docs/modelo_base_datos/stored_procedures.sql`
+Para este modo se necesitan Python con `pip` y entorno virtual, Node.js con npm, Git y un servidor MySQL disponible. Las versiones pueden variar según la PC; verificar las dependencias del proyecto. Python 3.12 es la referencia de la documentación anterior, no una versión mínima comprobada.
 
-El primer archivo recrea la base completa. No debe ejecutarse sobre una base con información que se quiera conservar sin realizar antes una copia de seguridad.
+Seguí la [guía operativa](docs/guia-instalacion-actualizacion.md) para clonar el repositorio, preparar una base nueva, instalar dependencias y configurar `backend/.env`.
 
-### 3. Configurar y levantar el backend
+Completá también la [configuración de sesiones y primera cuenta](docs/configuracion-sesiones-seguras.md). Producción requiere una clave de firma privada; para desarrollo local hay que declarar `ORDEN_ENV=development`. No hay contraseñas iniciales incorporadas en el código.
 
-Desde la carpeta raíz del proyecto:
+Para actualizar, revisá primero `git status`, hacé backup antes de cualquier cambio de base de datos y seguí la secuencia `git fetch origin` / `git merge origin/main` explicada en la guía. El merge se aplica a la rama actual. No uses el SQL de instalación como actualización: contiene `DROP DATABASE`.
+
+## Trabajo diario en modo desarrollo/manual
+
+Con la instalación terminada, desde la raíz, en Linux/macOS:
 
 ```bash
 cd backend
-py -3.12 -m venv venv
-venv\Scripts\activate
-python -m pip install -r requirements.txt
-copy .env.example .env
+source venv/bin/activate
 python app.py
 ```
 
-La API queda disponible en `http://127.0.0.1:5000`.
+En Windows CMD, reemplazá la activación por `venv\Scripts\activate.bat`.
 
-La configuración predeterminada de XAMPP es:
-
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=orden_fabricacion
-DB_PORT=3306
-```
-
-### 4. Levantar el frontend
-
-En otra terminal, desde la carpeta raíz:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Abrir la dirección indicada por Vite, normalmente `http://127.0.0.1:5173` o `http://127.0.0.1:4173`.
-
-## Actualizar una instalación existente
-
-Antes de actualizar, realizar una copia de seguridad de la base desde phpMyAdmin.
-
-Desde la carpeta del proyecto:
-
-```bash
-git pull origin main
-```
-
-Luego actualizar las dependencias:
-
-```bash
-cd backend
-venv\Scripts\activate
-python -m pip install -r requirements.txt
-cd ..\frontend
-npm install
-```
-
-Para incorporar la planificación por talle sin borrar la información existente, importar desde phpMyAdmin:
-
-```text
-docs/modelo_base_datos/migracion_talles_por_orden_2026-08-19.sql
-```
-
-Esta migración crea `detalle_orden`, conserva las órdenes existentes y actualiza los procedimientos necesarios. Debe ejecutarse una sola vez en cada base anterior a esta versión.
-
-Para incorporar la composición automática de artículos por modelo, puntera, adicionales y color, importar después:
-
-```text
-docs/modelo_base_datos/migracion_codigos_producto_2026-08-28.sql
-```
-
-Esta migración conserva los artículos actuales, crea los nuevos catálogos y relaciona automáticamente los códigos existentes que pueda reconocer. También debe ejecutarse una sola vez.
-
-Después, reiniciar backend y frontend.
-
-## Trabajo diario
-
-Backend:
-
-```bash
-cd backend
-venv\Scripts\activate
-python app.py
-```
-
-Frontend, en otra terminal:
+Frontend, en otra terminal desde la raíz:
 
 ```bash
 cd frontend
 npm run dev
+```
+
+El backend normalmente escucha en `http://127.0.0.1:5000` y sus rutas usan `/api`. Abrí la URL que indique Vite, normalmente `http://127.0.0.1:5173`. Ambos procesos y MySQL deben permanecer encendidos.
+
+Para comprobar la compilación del frontend, desde `frontend/`:
+
+```bash
+npm run build
 ```
 
 ## Testing automatizado
 
-Las pruebas no requieren que MySQL este iniciado: las respuestas de base de datos se simulan para que los casos sean repetibles y no modifiquen informacion real.
+### Backend: Flask y pytest
 
-### Backend - Flask y pytest
+La suite activa `TESTING` antes de importar la aplicación y bloquea conexiones reales a MySQL tanto durante esa importación como durante las pruebas. Cada caso debe simular la persistencia: un acceso sin mock falla en lugar de conectarse a la base configurada. No hace falta iniciar MySQL ni el backend para ejecutar estos tests.
 
-Instalar las dependencias de prueba y ejecutar la suite:
+Desde `backend/`, con el entorno virtual activado:
 
 ```bash
-cd backend
-py -3.12 -m pip install -r requirements-test.txt
-py -3.12 -m pytest -v
+python -m pip install -r requirements-test.txt
+python -m pytest -v
 ```
 
-La suite comprueba el listado de productos, respuestas `404`, creacion con codigo `201`, validacion de datos con codigo `400` y manejo controlado de errores `500`.
+La herramienta `entrega-cliente/scripts/recuperar-admin.py`, referenciada por `backend/tests/test_recuperacion_local.py`, ahora está incluida. Para el procedimiento del paquete, consultá [Recuperar acceso](entrega-cliente/RECUPERAR_ACCESO.md); la guía operativa conserva el contexto de recuperación manual.
 
-### Frontend - Vitest y React Testing Library
+### Frontend: Vitest y React Testing Library
 
-Instalar las dependencias y ejecutar todos los tests una vez:
+Desde `frontend/`, con dependencias instaladas:
 
 ```bash
-cd frontend
-npm install
 npm test
 ```
 
-Para trabajar viendo como se vuelven a ejecutar al guardar cambios:
+Para volver a ejecutar las pruebas al guardar cambios:
 
 ```bash
 npm run test:watch
 ```
 
-La suite del Dashboard verifica el contenido inicial, el consumo simulado de la API, los enlaces de navegacion y el mensaje mostrado cuando la API falla.
+### Integración continua con Jenkins
 
-## Subir cambios a GitHub
+El [Jenkinsfile](Jenkinsfile) ejecuta checkout, pruebas del backend con `TESTING=1`, instalación del frontend con `npm ci`, pruebas, lint y build. Finalmente archiva `frontend/dist/**`. Usa contenedores Python 3.12 y Node 20, y requiere un agente Jenkins con acceso a Docker y al volumen `jenkins_home` donde se encuentra el workspace.
 
-Revisar los archivos modificados:
+## Antes de compartir cambios
 
 ```bash
 git status
 git diff --check
 ```
 
-Guardar y subir una versión:
-
-```bash
-git add .
-git commit -m "Mejora planillas, trazabilidad y diseño responsive"
-git push origin main
-```
-
-No subir el archivo `backend/.env`, contraseñas, copias de seguridad ni las carpetas `node_modules` o `venv`.
+No subir `backend/.env`, contraseñas reales, códigos de recuperación, backups, `node_modules` ni `venv`. La carpeta `backups/` ya está incluida en el `.gitignore` de la raíz; esto no deja de versionar archivos que ya estuvieran registrados en Git.

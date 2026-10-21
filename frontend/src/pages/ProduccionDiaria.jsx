@@ -7,6 +7,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Toast from "../components/Toast";
+import RetryMessage from "../components/RetryMessage";
 import ConfirmModal from "../components/ConfirmModal";
 import PromptModal from "../components/PromptModal";
 import CatalogModal from "../components/CatalogModal";
@@ -38,6 +39,7 @@ export default function ProduccionDiaria() {
   const [adicionales, setAdicionales] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState("");
   const [guardando, setGuardando] = useState(false);
   const envioEnCurso = useRef(false);
   const versionFormulario = useRef(0);
@@ -85,7 +87,7 @@ export default function ProduccionDiaria() {
     if (blocker.state === "blocked") blocker.reset();
   };
 
- 
+
 
   useEffect(() => {
     if (!tieneCambiosSinGuardar) return undefined;
@@ -133,6 +135,7 @@ export default function ProduccionDiaria() {
   const historialVisible = paginacionHistorial.pageItems;
 
   const cargarDatos = async () => {
+    setCargando(true);
     try {
       const [ordenesRes, maquinasRes, lotesRes, historialRes, punterasRes, adicionalesRes] = await Promise.all([
         axios.get("/api/produccion-diaria/disponibilidad"), axios.get("/api/maquinas/"),
@@ -145,9 +148,10 @@ export default function ProduccionDiaria() {
       setHistorial(historialRes.data.map((item) => ({ ...item, articulo: articuloVisible(item.articulo) })));
       setPunteras(punterasRes.data);
       setAdicionales(adicionalesRes.data);
+      setErrorCarga("");
     } catch (error) {
       console.error(error);
-      setToast({ type: "error", title: "No se pudieron cargar los datos", message: obtenerMensajeError(error, "producción diaria") });
+      setErrorCarga("Verificá que el servidor esté iniciado e intentá nuevamente.");
     } finally {
       setCargando(false);
     }
@@ -396,7 +400,8 @@ export default function ProduccionDiaria() {
     <PromptModal open={altaMaquinaBloque !== null} title="Nueva inyectora" label="Nombre de la inyectora" placeholder="Ej. Máquina INYEC-BGM" confirmText="Crear y seleccionar" onConfirm={crearMaquinaRapida} onCancel={() => setAltaMaquinaBloque(null)} />
     <CatalogModal key={altaCatalogo ? `${altaCatalogo.tipo}-${altaCatalogo.bloque}-${altaCatalogo.linea}` : "catalogo-cerrado"} open={Boolean(altaCatalogo)} title={altaCatalogo?.tipo === "puntera" ? "Agregar tipo de puntera" : "Agregar adicional"} codeLength={2} onConfirm={crearCatalogoRapido} onCancel={() => setAltaCatalogo(null)} />
     <div className="ui-page-header ui-page-header-row"><div><h1>Producción diaria</h1><p>Carga conjunta por inyectora que actualiza la R013/1 de cada orden.</p></div>{!formularioAbierto && <button type="button" className="ui-btn ui-btn-primary" onClick={() => { versionFormulario.current += 1; setFormularioAbierto(true); }}>+ Nueva producción diaria</button>}</div>
-    {cargando ? <p>Cargando datos…</p> : <>
+    {errorCarga && <RetryMessage title="No se pudieron cargar los datos" message={errorCarga} onRetry={cargarDatos} retrying={cargando} />}
+    {cargando && !errorCarga && <p>Cargando datos…</p>}
       {formularioAbierto && <form className="produccion-diaria-form" onSubmit={guardar}>
         <div className="ui-form-card produccion-cabecera">
           <div><h2>Datos de la jornada</h2><p>Los operarios de calzado, puntera e inspección final se aplican a todos los bloques.</p></div>
@@ -440,6 +445,7 @@ export default function ProduccionDiaria() {
 
 
 
+    {!cargando && !errorCarga && <>
       <div className={`produccion-historial${formularioAbierto ? " produccion-historial-separado" : ""}`}>
         <div className="produccion-historial-header">{formularioAbierto && <div><h2>Producciones registradas</h2><p>Consultá el historial de producción guardado.</p></div>}<div className="ui-list-tools"><ClearableSearch value={busquedaHistorial} onChange={setBusquedaHistorial} placeholder="Buscar por orden, artículo, producto, inyectora, fecha o inspección..." /><div className="ui-sort-controls produccion-historial-filtros">
           <label className="ui-filter-select"><span>Agrupar por</span><Selector searchable={false} value={grupoHistorial} onChange={(evento) => setGrupoHistorial(evento.target.value)}><option value="">Sin agrupar</option><option value="inyectora">Inyectora</option><option value="producto">Producto</option></Selector></label>

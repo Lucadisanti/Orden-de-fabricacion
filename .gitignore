@@ -25,3 +25,4 @@ backups/
 *.bak
 *.tmp
 tmp/
+backups/

@@ -26,6 +26,22 @@ it("enlaza la alerta compacta a las recepciones pendientes", async () => {
 describe("Inicio", () => {
   beforeEach(() => { vi.resetAllMocks(); axios.get.mockResolvedValue({ data: [] }); });
 
+  it("enlaza las órdenes pendientes y las planillas en proceso a sus filtros", async () => {
+    axios.get.mockImplementation(async url => ({ data: url === "/api/ordenes/" ? [
+      { estado: "Pendiente" }, { estado: "Finalizada" },
+    ] : url === "/api/planillas/" ? [
+      { numero_planilla: "R013/1", estado: "En proceso" },
+      { numero_planilla: "R013", estado: "En proceso" },
+    ] : [] }));
+    renderDashboard();
+    const ordenes = await screen.findByRole("link", { name: /Órdenes pendientes/ });
+    expect(ordenes).toHaveAttribute("href", "/ordenes?estado=pendiente");
+    expect(ordenes).toHaveTextContent("1 orden/es");
+    const planillas = screen.getByRole("link", { name: /Planillas en proceso/ });
+    expect(planillas).toHaveAttribute("href", "/planillas?estado=proceso");
+    expect(planillas).toHaveTextContent("1 planilla/s");
+  });
+
   it("muestra el resumen general y las tarjetas principales", async () => {
     axios.get.mockResolvedValueOnce({ data: { productos: 3, proveedores: 2, ordenes: 4, planillas: 5 } });
     renderDashboard();

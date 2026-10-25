@@ -25,7 +25,8 @@ import "../styles/Planillas.css";
 
 export default function Planillas() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const soloEnProceso = searchParams.get("estado") === "proceso";
   const seleccionInicial = searchParams.get("seleccion");
   const tallesDisponibles = Array.from({ length: 13 }, (_, i) => i + 35);
 
@@ -951,10 +952,12 @@ export default function Planillas() {
       ${planilla.estado || ""}
     `.toLowerCase();
 
-    return texto.includes(textoBusqueda.toLowerCase());
+    const estado = String(planilla.estado || "").toLowerCase();
+    const coincideEstado = !soloEnProceso || (String(planilla.numero_planilla).trim().toUpperCase() === "R013/1" && (estado.includes("proceso") || estado.includes("producci")));
+    return coincideEstado && texto.includes(textoBusqueda.toLowerCase());
     });
 
-    const hayBusqueda = textoBusqueda.length > 0;
+    const hayBusqueda = textoBusqueda.length > 0 || soloEnProceso;
     const sinResultados = hayBusqueda && planillasFiltradas.length === 0;
     const sinPlanillas = !hayBusqueda && planillasVisibles.length === 0;
 
@@ -1412,6 +1415,13 @@ export default function Planillas() {
             value={busqueda}
             onChange={setBusqueda}
           />
+          <Selector aria-label="Estado de planillas" searchable={false} value={soloEnProceso ? "proceso" : "todos"} onChange={e => {
+            const nuevos = new URLSearchParams(searchParams);
+            if (e.target.value === "proceso") nuevos.set("estado", "proceso");
+            else nuevos.delete("estado");
+            setSearchParams(nuevos);
+            paginacionPlanillas.setPage(1);
+          }}><option value="todos">Todas las planillas</option><option value="proceso">Planillas en proceso</option></Selector>
         </div>
         {sinResultados ? (
           <div className="ui-empty-state">

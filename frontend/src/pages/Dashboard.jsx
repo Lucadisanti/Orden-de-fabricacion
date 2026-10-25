@@ -259,6 +259,7 @@ export default function Dashboard() {
       ? {
           tipo: "warning",
           titulo: "Órdenes pendientes",
+          ruta: "/ordenes?estado=pendiente",
           detalle: `${panelControl.ordenesPendientes} orden/es todavía necesitan avanzar.`,
         }
       : {
@@ -270,6 +271,7 @@ export default function Dashboard() {
       ? {
           tipo: "info",
           titulo: "Planillas en proceso",
+          ruta: "/planillas?estado=proceso",
           detalle: `${panelControl.planillasProceso} planilla/s siguen en producción.`,
         }
       : {

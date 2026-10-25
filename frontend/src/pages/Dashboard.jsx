@@ -281,6 +281,7 @@ export default function Dashboard() {
       ? {
           tipo: "warning",
           titulo: "Material pendiente",
+          ruta: "/recepcion-materiales?estado=pendiente",
           detalle: `${panelControl.lotesPendientes} lote/s tienen ${panelControl.unidadesPendientes} unidades pendientes.`,
         }
       : {
@@ -395,15 +396,17 @@ export default function Dashboard() {
             <p className="dashboard-mensaje dashboard-mensaje-simple">Calculando indicadores…</p>
           ) : (
             <div className="dashboard-alertas-lista">
-              {alertas.map((alerta) => (
-                <article className={`dashboard-alerta dashboard-alerta-${alerta.tipo}`} key={alerta.titulo}>
+              {alertas.map((alerta) => {
+                const Contenedor = alerta.ruta ? Link : "article";
+                return (
+                <Contenedor to={alerta.ruta} className={`dashboard-alerta dashboard-alerta-${alerta.tipo}`} key={alerta.titulo}>
                   <div className="dashboard-alerta-icono" aria-hidden="true" />
                   <div>
                     <h3>{alerta.titulo}</h3>
                     <p>{alerta.detalle}</p>
                   </div>
-                </article>
-              ))}
+                </Contenedor>
+              );})}
             </div>
           )}
 

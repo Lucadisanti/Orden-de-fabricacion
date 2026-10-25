@@ -500,10 +500,10 @@ export default function Trazabilidad() {
                 ))}
               </tbody>
             </table>
-            <Pagination {...paginacionOrdenes} />
               </>
             )}
             </div>
+            {!sinResultadosOrdenes && !sinOrdenes && <Pagination {...paginacionOrdenes} />}
           </div>
 
           <div className={`ui-form-card trazabilidad-detalle ${ordenSeleccionada ? "visible-movil" : ""}`}>

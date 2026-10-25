@@ -32,7 +32,8 @@ const crearLineaVacia = () => ({
 
 export default function RecepcionMateriales() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const soloPendientes = searchParams.get("estado") === "pendiente";
   const volverA = searchParams.get("volver");
   const formularioRef = useRef(null);
   const [guardando, setGuardando] = useState(false);
@@ -411,7 +412,7 @@ export default function RecepcionMateriales() {
     });
   };
 
-  const recepciones = Object.values(lotes.reduce((grupos, lote) => {
+  const recepciones = Object.values(lotes.filter(lote => !soloPendientes || Number(lote.pendiente) > 0).reduce((grupos, lote) => {
     const clave = String(lote.remitos_id_remito);
     if (!grupos[clave]) grupos[clave] = { ...lote, ...remitos.find((remito) => String(remito.id_remito) === clave), materiales: [] };
     grupos[clave].materiales.push(lote);
@@ -645,12 +646,25 @@ export default function RecepcionMateriales() {
 
       {!cargando && !error && (
         <>
-        <div className="ui-list-tools">
+        <div className="ui-list-tools recepcion-filtros">
           <ClearableSearch
             placeholder="Buscar por proveedor, material, color, remito, estado o recibido por..."
             value={busqueda}
             onChange={setBusqueda}
           />
+          <div className="recepcion-filtro-estado">
+            <Selector aria-label="Estado de recepción" searchable={false} value={soloPendientes ? "pendiente" : "todos"} onChange={e => {
+              const nuevosParams = new URLSearchParams(searchParams);
+              if (e.target.value === "pendiente") nuevosParams.set("estado", "pendiente");
+              else nuevosParams.delete("estado");
+              setSearchParams(nuevosParams);
+              paginacionRecepciones.setPage(1);
+              setFilaAbierta(null);
+            }}>
+              <option value="todos">Todas las recepciones</option>
+              <option value="pendiente">Materiales pendientes de recibir</option>
+            </Selector>
+          </div>
         </div>
         {sinResultados ? (
           <div className="ui-empty-state">
@@ -659,8 +673,8 @@ export default function RecepcionMateriales() {
           </div>
         ) : sinRecepciones ? (
           <div className="ui-empty-state">
-            <strong>Todavía no hay recepciones cargadas.</strong>
-            <span>Creá una recepción para empezar a registrar remitos y materiales.</span>
+            <strong>{soloPendientes ? "No hay materiales pendientes de recibir." : "Todavía no hay recepciones cargadas."}</strong>
+            <span>{soloPendientes ? "Seleccioná Todas las recepciones para consultar el resto." : "Creá una recepción para empezar a registrar remitos y materiales."}</span>
           </div>
         ) : (
           <>

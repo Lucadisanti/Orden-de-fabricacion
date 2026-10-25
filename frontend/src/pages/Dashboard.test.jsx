@@ -11,6 +11,18 @@ function renderDashboard() {
   return render(<MemoryRouter><Dashboard /></MemoryRouter>);
 }
 
+it("enlaza la alerta compacta a las recepciones pendientes", async () => {
+  axios.get.mockImplementation(async url => ({ data: url === "/api/lotes/" ? [
+    { id_lote: 1, remitos_id_remito: 42, material: "Cuero", color: "Negro", nombre_proveedor: "Proveedor de cuero", numero_remito: "R-42", pendiente: "7.5" },
+    { id_lote: 2, remitos_id_remito: 43, material: "Forro completo", pendiente: 0 },
+  ] : [] }));
+  renderDashboard();
+  const alerta = await screen.findByRole("link", { name: /Material pendiente/ });
+  expect(alerta).toHaveAttribute("href", "/recepcion-materiales?estado=pendiente");
+  expect(alerta).toHaveTextContent("1 lote/s tienen 7.5 unidades pendientes.");
+  expect(screen.queryByText("Proveedor de cuero")).not.toBeInTheDocument();
+});
+
 describe("Inicio", () => {
   beforeEach(() => { vi.resetAllMocks(); axios.get.mockResolvedValue({ data: [] }); });
 

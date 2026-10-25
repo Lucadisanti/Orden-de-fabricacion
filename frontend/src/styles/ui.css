@@ -67,6 +67,36 @@
   scrollbar-gutter: auto;
 }
 
+/* Barras discretas que acompañan los colores de ambos temas. */
+.ui-table-card {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 45%, transparent) transparent;
+}
+
+.ui-table-card::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ui-table-card::-webkit-scrollbar-track,
+.ui-table-card::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.ui-table-card::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted) 45%, transparent);
+  border: 2px solid var(--bg-card);
+  border-radius: 20px;
+}
+
+.ui-table-card::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.ui-table-card::-webkit-scrollbar-button {
+  display: none;
+}
+
 .ui-data-table {
   width: 100%;
   min-width: 760px;

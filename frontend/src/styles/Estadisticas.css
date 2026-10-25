@@ -51,3 +51,25 @@
 :root[data-theme="noche"] .estadisticas .estado-2 { background: #554010; color: #ffe795; border-color: #eebf43; }
 @media(max-width: 1100px) { .estadisticas-tarjetas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media(max-width: 650px) { .estadisticas-graficos { grid-template-columns: 1fr; }.estadisticas-card, .estadisticas-panel { padding: 18px; }.estadisticas-filtros input { width: 145px; }.estadisticas-card > strong { font-size: 28px; } }
+.estadisticas-revision {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 22px;
+  margin: 22px 0 28px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg-card));
+}
+.estadisticas-revision > strong { font-size: 30px; }
+.estadisticas-revision > span { align-self: center; font-weight: 700; }
+.estadisticas-revision > p { grid-column: 1 / -1; margin: 0; }
+.estadisticas-inspeccion-barra { grid-column: 1 / -1; display: flex; height: 14px; overflow: hidden; border-radius: 20px; background: var(--border); margin-top: 8px; }
+.revision-0 { background: #22c580; }
+.revision-1 { background: #fb7185; }
+.revision-2 { background: #eebf43; }
+.revision-3 { background: #94a3b8; }
+.estado-3 { background: #e2e8f0; color: #334155; }
+.estadisticas-inspeccion-pendientes { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--border); }
+.estadisticas-inspeccion-pendientes > div { display: grid; gap: 6px; }
+.estadisticas-inspeccion-pendientes strong { font-size: 24px; }
+.estadisticas-inspeccion-pendientes span { color: var(--text-muted); font-size: 14px; }

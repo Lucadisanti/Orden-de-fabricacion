@@ -176,3 +176,28 @@
 }
 
 @media (max-width: 900px) { .recepcion-listado-desplegable { scroll-margin-top: 78px; } }
+.recepcion-filtros {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.recepcion-filtro-estado {
+  flex: 0 0 320px;
+  min-width: 0;
+}
+
+.recepcion-filtros > .ui-search-bar {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .recepcion-filtros {
+    flex-wrap: wrap;
+  }
+
+  .recepcion-filtro-estado {
+    flex: none;
+    width: 100%;
+  }
+}

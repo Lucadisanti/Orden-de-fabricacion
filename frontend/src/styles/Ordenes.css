@@ -100,7 +100,6 @@
 .ordenes .orden-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; width: 100%; min-width: 0; }
 .ordenes .orden-acciones .ui-btn { margin: 0; padding: 8px; white-space: nowrap; flex-shrink: 0; }
 .ordenes .orden-acciones .ui-registro-autoria { flex-basis: 100%; }
-.ordenes .ui-table-card:has(> .ordenes-listado-tabla) { max-height: none; overflow-y: visible; }
 .main-content .ordenes .ui-table-card > .ordenes-listado-tabla { width: 100%; min-width: 0; table-layout: fixed; }
 .main-content .ordenes .ordenes-listado-tabla > tbody > tr > td { overflow-wrap: anywhere; }
 @media (min-width: 1101px) {

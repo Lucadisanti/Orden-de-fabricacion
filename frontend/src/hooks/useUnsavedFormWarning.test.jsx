@@ -7,6 +7,41 @@ import useUnsavedFormWarning from "./useUnsavedFormWarning";
 afterEach(cleanup);
 vi.mock("react-router-dom", () => ({ useBlocker: () => ({ state: "unblocked" }) }));
 
+function CicloFormulario() {
+  const ref = useRef(null);
+  const [abierto, setAbierto] = useState(true);
+  const salida = useUnsavedFormWarning({ enabled: abierto, refs: [ref] });
+  return <>
+    {abierto && <form ref={ref}><label>Dato<input /></label></form>}
+    <button onClick={() => { salida.limpiarCambios(); setAbierto(false); }}>Guardar</button>
+    <button onClick={() => setAbierto(false)}>Ocultar</button>
+    <button onClick={() => salida.solicitarSalida(() => setAbierto(true))}>Nueva orden</button>
+    {salida.salidaPendiente && <p>Aviso pendiente</p>}
+  </>;
+}
+
+it("permite crear otra orden tras guardar y protege sus nuevos cambios", async () => {
+  render(<CicloFormulario />);
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText("Dato"), "Orden guardada");
+  await user.click(screen.getByText("Guardar"));
+  await user.click(screen.getByText("Nueva orden"));
+  expect(screen.queryByText("Aviso pendiente")).not.toBeInTheDocument();
+  await user.type(screen.getByLabelText("Dato"), "Orden pendiente");
+  await user.click(screen.getByText("Nueva orden"));
+  expect(screen.getByText("Aviso pendiente")).toBeInTheDocument();
+});
+
+it("no pide confirmar cuando el formulario está cerrado", async () => {
+  render(<CicloFormulario />);
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText("Dato"), "Carga anterior");
+  await user.click(screen.getByText("Ocultar"));
+  await user.click(screen.getByText("Nueva orden"));
+  expect(screen.queryByText("Aviso pendiente")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Dato")).toBeInTheDocument();
+});
+
 function Formulario() {
   const ref = useRef(null);
   const [numero, setNumero] = useState("");

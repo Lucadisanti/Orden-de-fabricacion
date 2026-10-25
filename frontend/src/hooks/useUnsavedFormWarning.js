@@ -10,7 +10,7 @@ export default function useUnsavedFormWarning({ enabled, refs }) {
   );
 
   const solicitarSalida = (accion) => {
-    if (!tieneCambios) {
+    if (!enabled || !tieneCambios) {
       accion();
       return;
     }

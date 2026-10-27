@@ -55,7 +55,6 @@ export default function ProduccionDiaria() {
   const [fechaHistorial, setFechaHistorial] = useState("");
   const [busquedaHistorial, setBusquedaHistorial] = useState("");
   const [toast, setToast] = useState(null);
-  const [salidaPendiente, setSalidaPendiente] = useState(null);
   const [lineaDetalleAbierta, setLineaDetalleAbierta] = useState(null);
   const [detallesHistorial, setDetallesHistorial] = useState({});
   const [altaMaquinaBloque, setAltaMaquinaBloque] = useState(null);
@@ -76,13 +75,10 @@ export default function ProduccionDiaria() {
   }, [form, bloques]);
   const blocker = useBlocker(() => tieneCambiosSinGuardar && !navegacionAuxiliar.current);
   const confirmarSalida = () => {
-    const accion = salidaPendiente;
-    setSalidaPendiente(null);
-    accion?.();
+    if (blocker.state === "blocked") blocker.proceed();
   };
 
   const cancelarSalida = () => {
-    setSalidaPendiente(null);
     if (blocker.state === "blocked") blocker.reset();
   };
 
@@ -395,7 +391,7 @@ export default function ProduccionDiaria() {
 
   return <section className="produccion-diaria">
     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
-    <ConfirmModal open={Boolean(salidaPendiente)} title="Cambios sin guardar" message="Hay datos de producción sin guardar. Si salís, se perderán." confirmText="Salir sin guardar" danger onCancel={cancelarSalida} onConfirm={confirmarSalida} />
+    <ConfirmModal open={blocker.state === "blocked"} title="Cambios sin guardar" message="Hay datos de producción sin guardar. Si salís, se perderán." confirmText="Salir sin guardar" danger onCancel={cancelarSalida} onConfirm={confirmarSalida} />
     <PromptModal open={altaMaquinaBloque !== null} title="Nueva inyectora" label="Nombre de la inyectora" placeholder="Ej. Máquina INYEC-BGM" confirmText="Crear y seleccionar" onConfirm={crearMaquinaRapida} onCancel={() => setAltaMaquinaBloque(null)} />
     <CatalogModal key={altaCatalogo ? `${altaCatalogo.tipo}-${altaCatalogo.bloque}-${altaCatalogo.linea}` : "catalogo-cerrado"} open={Boolean(altaCatalogo)} title={altaCatalogo?.tipo === "puntera" ? "Agregar tipo de puntera" : "Agregar adicional"} codeLength={2} onConfirm={crearCatalogoRapido} onCancel={() => setAltaCatalogo(null)} />
     <div className="ui-page-header ui-page-header-row"><div><h1>Producción diaria</h1><p>Carga conjunta por inyectora que actualiza la R013/1 de cada orden.</p></div>{!formularioAbierto && <button type="button" className="ui-btn ui-btn-primary" onClick={() => { versionFormulario.current += 1; setFormularioAbierto(true); }}>+ Nueva producción diaria</button>}</div>

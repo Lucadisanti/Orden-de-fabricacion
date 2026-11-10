@@ -8,12 +8,14 @@ import "../styles/Estadisticas.css";
 
 const numero = (n) => n.toLocaleString("es-AR");
 const coloresGrafico = ["#3975ee", "#16a6a0", "#9464df", "#eea32b", "#e46b87", "#718096"];
-function Dona({ filas, onSeleccionar }) {
+function Dona({ filas, onSeleccionar, onSeleccionarGrupo, agrupar = true }) {
   const [seleccion, setSeleccion] = useState(null);
   const positivas = filas.filter((fila) => fila.pares > 0);
-  const grupos = !onSeleccionar && positivas.length > 6
-    ? [...positivas.slice(0, 5), { nombre: "Otros", pares: positivas.slice(5).reduce((s, fila) => s + fila.pares, 0) }]
+  const grupos = agrupar && positivas.length > 6
+    ? [...positivas.slice(0, 5), { nombre: "Otros", agrupado: true, nombres: positivas.slice(5).map(fila => fila.nombre), pares: positivas.slice(5).reduce((s, fila) => s + fila.pares, 0) }]
     : positivas;
+  const elegir = fila => fila.agrupado ? (onSeleccionarGrupo ? onSeleccionarGrupo(fila.nombres) : setSeleccion(fila.nombre)) : (onSeleccionar ? onSeleccionar(fila.nombre) : setSeleccion(fila.nombre));
+  const navegable = fila => fila.agrupado ? Boolean(onSeleccionarGrupo) : Boolean(onSeleccionar);
   const total = grupos.reduce((s, fila) => s + fila.pares, 0);
   const activa = grupos.find((fila) => fila.nombre === seleccion);
   if (!total) return <p className="estadisticas-vacio">No hay producción registrada en este período.</p>;
@@ -22,13 +24,13 @@ function Dona({ filas, onSeleccionar }) {
       <svg viewBox="0 0 220 220" role="img" aria-label={`Distribución de ${numero(total)} pares`}>
         {grupos.map((fila, i) => {
           const inicio = grupos.slice(0, i).reduce((s, item) => s + item.pares, 0) / total * 100;
-          return <circle key={fila.nombre} cx="110" cy="110" r="85" fill="none" stroke={coloresGrafico[i]} strokeWidth="30" pathLength="100" strokeDasharray={`${fila.pares / total * 100} 100`} strokeDashoffset={-inicio} transform="rotate(-90 110 110)" opacity={activa && activa.nombre !== fila.nombre ? 0.25 : 1} style={onSeleccionar ? { cursor: "pointer" } : undefined} onClick={onSeleccionar ? () => onSeleccionar(fila.nombre) : undefined} onMouseEnter={() => setSeleccion(fila.nombre)} onMouseLeave={() => setSeleccion(null)}><title>{fila.nombre}: {numero(fila.pares)} pares ({(fila.pares / total * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}%)</title></circle>;
+          return <circle key={fila.nombre} cx="110" cy="110" r="85" fill="none" stroke={coloresGrafico[i % coloresGrafico.length]} strokeWidth="30" pathLength="100" strokeDasharray={`${fila.pares / total * 100} 100`} strokeDashoffset={-inicio} transform="rotate(-90 110 110)" opacity={activa && activa.nombre !== fila.nombre ? 0.25 : 1} style={navegable(fila) ? { cursor: "pointer" } : undefined} onClick={() => elegir(fila)} onMouseEnter={() => setSeleccion(fila.nombre)} onMouseLeave={() => setSeleccion(null)}><title>{fila.nombre}: {numero(fila.pares)} pares ({(fila.pares / total * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}%)</title></circle>;
         })}
       </svg>
       <div className="estadisticas-dona-centro"><strong>{numero(activa ? activa.pares : total)}</strong><span>{activa ? "pares seleccionados" : "pares en total"}</span></div>
     </div>
-    <div className="estadisticas-leyenda">{grupos.map((fila, i) => <button type="button" key={fila.nombre} className={activa?.nombre === fila.nombre ? "activa" : ""} onMouseEnter={() => setSeleccion(fila.nombre)} onMouseLeave={() => setSeleccion(null)} onFocus={() => setSeleccion(fila.nombre)} onBlur={() => setSeleccion(null)} onClick={() => onSeleccionar ? onSeleccionar(fila.nombre) : setSeleccion(fila.nombre)}>
-      <span className="estadisticas-color" style={{ background: coloresGrafico[i] }} /><span className="estadisticas-leyenda-dato"><span>{fila.nombre}</span><strong>{numero(fila.pares)} pares <small>· {(fila.pares / total * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}%</small></strong></span>
+    <div className={`estadisticas-leyenda${!agrupar ? " estadisticas-leyenda-scroll" : ""}`}>{grupos.map((fila, i) => <button type="button" key={fila.nombre} className={activa?.nombre === fila.nombre ? "activa" : ""} onMouseEnter={() => setSeleccion(fila.nombre)} onMouseLeave={() => setSeleccion(null)} onFocus={() => setSeleccion(fila.nombre)} onBlur={() => setSeleccion(null)} onClick={() => elegir(fila)}>
+      <span className="estadisticas-color" style={{ background: coloresGrafico[i % coloresGrafico.length] }} /><span className="estadisticas-leyenda-dato"><span>{fila.nombre}</span><strong>{numero(fila.pares)} pares <small>· {(fila.pares / total * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}%</small></strong></span>
     </button>)}</div>
   </div>;
 }
@@ -80,7 +82,7 @@ export default function Estadisticas() {
       <div className="estadisticas-tarjetas">{[["Pares producidos", numero(resumen.total), "Total registrado"], ["Órdenes con producción", numero(resumen.ordenes), "Con al menos una producción"], ["Días con producción", numero(resumen.dias.length), "Fechas con registros"], ["Pendientes de inspección", numero(paresEstado("Pendiente")), "Pares por inspeccionar"]].map(([titulo, valor, detalle]) => <article className="estadisticas-card" key={titulo}><span>{titulo}</span><strong>{valor}</strong><small>{detalle}</small></article>)}</div>
       <div className="estadisticas-graficos">
         <article className="estadisticas-panel"><h2>Pares por fecha de producción</h2><p>Cantidad registrada en cada jornada.</p><Barras filas={resumen.dias} fechas /></article>
-        <article className="estadisticas-panel"><h2>Producción por inyectora</h2><p>Participación de cada inyectora en los pares producidos.</p><Dona filas={resumen.maquinas} onSeleccionar={inyectora => navigate("/produccion-diaria?" + new URLSearchParams({ inyectora, desde, hasta }))} /></article>
+        <article className="estadisticas-panel estadisticas-panel-inyectoras"><h2>Producción por inyectora</h2><p>Participación de cada inyectora en los pares producidos.</p><Dona filas={resumen.maquinas} onSeleccionar={inyectora => navigate("/produccion-diaria?" + new URLSearchParams({ inyectora, desde, hasta }))} /></article>
         <article className="estadisticas-panel"><h2>Inspección final</h2><p>Estado actual de los pares producidos en el período.</p>{paresEstado("Sin desglose") > 0 && <p>Hay producciones anteriores no conformes sin cantidad defectuosa indicada. Editalas desde R013/1 para completar el desglose.</p>}<div className="estadisticas-revision">
           <span>Avance de revisión</span><strong>{porcentaje(inspeccionados)}%</strong>
           <p>{numero(inspeccionados)} de {numero(resumen.total)} pares inspeccionados</p>
@@ -88,7 +90,7 @@ export default function Estadisticas() {
             {["Conforme", "No conforme", "Pendiente", "Sin desglose"].map((estado, indice) => <span key={estado} className={"revision-segmento revision-" + indice} style={{ width: (resumen.total ? paresEstado(estado) / resumen.total * 100 : 0) + "%" }}><title>{estado}: {numero(paresEstado(estado))} pares</title></span>)}
           </div>
         </div><div className="estadisticas-inspeccion">{["Conforme", "No conforme", "Pendiente", ...(paresEstado("Sin desglose") ? ["Sin desglose"] : [])].map((estado, i) => <div key={estado}><span className={`estadisticas-estado estado-${i}`}>{estado}</span><strong>{numero(paresEstado(estado))} pares</strong><small>{porcentaje(paresEstado(estado))}% del total</small></div>)}</div><div className="estadisticas-inspeccion-pendientes"><div><strong>{numero(paresEstado("Pendiente"))} pares</strong><span>Pendientes de revisar</span></div>{paresEstado("Pendiente") > 0 && <Link className="ui-btn ui-btn-secondary" to={"/produccion-diaria?" + pendientesParams}>Ver pendientes</Link>}</div></article>
-        <article className="estadisticas-panel"><h2>Productos y colores</h2><p>Participación de cada producto y color en el total producido.</p><Dona filas={resumen.productos} /></article>
+        <article className="estadisticas-panel"><h2>Productos y colores</h2><p>Participación de cada producto y color en el total producido.</p><Dona filas={resumen.productos} onSeleccionarGrupo={() => navigate("/produccion-diaria")} onSeleccionar={productoColor => navigate("/produccion-diaria?" + new URLSearchParams({ producto_color: productoColor, desde, hasta }))} /></article>
       </div>
     </>}
   </section>;

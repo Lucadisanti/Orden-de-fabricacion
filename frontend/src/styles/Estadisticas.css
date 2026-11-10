@@ -73,3 +73,20 @@
 .estadisticas-inspeccion-pendientes > div { display: grid; gap: 6px; }
 .estadisticas-inspeccion-pendientes strong { font-size: 24px; }
 .estadisticas-inspeccion-pendientes span { color: var(--text-muted); font-size: 14px; }
+.estadisticas-panel-inyectoras {
+  display: flex;
+  flex-direction: column;
+}
+
+.estadisticas-panel-inyectoras > .estadisticas-dona-layout {
+  flex: 1;
+  align-content: center;
+  padding-block: 12px;
+}
+.estadisticas-leyenda-scroll {
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+  padding-right: 6px;
+}

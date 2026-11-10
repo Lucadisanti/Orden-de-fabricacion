@@ -54,6 +54,7 @@ export default function ProduccionDiaria() {
   const [inyectoraHistorial, setInyectoraHistorial] = useState(() => searchParams.get("inyectora") || "");
   const [fechaHistorial, setFechaHistorial] = useState("");
   const [busquedaHistorial, setBusquedaHistorial] = useState("");
+  const [productoColorHistorial, setProductoColorHistorial] = useState(() => searchParams.getAll("producto_color"));
   const [toast, setToast] = useState(null);
   const [lineaDetalleAbierta, setLineaDetalleAbierta] = useState(null);
   const [detallesHistorial, setDetallesHistorial] = useState({});
@@ -107,9 +108,10 @@ export default function ProduccionDiaria() {
       const coincideFecha = !fechaHistorial || String(item.fecha || "").slice(0, 10) === fechaHistorial;
       const fecha = String(item.fecha || "").slice(0, 10);
       const coincidePeriodo = (!periodoInspeccion.desde || fecha >= periodoInspeccion.desde) && (!periodoInspeccion.hasta || fecha <= periodoInspeccion.hasta);
-      return coincideBusqueda && coincideEstado && coincideInyectora && coincideFecha && coincidePeriodo;
+      const coincideProductoColor = !productoColorHistorial.length || productoColorHistorial.includes(`${item.producto || "Sin producto"} · ${item.color || "Sin color"}`);
+      return coincideBusqueda && coincideEstado && coincideInyectora && coincideFecha && coincidePeriodo && coincideProductoColor;
     });
-  }, [historial, busquedaHistorial, estadoHistorial, inyectoraHistorial, fechaHistorial, periodoInspeccion]);
+  }, [historial, busquedaHistorial, estadoHistorial, inyectoraHistorial, fechaHistorial, periodoInspeccion, productoColorHistorial]);
   const inyectorasHistorial = useMemo(() => [...new Set(historial.map((item) => item.inyectora).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es")), [historial]);
   const historialOrdenado = useMemo(() => [...historialFiltrado].sort((a, b) => {
     if (grupoHistorial) {
@@ -440,6 +442,7 @@ export default function ProduccionDiaria() {
 
 
       <div className={`produccion-historial${formularioAbierto ? " produccion-historial-separado" : ""}`}>
+        {productoColorHistorial.length > 0 && <p>Producto y color: <strong>{searchParams.get("grupo_productos") === "otros" ? `Otros (${productoColorHistorial.length} productos y colores)` : productoColorHistorial.join(", ")}</strong> <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setProductoColorHistorial([])}>Quitar filtro de producto</button></p>}
         {(periodoInspeccion.desde || periodoInspeccion.hasta) && <p>Período de estadísticas: {periodoInspeccion.desde ? formatearFecha(periodoInspeccion.desde) : "Inicio del historial"} al {periodoInspeccion.hasta ? formatearFecha(periodoInspeccion.hasta) : "hoy"}. <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPeriodoInspeccion({ desde: "", hasta: "" })}>Quitar período</button></p>}
         <div className="produccion-historial-header">{formularioAbierto && <div><h2>Producciones registradas</h2><p>Consultá el historial de producción guardado.</p></div>}<div className="ui-list-tools"><ClearableSearch value={busquedaHistorial} onChange={setBusquedaHistorial} placeholder="Buscar por orden, artículo, producto, inyectora, fecha o inspección..." /><div className="ui-sort-controls produccion-historial-filtros">
           <label className="ui-filter-select"><span>Agrupar por</span><Selector searchable={false} value={grupoHistorial} onChange={(evento) => setGrupoHistorial(evento.target.value)}><option value="">Sin agrupar</option><option value="inyectora">Inyectora</option><option value="producto">Producto</option></Selector></label>

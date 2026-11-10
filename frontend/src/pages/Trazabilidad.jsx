@@ -115,7 +115,7 @@ export default function Trazabilidad() {
       setTallesOrden(tallesOrdenRes.data);
 
       const planillasOrden = planillasRes.data.filter(
-        (planilla) => planilla.orden_fabricacion_id_orden === orden.id_orden
+        (planilla) => String(planilla.orden_fabricacion_id_orden) === String(orden.id_orden)
       );
       setPlanillasDetalle(planillasOrden);
       const idsPlanillas = planillasOrden.map((planilla) => planilla.id_planilla);
@@ -195,7 +195,7 @@ export default function Trazabilidad() {
     .map((planilla) => ({
       ...planilla,
       materiales: materiales.filter(
-        (item) => item.id_planilla === planilla.id_planilla && item.id_uso
+        (item) => String(item.id_planilla) === String(planilla.id_planilla) && item.id_lote != null
       ),
     }))
     .filter((planilla) => obtenerGrupoPlanilla(planilla) === "R013" || !ordenSeleccionada?.articulo_producto || (desglosePorPlanilla[planilla.id_planilla] || []).some((linea) => linea.articulo === ordenSeleccionada.articulo_producto))
@@ -713,7 +713,7 @@ export default function Trazabilidad() {
 
                                 <tbody>
                                   {planilla.materiales.map((item) => (
-                                    <tr key={item.id_uso}>
+                                    <tr key={item.id_uso ?? `${item.id_planilla}-${item.id_lote}`}>
                                       <td>{item.numero_remito || "-"}</td>
                                       <td>{item.material || "-"}</td>
                                       <td>{item.color || "-"}</td>
